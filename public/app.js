@@ -96,16 +96,114 @@ function branchHtml(id, d, seen) {
   return `<div class="br">${node(id)}${ps.length ? `<div class="par">${ps.map(x => branchHtml(x, d + 1, seen)).join('')}</div>` : ''}</div>`;
 }
 function vTree() {
+  const mode = S.ui.tmode || 'all';
+  const tabs = `<div class="tmodes"><button data-tmode="all" class="${mode === 'all' ? 'on' : ''}">Усе дерево · згори вниз</button><button data-tmode="ped" class="${mode === 'ped' ? 'on' : ''}">Предки · зліва направо</button></div>`;
+  return mode === 'ped' ? vPedigree(tabs) : vAll(tabs);
+}
+function vPedigree(tabs) {
   const r0 = rootId(); const kidsR = (KIDS[r0] || []).slice().sort(byBirth).reverse();
   const r = S.arg && P[S.arg] ? S.arg : (kidsR[0] || r0);
   depthMax = 0; const t = branchHtml(r, 0, new Set());
-  const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди'];
-  const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-  const isRoot = !S.arg;
-  return `<div class="lede"><div class="eyebrow">${isRoot ? 'Родовід по всіх лініях' : 'Родовід'}</div><h1>${isRoot ? 'Рід Шутих' : 'Предки: ' + esc(short(P[r]))}</h1>
-    <p>Від кріпаків графа Апраксина у Вороньках до наших днів. Натисніть на будь-кого: відкриється картка з документами, фото і спогадами, а звідти можна йти будь-якою гілкою далі.</p></div>
+  const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди', '9-ті прадіди'];
+  const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+  return `<div class="lede"><div class="eyebrow">Родовід</div><h1>${S.arg ? 'Предки: ' + esc(short(P[r])) : 'Рід Шутих'}</h1></div>${tabs}
     <div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>
-    <div class="treebox" id="treebox"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i]}</b>${i ? L[i] : 'Покоління'}</div>`).join('')}</div>${t}</div>`;
+    <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
+}
+const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
+
+/* ── Дерево згори вниз: людина в центрі, над нею батьки, діди…; біля кожного предка — брати й сестри ── */
+const T2 = { W: 156, H: 46, GX: 12, GY: 92, PAD: 50 };
+const P2 = T2.W + T2.GX;
+function treeCenter() { const f = S.ui.tf || {}; if (f.center && P[f.center]) return f.center; const r0 = rootId(); const k = (KIDS[r0] || []).slice().sort(byBirth).reverse(); return k[0] || r0; }
+function layoutTD(center) {
+  const f = S.ui.tf || {}; const sortS = f.sort === 'name' ? ((a, b) => short(P[a]).localeCompare(short(P[b]), 'uk')) : byBirth;
+  const mk = () => ({ n: [], c: {} }); // n: [{id,x,r}], c: row -> [min,max]
+  const add = (B, id, x, r) => { B.n.push({ id, x, r }); const c = B.c[r] ||= [x, x]; c[0] = Math.min(c[0], x); c[1] = Math.max(c[1], x); };
+  const shift = (B, dx) => { B.n.forEach(o => o.x += dx); Object.values(B.c).forEach(c => { c[0] += dx; c[1] += dx; }); return B; };
+  const merge = (A, B) => { B.n.forEach(o => add(A, o.id, o.x, o.r)); return A; };
+  const sep = (A, B) => { let d = -Infinity; for (const r in A.c) if (B.c[r]) d = Math.max(d, A.c[r][1] - B.c[r][0] + P2); return d === -Infinity ? 0 : d; };
+  const seen = new Set();
+  const sibs = c => { const p = P[c]; const ps = [p.f, p.mo].filter(x => x && P[x]); if (!ps.length) return [c]; return [...new Set(ps.flatMap(x => KIDS[x] || []))].filter(x => x === c || !seen.has(x)).sort(sortS); };
+  function up(c, r, side) { // блок предків людини c (c у x=0, ряд r)
+    const B = mk(); const g = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
+    let order = g.filter(x => x !== c); order = side === 'L' ? [...order, c] : side === 'R' ? [c, ...order] : g;
+    const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
+    const p = P[c]; const fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
+    if (fa || mo) {
+      let F = fa ? up(fa, r + 1, mo ? 'L' : 'C') : null; let M = mo ? up(mo, r + 1, fa ? 'R' : 'C') : null;
+      let mid;
+      if (F && M) { shift(M, sep(F, M)); const fx = F.n.find(o => o.id === fa).x, mx = M.n.find(o => o.id === mo).x; merge(F, M); mid = (fx + mx) / 2; shift(F, -mid); merge(B, F); }
+      else { const X = F || M; const id = fa || mo; shift(X, -X.n.find(o => o.id === id).x); merge(B, X); }
+    }
+    return B;
+  }
+  function down(c, r) { // нащадки центру
+    const B = mk(); const kids = (KIDS[c] || []).filter(k => !seen.has(k)).sort(sortS); let X = null;
+    kids.forEach(k => { seen.add(k); const K = down(k, r - 1); if (!X) X = K; else { shift(K, sep(X, K)); merge(X, K); } });
+    if (X) { const xs = kids.map(k => X.n.find(o => o.id === k).x); shift(X, -(Math.min(...xs) + Math.max(...xs)) / 2 + (SPOUSES[c] || []).length * P2 / 2); }
+    add(B, c, 0, r); (SPOUSES[c] || []).forEach((s, i) => { if (!seen.has(s.id)) { seen.add(s.id); add(B, s.id, (i + 1) * P2, r); } });
+    if (X) merge(B, X); return B;
+  }
+  seen.add(center);
+  const A = up(center, 0, 'C'); const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
+  D.n.forEach(o => add(A, o.id, o.x, o.r));
+  const rows = [...new Set(A.n.map(o => o.r))].sort((a, b) => b - a); const ri = Object.fromEntries(rows.map((r, i) => [r, i]));
+  const minX = Math.min(...A.n.map(o => o.x)), maxX = Math.max(...A.n.map(o => o.x));
+  const N = {}; A.n.forEach(o => { N[o.id] = { x: o.x - minX + T2.PAD, y: ri[o.r] * (T2.H + T2.GY) + T2.PAD, r: o.r }; });
+  return { N, w: maxX - minX + T2.W + T2.PAD * 2, h: rows.length * (T2.H + T2.GY) - T2.GY + T2.PAD * 2, rows };
+}
+function vAll(tabs) {
+  const center = treeCenter(); const L = layoutTD(center); S.ui.tl = L; const f = S.ui.tf || {}; const V = new Set(Object.keys(L.N));
+  const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
+  let lines = ''; const done = new Set();
+  V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
+    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp"/>`; }));
+  const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
+  Object.entries(fam).forEach(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
+    const px = two ? (cx(ps[0]) + cx(ps[1])) / 2 : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]);
+    const by = top(kids[0]) - T2.GY / 2; const xs = kids.map(cx); const x1 = Math.min(px, ...xs), x2 = Math.max(px, ...xs);
+    lines += `<path d="M${px} ${py}V${by}M${x1} ${by}H${x2}${xs.map(x => `M${x} ${by}V${top(kids[0])}`).join('')}" class="ln"/>`; });
+  const q = (f.q || '').trim().toLowerCase();
+  const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q);
+    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}">${ph(p)}<span><b>${esc(short(p))}</b><span class="y">${esc(life(p))}</span></span></a>`; }).join('');
+  const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
+  const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
+  return `<div class="lede"><div class="eyebrow">Родовід згори вниз</div><h1>${esc(short(P[center]))}: предки й родина</h1></div>${tabs}
+    <div class="tbar"><label class="small muted">Від кого будувати</label><select class="in" id="tcenter" aria-label="Від кого будувати дерево">${opts}</select>
+      <input class="in" id="tq" type="search" placeholder="Знайти в дереві…" value="${esc(f.q || '')}" aria-label="Пошук у дереві">
+      <select class="in" id="tsort" aria-label="Порядок братів і сестер"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>Брати й сестри: за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select>
+      <span class="small muted">${V.size} осіб</span></div>
+    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}</svg>${cards}</div>${vpCtl(true)}</div>
+    <p class="small muted" style="margin-top:8px">Тягніть мишкою або пальцем; коліщатко або два пальці — масштаб. Натисніть на людину — відкриється картка. Щоб побачити гілку іншої людини (наприклад, родину Олени), виберіть її у полі «Від кого будувати».</p>`;
+}
+
+/* ── Масштаб і переміщення (спільне для обох видів) ── */
+function vpMount() {
+  const vp = $('#vp'), st = $('#stage'); if (!vp || !st) return;
+  const mode = vp.dataset.mode; S.ui.vp ||= {}; const fresh = !S.ui.vp[mode]; const V = S.ui.vp[mode] ||= { s: 1, x: 0, y: 0 };
+  const apply = () => { st.style.transform = `translate(${V.x}px,${V.y}px) scale(${V.s})`; mini(); };
+  const size = () => mode === 'all' && S.ui.tl ? { w: S.ui.tl.w, h: S.ui.tl.h } : { w: st.scrollWidth || st.offsetWidth, h: st.scrollHeight || st.offsetHeight };
+  const fit = () => { const { w, h } = size(); V.s = Math.min(1, Math.max(0.15, Math.min(vp.clientWidth / w, vp.clientHeight / h) * 0.96)); V.x = (vp.clientWidth - w * V.s) / 2; V.y = Math.max(8, (vp.clientHeight - h * V.s) / 2); apply(); };
+  const zoomAt = (k, cx, cy) => { const s2 = Math.min(2.5, Math.max(0.12, V.s * k)); V.x = cx - (cx - V.x) * s2 / V.s; V.y = cy - (cy - V.y) * s2 / V.s; V.s = s2; apply(); };
+  const center = id => { const el = st.querySelector(`[data-id="${id}"]`) || st.querySelector('.nd.root'); if (!el) return fit(); if (V.s < 0.7) V.s = 0.9; V.x = vp.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2) * V.s; V.y = vp.clientHeight / 2 - (el.offsetTop + el.offsetHeight / 2) * V.s; apply(); };
+  function mini() { const c = $('#minimap'); if (!c || !S.ui.tl) return; const g = c.getContext('2d'), L = S.ui.tl; const k = Math.min(c.width / L.w, c.height / L.h); g.clearRect(0, 0, c.width, c.height); g.fillStyle = '#B9B2A6';
+    Object.values(L.N).forEach(n => g.fillRect(n.x * k, n.y * k, Math.max(1.5, T2.W * k), Math.max(1.5, T2.H * k)));
+    g.strokeStyle = '#2C4A6E'; g.lineWidth = 1.5; g.strokeRect(-V.x / V.s * k, -V.y / V.s * k, vp.clientWidth / V.s * k, vp.clientHeight / V.s * k); c._k = k; }
+  if (fresh) { if (mode === 'all') { V.s = 0.85; center(vp.dataset.center); } else fit(); } else apply();
+  let drag = null, moved = false; const pts = new Map();
+  vp.onpointerdown = e => { if (e.target.closest('.vpctl,.minimap')) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y }; moved = false; vp.setPointerCapture?.(e.pointerId); };
+  vp.onpointermove = e => { if (!pts.has(e.pointerId)) return; const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; const d1 = Math.hypot(a.x - b.x, a.y - b.y); const o = [...pts.entries()].find(([k]) => k !== e.pointerId)[1]; const d0 = Math.hypot(prev.x - o.x, prev.y - o.y); const r = vp.getBoundingClientRect(); if (d0 > 0) zoomAt(d1 / d0, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); moved = true; return; }
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 4) moved = true; V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); };
+  vp.onpointerup = vp.onpointercancel = e => { pts.delete(e.pointerId); if (!pts.size) drag = null; };
+  vp.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+  vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
+  vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
+  vp.querySelector('[data-zoom-out]').onclick = () => zoomAt(0.8, vp.clientWidth / 2, vp.clientHeight / 2);
+  vp.querySelector('[data-zoom-fit]').onclick = fit;
+  const mm = $('#minimap'); if (mm) mm.onclick = e => { const r = mm.getBoundingClientRect(), k = mm._k || 1; const sx = (e.clientX - r.left) / k, sy = (e.clientY - r.top) / k; V.x = vp.clientWidth / 2 - sx * V.s; V.y = vp.clientHeight / 2 - sy * V.s; apply(); };
+  if (S.ui.findId) { center(S.ui.findId); S.ui.findId = null; }
 }
 
 /* ───── Сторінка людини: гілка + картка ───── */
@@ -389,7 +487,7 @@ function render() {
   const sy = window.scrollY;
   app.innerHTML = top() + `<main class="wrap">${V()}</main>`;
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
-  if (S.view === 'tree') requestAnimationFrame(() => { const b = $('#treebox'), r = $('#treebox .nd.root') || $('#treebox .nd'); if (b && r) b.scrollTop = Math.max(0, r.offsetTop - b.offsetTop - b.clientHeight / 2 + 40); });
+  if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'fam' && S.arg) {} // окрема сторінка родини
   const key = S.view + ':' + (S.arg || '');
   if (S.ui.lastView !== key) { S.ui.lastView = key; ev('view', S.view, curTarget); if (curTarget) ev('open', S.view, curTarget); }
@@ -410,6 +508,8 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', async e => {
   const t = e.target;
+  if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
+  if (t.id === 'tq') { S.ui.tf ||= {}; S.ui.tf.q = t.value; const q = t.value.trim().toLowerCase(); const hit = q && Object.keys(S.ui.tl?.N || P).find(id => full(P[id]).toLowerCase().includes(q)); if (hit) S.ui.findId = hit; render(); setTimeout(() => $('#tq')?.focus(), 0); return; }
   if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
   if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.docbulk) return uploadBulk([...t.files]);
@@ -418,11 +518,12 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#layer').innerHTML) closeLayer(); });
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-act],[data-add],[data-doc],[data-photo],[data-story],[data-delstory],[data-unlink],[data-portrait],[data-delphoto],[data-famedit],[data-go],[data-atab],[data-per],[data-member],[data-k],[data-revert],[data-reset],[data-revoke],[data-active],[data-close-scrim],[data-pg],[data-zoom]');
+  const t = e.target.closest('[data-tmode],[data-act],[data-add],[data-doc],[data-photo],[data-story],[data-delstory],[data-unlink],[data-portrait],[data-delphoto],[data-famedit],[data-go],[data-atab],[data-per],[data-member],[data-k],[data-revert],[data-reset],[data-revoke],[data-active],[data-close-scrim],[data-pg],[data-zoom]');
   if (!t) return;
   if (t.hasAttribute('data-close-scrim')) { if (e.target === t) closeLayer(); return; }
   const d = t.dataset;
   try {
+    if (d.tmode) { S.ui.tmode = d.tmode; delete S.ui.vp?.[d.tmode]; render(); return; }
     if (d.go) { location.hash = href('p', d.go); return; }
     if (d.doc) return openDoc(d.doc);
     if (d.photo) return openPhoto(d.photo);
