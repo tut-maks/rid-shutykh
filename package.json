@@ -1,0 +1,8 @@
+{
+  "name": "rid-shutykh",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "dev": "DB_MOCK=1 node tools/dev.js" },
+  "dependencies": { "@supabase/supabase-js": "^2.58.0" }
+}
