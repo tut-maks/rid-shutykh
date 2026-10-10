@@ -123,6 +123,16 @@ export default handler(async (req, res, ctx) => {
     await revision('document', id, 'create', null, data, me.id);
     return send(res, 200, { ok: true, id });
   }
+  if (op === 'doc.page.delete') { // прибрати зайву сторінку зі скану документа (файл лишається в сховищі)
+    if (!editor) return fail(res, 403, 'forbidden');
+    const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc) return fail(res, 404, 'not_found');
+    const pages = [...(doc.data.pages || [])]; const i = Number(body.page);
+    if (!Number.isInteger(i) || !pages[i]) return fail(res, 400, 'bad');
+    pages.splice(i, 1); const data = { ...doc.data, pages };
+    await db.update('documents', { eq: { id: doc.id } }, { data, updated_by: me.id, updated_at: new Date().toISOString() });
+    await revision('document', doc.id, 'update', doc.data, data, me.id);
+    return send(res, 200, { ok: true, pages: pages.length });
+  }
   if (op === 'story.add') {
     const text = S(body.text, 20000), target = S(body.target, 80);
     if (!text || !target) return fail(res, 400, 'empty');
