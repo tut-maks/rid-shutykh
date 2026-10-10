@@ -135,6 +135,7 @@ export function cleanPerson(d) {
     hyp: !!d.hyp, fam: Array.isArray(d.fam) ? d.fam.map(x => STR(x, 40)).filter(Boolean).slice(0, 10) : [],
   };
   if (d.portrait) o.portrait = STR(d.portrait, 60);
+  if (Array.isArray(d.src)) o.src = d.src.slice(0, 30).map(s => ({ t: STR(s?.t, 120), u: STR(s?.u, 300) })).filter(s => /^https:\/\/(www\.)?familysearch\.org\//.test(s.u) || /^https:\/\//.test(s.u));
   if (d.root) o.root = true;
   return o;
 }

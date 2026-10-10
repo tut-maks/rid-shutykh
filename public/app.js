@@ -87,12 +87,13 @@ function branchHtml(id, d, seen) {
   return `<div class="br">${node(id)}${ps.length ? `<div class="par">${ps.map(x => branchHtml(x, d + 1, seen)).join('')}</div>` : ''}</div>`;
 }
 function vTree() {
-  const r = S.arg && P[S.arg] ? S.arg : rootId();
+  const r0 = rootId(); const kidsR = (KIDS[r0] || []).slice().sort(byBirth).reverse();
+  const r = S.arg && P[S.arg] ? S.arg : (kidsR[0] || r0);
   depthMax = 0; const t = branchHtml(r, 0, new Set());
   const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди'];
   const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-  const isRoot = P[r].root;
-  return `<div class="lede"><div class="eyebrow">${isRoot ? 'Від Максима до Максима' : 'Родовід'}</div><h1>${isRoot ? 'Предки по всіх лініях' : 'Предки: ' + esc(short(P[r]))}</h1>
+  const isRoot = !S.arg;
+  return `<div class="lede"><div class="eyebrow">${isRoot ? 'Родовід по всіх лініях' : 'Родовід'}</div><h1>${isRoot ? 'Рід Шутих' : 'Предки: ' + esc(short(P[r]))}</h1>
     <p>Від кріпаків графа Апраксина у Вороньках до наших днів. Натисніть на будь-кого: відкриється картка з документами, фото і спогадами, а звідти можна йти будь-якою гілкою далі.</p></div>
     <div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>
     <div class="treebox" id="treebox"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i]}</b>${i ? L[i] : 'Покоління'}</div>`).join('')}</div>${t}</div>`;
@@ -138,6 +139,7 @@ function vPerson() {
       ${p.note ? `<p class="about">${esc(p.note)}</p>` : `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>`}
       ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
+    ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">FamilySearch</span></li>`).join('')}</ul></div>` : ''}
     <div class="sec"><h3>Документи</h3>${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}</div>
     <div class="sec"><h3>Фото ${S.me ? `<label class="btn line small" style="cursor:pointer">Додати фото<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>

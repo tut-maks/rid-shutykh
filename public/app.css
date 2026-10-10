@@ -222,3 +222,6 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .modal h2{font-size:24px}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:var(--r);z-index:70;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.modal{animation:up .18s ease-out}@keyframes up{from{transform:translateY(8px);opacity:.6}}}
+
+.srcs{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.srcs a{color:var(--accent)}
