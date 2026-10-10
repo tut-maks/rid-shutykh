@@ -253,10 +253,10 @@ function vDocs() {
   <div class="docs">${s.filter(d => !d.maybe).map(docCard).join('')}</div>
   ${s.some(d => d.maybe) ? `<h2 class="dbl" style="margin:40px 0 18px">Можлива рідня</h2><div class="docs">${s.filter(d => d.maybe).map(docCard).join('')}</div>` : ''}`;
 }
-function viewer({ title, pages, line, text, src, people, photoId }) {
+function viewer({ title, pages, line, text, src, people, photoId, docId }) {
   let i = 0;
   const draw = () => {
-    $('#layer').innerHTML = `<div class="viewer" role="dialog" aria-modal="true"><div class="vb"><b>${esc(title)}</b>${pages.length > 1 ? `<button data-pg="-1">‹</button><span class="mono">${i + 1} / ${pages.length}</span><button data-pg="1">›</button>` : ''}<button data-zoom>Збільшити</button>${photoId && canEdit() ? `<button data-portrait="${photoId}">Зробити головним</button>` : ''}${photoId ? `<button data-delphoto="${photoId}">Видалити</button>` : ''}<button data-act="close">Закрити</button></div>
+    $('#layer').innerHTML = `<div class="viewer" role="dialog" aria-modal="true"><div class="vb"><b>${esc(title)}</b>${pages.length > 1 ? `<button data-pg="-1">‹</button><span class="mono">${i + 1} / ${pages.length}</span><button data-pg="1">›</button>` : ''}<button data-zoom>Збільшити</button>${docId && canEdit() ? `<label style="cursor:pointer">+ Сторінка<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label>` : ''}${photoId && canEdit() ? `<button data-portrait="${photoId}">Зробити головним</button>` : ''}${photoId ? `<button data-delphoto="${photoId}">Видалити</button>` : ''}<button data-act="close">Закрити</button></div>
       <div class="stage">${pages.length ? `<img src="${pages[i]}" alt="${esc(title)}">` : '<p style="color:#EDE8DF">Скан ще не додано.</p>'}</div>
       <div class="cap">${line ? `<div class="ln">${esc(line)}</div>` : ''}${text ? `<div>${esc(text)}</div>` : ''}${src ? `<div class="src">${esc(src)}</div>` : ''}${people?.length ? `<div>${people.filter(x => P[x]).map(x => `<a href="${href('p', x)}" data-act="close">${esc(short(P[x]))}</a>`).join(' · ')}</div>` : ''}${photoId ? `<div class="btns" style="margin-top:6px"><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Підпис: хто на фото, рік, звідки" style="max-width:520px;background:#26221C;color:#EDE8DF;border-color:#3B352C"><button data-capsave="${photoId}">Зберегти підпис</button></div>` : ''}</div></div>`;
     const cs = $('#layer [data-capsave]'); if (cs) cs.onclick = async () => { try { await api('/api/data', { body: { op: 'photo.caption', id: photoId, caption: $('#cap-in').value } }); const x = S.data.photos.find(y => y.id === photoId); if (x) x.caption = $('#cap-in').value; toast('Підпис збережено'); } catch (err) { toast(errText(err)); } };
@@ -266,7 +266,7 @@ function viewer({ title, pages, line, text, src, people, photoId }) {
   const z = () => { const st = $('#layer .stage'); st.classList.toggle('z'); $('#layer [data-zoom]').textContent = st.classList.contains('z') ? 'Зменшити' : 'Збільшити'; };
   draw();
 }
-function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people }); }
+function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
 function openPhoto(id) { const x = S.data.photos.find(y => y.id === id); if (!x) return; if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; } viewer({ title: x.caption || short(P[x.person] || {}), pages: [img('photo=' + id)], text: `Додав(ла): ${who(x.by)}, ${when(x.at)}`, people: [x.person], photoId: (canEdit() || x.by === S.me.id) ? id : null }); }
 
 /* ───── Власнику: аналітика, доступи, історія ───── */
@@ -413,6 +413,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
   if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.docbulk) return uploadBulk([...t.files]);
+  if (t.dataset.docpage) return uploadPages(t.dataset.docpage, [...t.files]);
   if (t.dataset.role) { try { await api('/api/admin?a=member', { body: { id: t.dataset.role, role: t.value } }); toast('Права змінено'); } catch (err) { toast(errText(err)); } }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#layer').innerHTML) closeLayer(); });
@@ -494,6 +495,11 @@ async function upload(personId, files) {
     } catch (err) { console.warn("[upload]", err); m.className = "msg err"; m.textContent = `«${f.name}»: ${errText(err)}`; }
   }
   if (n) { await load(); S.ui.keepScroll = true; render(); toast(`Додано фото: ${n}`); }
+}
+async function uploadPages(id, files) {
+  let n = 0; files.sort((x, y) => x.name.localeCompare(y.name));
+  for (const f of files) { try { toast(`Завантажую сторінку ${n + 1}…`); let full = await toJpeg(f, 2600, 0.85); if (full.size > 4e6) full = await toJpeg(f, 1800, 0.8); const r = await api(`/api/upload?doc=${id}`, { raw: full }); await api(`/api/upload?doc=${id}&kind=thumb&page=${r.page}`, { raw: await toJpeg(f, 420, 0.78) }).catch(() => {}); n++; } catch (err) { toast(`«${f.name}»: ${errText(err)}`); } }
+  if (n) { await load(); closeLayer(); openDoc(id); toast(`Додано сторінок: ${n}`); }
 }
 async function uploadBulk(files) {
   files.sort((x, y) => x.name.localeCompare(y.name));
