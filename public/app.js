@@ -487,6 +487,7 @@ async function upload(personId, files) {
   if (n) { await load(); S.ui.keepScroll = true; render(); toast(`Додано фото: ${n}`); }
 }
 async function uploadBulk(files) {
+  files.sort((x, y) => x.name.localeCompare(y.name));
   const m = $('#dmsg'); const ids = S.data.documents.map(d => d.id).sort((x, y) => y.length - x.length); let n = 0, skip = [];
   for (const f of files) {
     const base = f.name.toLowerCase(); const id = ids.find(x => base === x || base.startsWith(x + '-') || base.startsWith(x + '.') || base.startsWith(x + '_'));
