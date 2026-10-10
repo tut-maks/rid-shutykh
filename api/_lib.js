@@ -140,3 +140,29 @@ export function cleanPerson(d) {
   return o;
 }
 export const slugId = () => 'p_' + crypto.randomBytes(5).toString('hex');
+
+/* Глядач доповнює (спогади, фото) лише свою гілку: себе, чоловіка/дружину, батьків, дітей, братів і сестер.
+   Редактор і власник — будь-яку картку. Для спогадів про родину — лише родину, до якої належить сам. */
+export function branchSet(personId, persons, unions) {
+  const out = new Set(); if (!personId) return out;
+  const P = new Map(persons.map(p => [p.id, p.data || p]));
+  const me = P.get(personId); if (!me) return out;
+  out.add(personId);
+  for (const k of [me.f, me.mo]) if (k) out.add(k);
+  for (const [id, d] of P) {
+    if (d.f === personId || d.mo === personId) out.add(id);
+    if ((me.f && d.f === me.f) || (me.mo && d.mo === me.mo)) out.add(id);
+  }
+  for (const u of unions) { if (u.a === personId) out.add(u.b); if (u.b === personId) out.add(u.a); }
+  return out;
+}
+export async function canAddTo(member, target) {
+  if (can(member, 'editor')) return true;
+  if (!member.person_id || !target) return false;
+  if (target.startsWith('fam:')) {
+    const f = await db.get('families', { eq: { id: target.slice(4) } });
+    return !!f && (f.data.members || []).includes(member.person_id);
+  }
+  const [persons, unions] = await Promise.all([db.list('persons', { eq: { deleted: false }, select: 'id,data' }), db.list('unions', { eq: { deleted: false } })]);
+  return branchSet(member.person_id, persons, unions).has(target);
+}

@@ -15,7 +15,7 @@ async function api(path, opts = {}) {
   if (!r.ok) { const e = new Error(j.error || 'http_' + r.status); e.status = r.status; throw e; }
   return j;
 }
-const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.' };
+const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.' };
 const errText = e => ERR[e.message] || 'Не вдалося. Спробуйте ще раз.';
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 
@@ -53,6 +53,15 @@ const portrait = p => p.portrait ? img('photo=' + encodeURIComponent(p.portrait)
 const ph = p => { const u = portrait(p); return `<span class="ph">${u ? `<img src="${u}" alt="" loading="lazy">` : esc((p.n || '?')[0])}</span>`; };
 const canEdit = () => S.me && (S.me.role === 'editor' || S.me.role === 'owner');
 const isOwner = () => S.me && S.me.role === 'owner';
+// глядач доповнює лише свою гілку (сервер перевіряє те саме)
+function canAdd(target) {
+  if (canEdit()) return true; const me = S.me?.person_id; if (!me || !P[me] || !target) return false;
+  if (target.startsWith('fam:')) return (FAM[target.slice(4)]?.members || []).includes(me);
+  const p = P[me], set = new Set([me, p.f, p.mo, ...(KIDS[me] || []), ...(SPOUSES[me] || []).map(s => s.id)]);
+  for (const x of [p.f, p.mo]) if (x) (KIDS[x] || []).forEach(k => set.add(k));
+  return set.has(target);
+}
+const noAdd = '<p class="small muted">Доповнювати можна свою картку та найближчих: батьків, дітей, братів і сестер, чоловіка чи дружину.</p>';
 const who = id => S.data?.names?.[id] || 'Родич';
 const when = t => t ? new Date(t).toLocaleString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 const rootId = () => (Object.values(P).find(p => p.root) || {}).id;
@@ -143,11 +152,11 @@ function vPerson() {
     <div class="sec"><h3>Документи ${canEdit() ? `<button class="btn line small" data-act="docform">+ Архівний документ</button>` : ''}</h3>
       ${canEdit() && S.ui.docform ? `<div class="docform"><input class="in" id="dtitle" placeholder="Назва: напр. «Народження Микити Максимовича»"><input class="in" id="ddate" placeholder="Дата, напр. 27.05.1818"><input class="in" id="dsrc" placeholder="Джерело: архів, книга, запис №"><label class="btn line small" style="cursor:pointer">Вибрати скани<input type="file" accept="image/*" multiple data-docup="${p.id}" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
       ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}</div>
-    <div class="sec"><h3>Фото ${S.me ? `<label class="btn line small" style="cursor:pointer">Додати фото<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
+    <div class="sec"><h3>Фото ${canAdd(p.id) ? `<label class="btn line small" style="cursor:pointer">Додати фото<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>
       ${photos.length ? `<div class="thumbs">${photos.map(x => `<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}</span></button>`).join('')}</div>` : `<p class="muted">Фото ще немає. Додайте портрет, родинне фото чи документ з домашнього архіву.</p>`}
     </div>
-    <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${storyForm(p.id)}</div>
+    <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
   </div></div>`;
 }
 const storiesHtml = list => list.map(s => `<div class="story"><p>${esc(s.text)}</p><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('');
@@ -218,7 +227,7 @@ function famBlock(f) {
     <div><div class="eyebrow">${esc(f.side || '')}</div><h2>${esc(f.title)}</h2><div class="muted small">${esc(f.places || '')}</div></div>
     <div class="famstory">${f.story || ''}</div>
     ${canEdit() ? `<div><button class="btn line small" data-famedit="${f.id}">Редагувати історію</button></div>` : ''}
-    <div class="sec"><h3>Спогади про родину</h3>${storiesHtml(S.data.stories.filter(s => s.target === 'fam:' + f.id))}${storyForm('fam:' + f.id)}</div>
+    <div class="sec"><h3>Спогади про родину</h3>${storiesHtml(S.data.stories.filter(s => s.target === 'fam:' + f.id))}${canAdd('fam:' + f.id) ? storyForm('fam:' + f.id) : ''}</div>
   </div><div>${famMembersHtml(f)}</div></article>`;
 }
 function vFamily() { const f = FAM[S.arg]; if (!f) return vFamilies(); curTarget = 'fam:' + f.id; return `<p><a href="#/families" class="small">← Усі родини</a></p><div class="famlist">${famBlock(f)}</div>`; }

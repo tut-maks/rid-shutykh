@@ -1,6 +1,6 @@
 // Дані дерева. GET /api/data — усе для показу; POST /api/data {op, ...} — зміни (з історією).
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugId } from './_lib.js';
+import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugId, canAddTo } from './_lib.js';
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
@@ -126,6 +126,7 @@ export default handler(async (req, res, ctx) => {
   if (op === 'story.add') {
     const text = S(body.text, 20000), target = S(body.target, 80);
     if (!text || !target) return fail(res, 400, 'empty');
+    if (!(await canAddTo(me, target))) return fail(res, 403, 'branch');
     const [s] = await db.insert('stories', { target, text, created_by: me.id });
     await revision('story', s.id, 'create', null, { target, text }, me.id);
     return done({ story: { id: s.id, target, text, by: me.id, at: s.created_at } }, target);

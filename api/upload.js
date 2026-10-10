@@ -3,7 +3,7 @@
 // Спершу надсилається повний файл (відповідь: {id}), потім мініатюра з &photo=<id>&kind=thumb.
 import crypto from 'node:crypto';
 import { db } from './_db.js';
-import { handler, send, fail, readRaw, revision, track, can } from './_lib.js';
+import { handler, send, fail, readRaw, revision, track, can, canAddTo } from './_lib.js';
 
 const OK = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
 function sniff(b) {
@@ -67,6 +67,7 @@ export default handler(async (req, res, ctx, url) => {
   const personId = String(url.searchParams.get('person') || '').slice(0, 60);
   const person = await db.get('persons', { eq: { id: personId, deleted: false } });
   if (!person) return fail(res, 404, 'not_found');
+  if (!(await canAddTo(me, personId))) return fail(res, 403, 'branch');
   const id = crypto.randomUUID();
   const path = `photos/${personId}/${id}.${OK[mime]}`;
   await db.put(path, buf, mime);
