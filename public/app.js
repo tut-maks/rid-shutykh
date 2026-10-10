@@ -469,8 +469,20 @@ function memberLog(name, log) {
 }
 
 /* ───── Вхід, запрошення, перше налаштування ───── */
+const INTRO = [
+  'Кожен із нас — продовження когось.',
+  'Кріпаків, що орали землю у Вороньках. Солдатів, що поверталися додому. Матерів, що ростили по вісім дітей.',
+  'Їхні імена століттями лежали в церковних книгах. Тепер ми повертаємо їх родині.',
+  'Знати свій рід — значить знати, звідки ти і куди йдеш.'
+];
+const QUOTE = { t: 'Учітеся, читайте,<br>І чужому научайтесь,<br>Й свого не цурайтесь:<br>Бо хто матір забуває,<br>Того Бог карає…', a: 'Тарас Шевченко, «І мертвим, і живим, і ненарожденним…», 1845' };
+const introHtml = btn => `<div class="intro">${INTRO.map((l, i) => `<p class="il" style="animation-delay:${0.4 + i * 1.3}s">${l}</p>`).join('')}
+  <blockquote class="iq" style="animation-delay:${0.6 + INTRO.length * 1.3}s"><p>${QUOTE.t}</p><cite>${QUOTE.a}</cite></blockquote>
+  ${btn ? `<button class="btn ib" data-act="intro-close" style="animation-delay:${1.2 + INTRO.length * 1.3}s">До родинного архіву</button>` : ''}</div>`;
+const introSeen = () => { try { return sessionStorage.getItem('rs_intro') === '1'; } catch { return S.ui.introSeen; } };
+const introMark = () => { S.ui.introSeen = true; try { sessionStorage.setItem('rs_intro', '1'); } catch {} };
 function gate(inner) { return `<div class="gate"><div class="card"><h1>Рід Шутих</h1><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
-function vLogin() { return gate(`<form id="login" class="sec"><label class="f">Пошта<input class="in" id="lg-e" type="email" inputmode="email" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form><p class="small muted" style="text-align:center;margin:0">Доступ лише за запрошенням. Забули пароль — напишіть Максиму.</p>`); }
+function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта<input class="in" id="lg-e" type="email" inputmode="email" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form><p class="small muted" style="text-align:center;margin:0">Доступ лише за запрошенням. Забули пароль — напишіть Максиму.</p>`) + '</div>'; }
 function vInvite(inv) { return gate(`<form id="accept" class="sec"><p style="margin:0">${inv.purpose === 'reset' ? 'Задайте новий пароль' : 'Вас запросили до родинного архіву.'}</p><label class="f">Пошта<input class="in" value="${esc(inv.email)}" disabled></label><label class="f">Як вас підписувати<input class="in" id="ac-n" value="${esc(inv.name || '')}" required></label><label class="f">Придумайте пароль (від 8 символів)<input class="in" id="ac-p" type="password" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">${inv.purpose === 'reset' ? 'Зберегти пароль' : 'Увійти до архіву'}</button><div class="msg" id="ac-m"></div></form>`); }
 function vSetup() { return gate(`<form id="setup" class="sec"><p style="margin:0">Перше налаштування: створіть обліковий запис власника.</p><label class="f">Код налаштування (BOOTSTRAP_TOKEN з Vercel)<input class="in" id="su-t" type="password" required></label><label class="f">Ваше ім'я<input class="in" id="su-n" value="Максим" required></label><label class="f">Пошта<input class="in" id="su-e" type="email" required></label><label class="f">Пароль (від 10 символів)<input class="in" id="su-p" type="password" minlength="10" autocomplete="new-password" required></label><button class="btn" type="submit">Створити</button><div class="msg" id="su-m"></div></form>`); }
 function vSeed() { return gate(`<div class="sec"><p style="margin:0">База порожня. Імпортувати дерево, родини і скани документів із початкового набору?</p><button class="btn" data-act="seed">Імпортувати</button><div class="msg" id="sd-m"></div></div>`); }
@@ -486,6 +498,7 @@ function render() {
   const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin }[S.view] || vTree;
   const sy = window.scrollY;
   app.innerHTML = top() + `<main class="wrap">${V()}</main>`;
+  if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'fam' && S.arg) {} // окрема сторінка родини
@@ -498,7 +511,7 @@ function render() {
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target;
   try {
-    if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; await load(); render(); }
+    if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); }
     if (f.id === 'accept') { const t = new URLSearchParams(location.search).get('invite'); const r = await api('/api/auth?a=accept', { body: { t, name: $('#ac-n').value, password: $('#ac-p').value }, noRedirect: true }); history.replaceState(null, '', '/'); S.gate = null; S.me = r.member; await load(); render(); }
     if (f.id === 'setup') { await api('/api/setup?a=init', { body: { token: $('#su-t').value, name: $('#su-n').value, email: $('#su-e').value, password: $('#su-p').value }, noRedirect: true }); S.gate = null; await start(); }
   } catch (err) { const m = f.querySelector('.msg'); if (m) { m.textContent = errText(err); m.className = 'msg err'; } }
@@ -549,6 +562,7 @@ document.addEventListener('click', async e => {
     if (d.active) { if (t.dataset.armed !== '1' && d.v === 'false') { t.dataset.armed = '1'; t.textContent = 'Точно вимкнути?'; return; } await api('/api/admin?a=member', { body: { id: d.active, active: d.v === 'true' } }); S.admin.members = null; return loadAdmin(); }
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
+    if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
     if (act === 'logout') { await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
     if (act === 'docform') { S.ui.docform = !S.ui.docform; S.ui.keepScroll = true; render(); setTimeout(() => $('#dtitle')?.focus(), 30); return; }
     if (act === 'edit') return openEdit(P[S.arg]);
