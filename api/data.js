@@ -112,6 +112,17 @@ export default handler(async (req, res, ctx) => {
   }
 
   /* ── спогади: додавати можуть усі учасники ── */
+  if (op === 'doc.create') { // опис архівного документа без скану; скани додаються потім через /api/upload?doc=<id>
+    if (!editor) return fail(res, 403, 'forbidden');
+    const id = S(body.id, 60); if (!/^[a-z0-9_-]{2,60}$/.test(id)) return fail(res, 400, 'bad_id');
+    if (await db.get('documents', { eq: { id } })) return fail(res, 409, 'exists');
+    const people = (Array.isArray(body.people) ? body.people : []).map(x => S(x, 60)).filter(Boolean).slice(0, 40);
+    const data = { title: S(body.title, 200) || 'Документ', date: S(body.date, 40), place: S(body.place, 120), src: S(body.src, 400), line: S(body.line, 400), text: S(body.text, 4000), maybe: !!body.maybe, people, pages: [] };
+    if (/^https:\/\//.test(S(body.url, 300))) data.url = S(body.url, 300);
+    await db.insert('documents', { id, data, sort: 500, updated_by: me.id });
+    await revision('document', id, 'create', null, data, me.id);
+    return send(res, 200, { ok: true, id });
+  }
   if (op === 'story.add') {
     const text = S(body.text, 20000), target = S(body.target, 80);
     if (!text || !target) return fail(res, 400, 'empty');
