@@ -225,3 +225,5 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 
 .srcs{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
 .srcs a{color:var(--accent)}
+.docform{display:grid;gap:8px;max-width:560px;margin:4px 0 14px;padding:12px;border:1px solid var(--line,#DDD6CA);background:#fff}
+.docform .in{margin:0}

@@ -140,7 +140,9 @@ function vPerson() {
       ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
     ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">FamilySearch</span></li>`).join('')}</ul></div>` : ''}
-    <div class="sec"><h3>Документи</h3>${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}</div>
+    <div class="sec"><h3>Документи ${canEdit() ? `<button class="btn line small" data-act="docform">+ Архівний документ</button>` : ''}</h3>
+      ${canEdit() && S.ui.docform ? `<div class="docform"><input class="in" id="dtitle" placeholder="Назва: напр. «Народження Микити Максимовича»"><input class="in" id="ddate" placeholder="Дата, напр. 27.05.1818"><input class="in" id="dsrc" placeholder="Джерело: архів, книга, запис №"><label class="btn line small" style="cursor:pointer">Вибрати скани<input type="file" accept="image/*" multiple data-docup="${p.id}" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
+      ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}</div>
     <div class="sec"><h3>Фото ${S.me ? `<label class="btn line small" style="cursor:pointer">Додати фото<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>
       ${photos.length ? `<div class="thumbs">${photos.map(x => `<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}</span></button>`).join('')}</div>` : `<p class="muted">Фото ще немає. Додайте портрет, родинне фото чи документ з домашнього архіву.</p>`}
@@ -399,6 +401,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', async e => {
   const t = e.target;
   if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
+  if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.role) { try { await api('/api/admin?a=member', { body: { id: t.dataset.role, role: t.value } }); toast('Права змінено'); } catch (err) { toast(errText(err)); } }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#layer').innerHTML) closeLayer(); });
@@ -434,6 +437,7 @@ document.addEventListener('click', async e => {
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
     if (act === 'logout') { await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
+    if (act === 'docform') { S.ui.docform = !S.ui.docform; S.ui.keepScroll = true; render(); setTimeout(() => $('#dtitle')?.focus(), 30); return; }
     if (act === 'edit') return openEdit(P[S.arg]);
     if (act === 'history') { e.preventDefault(); const r = await api(`/api/admin?a=revisions&entity=person&id=${encodeURIComponent(S.arg)}`); modal(`<h2>Історія змін</h2>${revList(r.revisions)}<div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
     if (act === 'save' || act === 'create') {
@@ -479,6 +483,22 @@ async function upload(personId, files) {
     } catch (err) { console.warn("[upload]", err); m.className = "msg err"; m.textContent = `«${f.name}»: ${errText(err)}`; }
   }
   if (n) { await load(); S.ui.keepScroll = true; render(); toast(`Додано фото: ${n}`); }
+}
+async function uploadDoc(personId, files) {
+  const m = $('#dmsg'); const title = ($('#dtitle')?.value || '').trim();
+  if (!title) { m.className = 'msg err'; m.textContent = 'Вкажіть назву документа.'; return; }
+  const meta = { title, date: ($('#ddate')?.value || '').trim(), src: ($('#dsrc')?.value || '').trim(), people: [personId] };
+  const id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); let n = 0;
+  for (const f of files) {
+    try {
+      m.className = 'msg'; m.textContent = `Завантажую сторінку ${n + 1} з ${files.length}…`;
+      let full = await toJpeg(f, 2600, 0.85); if (full.size > 4e6) full = await toJpeg(f, 1800, 0.8);
+      const r = await api(`/api/upload?doc=${id}${n ? '' : '&meta=' + encodeURIComponent(JSON.stringify(meta))}`, { raw: full });
+      await api(`/api/upload?doc=${id}&kind=thumb&page=${r.page}`, { raw: await toJpeg(f, 420, 0.78) }).catch(() => {});
+      n++;
+    } catch (err) { console.warn('[doc]', err); m.className = 'msg err'; m.textContent = `«${f.name}»: ${errText(err)}`; }
+  }
+  if (n) { S.ui.docform = false; await load(); S.ui.keepScroll = true; render(); toast(`Документ додано (сторінок: ${n})`); }
 }
 const prompt2 = () => ''; // підпис додається після завантаження (в перегляді)
 
