@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610112124';
+const BUILD = '202610112134';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -107,7 +107,7 @@ function branchHtml(id, d, seen) {
 }
 function vTree() {
   const mode = S.ui.tmode || 'all';
-  const tabs = `<div class="tmodes"><button data-tmode="all" class="${mode === 'all' ? 'on' : ''}">Усе дерево · згори вниз</button><button data-tmode="ped" class="${mode === 'ped' ? 'on' : ''}">Предки · зліва направо</button></div>`;
+  const tabs = `<div class="tmodes"><button data-tmode="all" class="${mode === 'all' ? 'on' : ''}" title="Усе дерево згори вниз">Згори вниз</button><button data-tmode="ped" class="${mode === 'ped' ? 'on' : ''}" title="Лише предки, зліва направо">Предки →</button></div>`;
   return mode === 'ped' ? vPedigree(tabs) : vAll(tabs);
 }
 function vPedigree(tabs) {
@@ -116,8 +116,8 @@ function vPedigree(tabs) {
   depthMax = 0; const t = branchHtml(r, 0, new Set());
   const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди', '9-ті прадіди'];
   const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
-  return `<div class="lede"><div class="eyebrow">Родовід</div><h1>${S.arg ? 'Предки: ' + esc(short(P[r])) : 'Рід Шутих'}</h1></div>${tabs}
-    <div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>
+  return `<h1 class="sr">${S.arg ? 'Предки: ' + esc(short(P[r])) : 'Рід Шутих'}</h1>
+    <div class="tbar tbar1">${tabs}<div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div></div>
     <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
 }
 const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
@@ -187,13 +187,13 @@ function vAll(tabs) {
     return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
-  return `<div class="lede"><div class="eyebrow">Родовід згори вниз</div><h1>${esc(short(P[center]))}: предки й родина</h1></div>${tabs}
-    <div class="tbar"><label class="small muted">Від кого будувати</label><select class="in" id="tcenter" aria-label="Від кого будувати дерево">${opts}</select>
+  return `<h1 class="sr">${esc(short(P[center]))}: предки й родина</h1>
+    <div class="tbar tbar1">${tabs}<select class="in" id="tcenter" title="Від кого будувати дерево" aria-label="Від кого будувати дерево">${opts}</select>
       <input class="in" id="tq" type="search" placeholder="Знайти в дереві…" value="${esc(f.q || '')}" aria-label="Пошук у дереві">
-      <select class="in" id="tsort" aria-label="Порядок братів і сестер"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>Брати й сестри: за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select>
-      <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button><span class="small muted">${V.size} осіб</span></div>
+      <select class="in" id="tsort" aria-label="Порядок братів і сестер"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>За роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>За ім'ям</option></select>
+      <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button><span class="small muted tcount">${V.size} осіб</span></div>
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
-    <p class="small muted" style="margin-top:8px">Тягніть мишкою або пальцем; коліщатко або два пальці — масштаб. Натисніть на людину — відкриється картка. Щоб побачити гілку іншої людини (наприклад, родину Олени), виберіть її у полі «Від кого будувати».</p>`;
+    <p class="small muted thint">Тягніть мишкою або пальцем; коліщатко або два пальці — масштаб. Натисніть на людину — відкриється картка. Гілку іншої людини (наприклад, родину Олени) — виберіть у першому списку.</p>`;
 }
 
 /* ── Масштаб і переміщення (спільне для обох видів) ── */
@@ -908,7 +908,7 @@ function render() {
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target;
   try {
-    if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); autoImport(); }
+    if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); window.scrollTo(0, 0); autoImport(); }
     if (f.id === 'register') {
       const m = $('#rg-m'), v = k => ($('#rg-' + k)?.value || '').trim();
       const data = Object.fromEntries(['s', 'n', 'pt', 'm', 'sex', 'b', 'bp', 'live', 'phone', 'father', 'mother', 'gpf', 'gpm', 'spouse', 'sibs', 'kids', 'link'].map(k => [k, v(k)]));
