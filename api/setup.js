@@ -95,7 +95,7 @@ export default handler(async (req, res, _c, url) => {
         if (story === before) { out.push(key + ': без змін'); continue; }
         const data = { ...f.data, story }; await db.update('families', { eq: { id: f.id } }, { data, updated_by: by, updated_at: new Date().toISOString() }); await revision('family', f.id, 'update', f.data, data, by);
         out.push(key + ': ok');
-      } else if (it.kind === 'map') { // стара карта: документ з type='map' і прив'язкою до координат (geo)
+      } else if (it.kind === 'map' || it.kind === 'doc') { // стара карта (type='map', geo) або архівний документ зі сканами
         const id = String(it.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 60); if (!id) continue;
         const cur = await db.get('documents', { eq: { id } });
         const pages = cur?.data?.pages ? [...cur.data.pages] : [];
@@ -106,10 +106,10 @@ export default handler(async (req, res, _c, url) => {
           await db.put(p, buf, 'image/jpeg'); const tb = read(f.thumb); if (tb) await db.put(`docs/t-imp-${key}-${n}.jpg`, tb, 'image/jpeg');
           pages.push(p); added++;
         }
-        const data = { ...(cur?.data || {}), ...(it.data || {}), type: 'map', people: [], pages };
+        const data = it.kind === 'map' ? { ...(cur?.data || {}), ...(it.data || {}), type: 'map', people: [], pages } : { ...(cur?.data || {}), ...(it.data || {}), pages };
         if (JSON.stringify(data) === JSON.stringify(cur?.data)) { out.push(key + ': вже є'); continue; }
         if (cur) await db.update('documents', { eq: { id } }, { data, updated_by: by, updated_at: new Date().toISOString() });
-        else await db.insert('documents', { id, data, sort: 2000, updated_by: by });
+        else await db.insert('documents', { id, data, sort: it.kind === 'map' ? 2000 : 1000, updated_by: by });
         await revision('document', id, cur ? 'update' : 'create', cur?.data || null, data, by);
         out.push(key + ': ok' + (added ? '' : ' (опис)'));
       } else if (it.kind === 'docpage') {
