@@ -243,7 +243,7 @@ function vPerson() {
   </div>
   <div class="sec" style="align-content:start;gap:30px">
     <div class="sec"><h3>Про людину ${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}</h3>
-      ${p.note ? `<p class="about">${esc(p.note)}</p>` : `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>`}
+      ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>`}
       ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
     ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">FamilySearch</span></li>`).join('')}</ul></div>` : ''}
@@ -257,7 +257,34 @@ function vPerson() {
     <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
   </div></div>`;
 }
-const storiesHtml = list => list.map(s => `<div class="story"><p>${esc(s.text)}</p><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('');
+/* ── Пояснення старих і архівних слів: слово* + виноска під текстом ── */
+const GLOSS = [
+  [/артіл[а-яіїєґ']*/i, 'артіль', 'добровільне об\'єднання селян чи ремісників для спільної роботи; на початку 1930-х так часто називали колгоспи.'],
+  [/колгосп[а-яіїєґ']*/i, 'колгосп', 'колективне господарство: селян примушували віддавати землю, худобу й реманент і працювати разом за трудодні.'],
+  [/сільрад[а-яіїєґ']*/i, 'сільрада', 'сільська рада — місцева влада в селі за радянських часів; вела записи актів цивільного стану.'],
+  [/ЗАГС[а-яіїєґ']*/, 'ЗАГС', 'відділ записів актів громадянського стану (народження, шлюби, смерті); з 1920-х замінив церковні метрики. Тепер — РАЦС.'],
+  [/РАЦС[а-яіїєґ']*/, 'РАЦС', 'відділ реєстрації актів цивільного стану — сучасна назва ЗАГСу.'],
+  [/метричн[а-яіїєґ']* книг[а-яіїєґ']*|метрик[аиуі]\b/i, 'метрична книга', 'церковна книга, куди священник записував народження (хрещення), шлюби й смерті парафіян.'],
+  [/сповідн[а-яіїєґ']* відомост[а-яіїєґ']*|сповідальн[а-яіїєґ']*/i, 'сповідна відомість', 'щорічний церковний список усіх парафіян по дворах із віком кожного — хто був на сповіді й причасті.'],
+  [/ревізьк[а-яіїєґ']* казк[а-яіїєґ']*/i, 'ревізька казка', 'перепис населення Російської імперії для оподаткування (1719–1858): списки родин по дворах.'],
+  [/кріпа[кц][а-яіїєґ']*/i, 'кріпак', 'селянин, прикріплений до землі пана: не міг вільно переїхати й мусив працювати на поміщика. Кріпацтво скасували 1861 року.'],
+  [/посполит[а-яіїєґ']*/i, 'посполитий', 'селянин (не козак) у Гетьманщині XVII–XVIII ст.'],
+  [/сотн[яіюеї]\b|сотні\b/i, 'сотня', 'адміністративна одиниця козацького полку на Лівобережжі (наприклад, Басанська сотня Переяславського полку).'],
+  [/консисторі[а-яіїєґ']*/i, 'консисторія', 'церковна управа єпархії; у її архіві зберігаються копії метричних книг і сповідних відомостей.'],
+  [/запасн[а-яіїєґ']* солдат[а-яіїєґ']*|відставн[а-яіїєґ']* солдат[а-яіїєґ']*/i, 'запасний (відставний) солдат', 'чоловік, що відслужив строкову військову службу і був звільнений у запас.'],
+  [/хрещен[а-яіїєґ']* (?:батьк|мат)[а-яіїєґ']*|восприємник[а-яіїєґ']*/i, 'хрещені', 'хресні батьки (восприємники), записані в метриці при хрещенні дитини.'],
+  [/⚭/, '⚭', 'знак шлюбу: «одружився / одружилася з», далі дата вінчання.'],
+];
+function glossify(html) { // html уже безпечний (екранований); замінюємо лише текст поза тегами, кожне слово — один раз
+  const used = [];
+  const out = String(html).split(/(<[^>]+>)/).map(part => {
+    if (part.startsWith('<')) return part;
+    GLOSS.forEach(([re, key, def]) => { if (used.some(u => u[0] === key)) return; const m = part.match(re); if (!m) return;
+      used.push([key, def]); part = part.slice(0, m.index) + m[0] + '\u0001' + (used.length - 1) + '\u0002' + part.slice(m.index + m[0].length); });
+    return part; }).join('').replace(/\u0001(\d+)\u0002/g, (_, i) => `<sup class="gl" title="${esc(used[i][0] + ' — ' + used[i][1])}">*</sup>`);
+  return out + (used.length ? `<div class="gnotes">${used.map(([k, d]) => `<p><b>* ${esc(k)}</b> — ${esc(d)}</p>`).join('')}</div>` : '');
+}
+const storiesHtml = list => list.map(s => `<div class="story"><div>${glossify(esc(s.text))}</div><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('');
 const storyForm = target => `<div class="sec" style="gap:8px"><textarea class="in" id="st-${esc(target)}" placeholder="Що ви пам'ятаєте або чули від старших? Хто розповідав, коли це було?"></textarea><div class="btns"><button class="btn" data-story="${esc(target)}">Зберегти спогад</button><span class="msg" id="stm-${esc(target)}"></span></div></div>`;
 
 /* ───── Редагування людини ───── */
@@ -323,7 +350,7 @@ function vFamilies() {
 function famBlock(f) {
   return `<article class="fam" id="fam-${f.id}"><div class="sec" style="align-content:start">
     <div><div class="eyebrow">${esc(f.side || '')}</div><h2>${esc(f.title)}</h2><div class="muted small">${esc(f.places || '')}</div></div>
-    <div class="famstory">${f.story || ''}</div>
+    <div class="famstory">${glossify(f.story || '')}</div>
     ${canEdit() ? `<div><button class="btn line small" data-famedit="${f.id}">Редагувати історію</button></div>` : ''}
     <div class="sec"><h3>Спогади про родину</h3>${storiesHtml(S.data.stories.filter(s => s.target === 'fam:' + f.id))}${canAdd('fam:' + f.id) ? storyForm('fam:' + f.id) : ''}</div>
   </div><div>${famMembersHtml(f)}</div></article>`;

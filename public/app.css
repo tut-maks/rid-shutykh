@@ -269,3 +269,10 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 @keyframes ovIn{from{opacity:0}}
 @media(max-width:820px){.loginwrap{grid-template-columns:1fr;padding:20px 16px}.intro{padding:8px 0}.intro .il{font-size:19px;margin-bottom:12px}.intro .il:first-child{font-size:25px}}
 @media(prefers-reduced-motion:reduce){.intro .il,.intro .iq,.intro .ib{animation:none;opacity:1;transform:none}}
+/* Пояснення слів */
+sup.gl{color:var(--seal);font-weight:700;cursor:help;margin-left:1px}
+.gnotes{margin-top:12px;padding-top:8px;border-top:1px dashed var(--rule2);font-size:13px;color:var(--muted)}
+.gnotes p{margin:3px 0;line-height:1.45}
+.gnotes b{color:var(--ink2);font-weight:600}
+.story>div:first-child{white-space:pre-wrap;font-family:var(--f-display);font-size:17px;line-height:1.5}
+.about .gnotes,.story .gnotes{white-space:normal;font-family:var(--f-body,inherit);font-size:13px}
