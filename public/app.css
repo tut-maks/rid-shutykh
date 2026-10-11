@@ -413,3 +413,5 @@ body.noscroll{overflow:hidden}
   .thint{display:none}
   .vp{height:calc(100vh - 180px);height:calc(100dvh - 180px)}
 }
+main.wrap.wide{max-width:none;padding-inline:20px}
+@media (max-width:600px){main.wrap.wide{padding-inline:16px}}
