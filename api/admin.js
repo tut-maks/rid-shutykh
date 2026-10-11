@@ -1,7 +1,7 @@
 // Панель власника: доступи, аналітика, історія змін і відкат. Лише роль owner.
 // /api/admin?a=members|invite|reset|member|revoke|stats|log|revisions|revert
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, sha, token, revision } from './_lib.js';
+import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId } from './_lib.js';
 
 const day = 864e5;
 const iso = d => new Date(d).toISOString();
@@ -32,6 +32,53 @@ function aggregate(events, revs) {
 export default handler(async (req, res, ctx, url) => {
   const a = url.searchParams.get('a');
   const me = ctx.member;
+
+  /* ── Посилання для реєстрації й заявки ── */
+  if (a === 'join_link') {
+    if (req.method === 'POST') {
+      const b = await readJSON(req, 2_000); const cur = (await joinCfg(true, me.id));
+      const value = b.do === 'rotate' ? { code: token(9), on: true } : { ...cur, on: b.do === 'on' };
+      await db.upsert('settings', { key: 'join', value, updated_by: me.id, updated_at: iso(Date.now()) });
+      await revision('setting', 'join', 'update', { on: cur.on }, { on: value.on, rotated: b.do === 'rotate' }, me.id);
+      return send(res, 200, value);
+    }
+    return send(res, 200, await joinCfg(true, me.id));
+  }
+  if (a === 'requests') {
+    const rows = await db.list('join_requests', { order: 'created_at', desc: true, limit: 300 });
+    return send(res, 200, { requests: rows.map(r => ({ id: r.id, email: r.email, name: r.name, data: r.data, status: r.status, at: r.created_at, decided_at: r.decided_at, decided_by: r.decided_by, person_id: r.person_id, member_id: r.member_id })) });
+  }
+  if ((a === 'approve' || a === 'reject') && req.method === 'POST') {
+    const b = await readJSON(req, 20_000);
+    const r = await db.get('join_requests', { eq: { id: S(b.id, 60) } });
+    if (!r || r.status !== 'pending') return fail(res, 404, 'not_found');
+    const now = iso(Date.now());
+    if (a === 'reject') {
+      await db.update('join_requests', { eq: { id: r.id } }, { status: 'rejected', decided_by: me.id, decided_at: now });
+      await revision('join', r.id, 'update', { status: 'pending' }, { status: 'rejected', email: r.email, name: r.name }, me.id);
+      return send(res, 200, { ok: true });
+    }
+    if (await db.get('members', { eq: { email: r.email } })) return fail(res, 409, 'exists');
+    const role = b.role === 'editor' ? 'editor' : 'viewer';
+    let pid = S(b.person_id, 60);
+    if (pid && !(await db.get('persons', { eq: { id: pid, deleted: false } }))) return fail(res, 400, 'bad_person');
+    if (!pid && b.create) {
+      // нова картка з даних заявки, одразу прив'язана до батьків (і подружжя), яких обрав власник
+      const d = r.data || {}, c = b.create || {};
+      const ok = async id => id && (await db.get('persons', { eq: { id: S(id, 60), deleted: false } })) ? S(id, 60) : '';
+      const f = await ok(c.f), mo = await ok(c.mo), sp = await ok(c.spouse);
+      const par = f ? await db.get('persons', { eq: { id: f } }) : mo ? await db.get('persons', { eq: { id: mo } }) : null;
+      const data = cleanPerson({ n: d.n, pt: d.pt, s: d.s, m: d.m, sex: d.sex, b: d.b, bp: d.bp, f, mo, fam: par?.data?.fam || [], note: '' });
+      pid = slugId();
+      await db.insert('persons', { id: pid, data, created_by: me.id, updated_by: me.id });
+      await revision('person', pid, 'create', null, data, me.id);
+      if (sp) { const u = { id: 'u_' + pid, a: sp, b: pid, date: '', created_by: me.id }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, me.id); }
+    }
+    const [m] = await db.insert('members', { email: r.email, name: r.name, role, person_id: pid || null, pass_hash: r.pass_hash, created_by: me.id });
+    await revision('member', m.id, 'create', null, { email: m.email, role: m.role, name: m.name, from: 'join' }, me.id);
+    await db.update('join_requests', { eq: { id: r.id } }, { status: 'approved', decided_by: me.id, decided_at: now, member_id: m.id, person_id: pid || null });
+    return send(res, 200, { ok: true, person_id: pid || null });
+  }
 
   if (a === 'members') {
     const [members, invites, sessions] = await Promise.all([

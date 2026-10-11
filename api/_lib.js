@@ -166,3 +166,17 @@ export async function canAddTo(member, target) {
   const [persons, unions] = await Promise.all([db.list('persons', { eq: { deleted: false }, select: 'id,data' }), db.list('unions', { eq: { deleted: false } })]);
   return branchSet(member.person_id, persons, unions).has(target);
 }
+
+/* Реєстрація за посиланням: код зберігається в settings.join = {code, on} */
+export async function joinCfg(create = false, by = null) {
+  let row = null; try { row = await db.get('settings', { eq: { key: 'join' } }); } catch { return null; }
+  if (!row && create) { const value = { code: token(9), on: true }; await db.upsert('settings', { key: 'join', value, updated_by: by, updated_at: new Date().toISOString() }); return value; }
+  return row ? row.value : null;
+}
+export const JOIN_FIELDS = ['s', 'n', 'pt', 'm', 'sex', 'b', 'bp', 'live', 'phone', 'father', 'mother', 'gpf', 'gpm', 'spouse', 'kids', 'sibs', 'link', 'note'];
+export function cleanJoin(d = {}) {
+  const o = {};
+  for (const k of JOIN_FIELDS) { const v = STR(d[k], ['kids', 'sibs', 'link', 'note', 'gpf', 'gpm'].includes(k) ? 2000 : 300); if (v) o[k] = v; }
+  if (o.sex && !['m', 'f'].includes(o.sex)) delete o.sex;
+  return o;
+}

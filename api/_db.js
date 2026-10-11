@@ -50,7 +50,7 @@ let M = null;
 const load = () => { if (M) return M; try { M = JSON.parse(fs.readFileSync(MF, 'utf8')); } catch { M = { t: {}, files: {} }; } return M; };
 const save = () => fs.writeFileSync(MF, JSON.stringify(M));
 const tbl = n => (load().t[n] ||= []);
-const PK = { sessions: 'token_hash', invites: 'token_hash' };
+const PK = { sessions: 'token_hash', invites: 'token_hash', settings: 'key' };
 const match = (r, f = {}) => Object.entries(f.eq || {}).every(([k, v]) => r[k] === v)
   && Object.entries(f.gte || {}).every(([k, v]) => r[k] >= v)
   && Object.entries(f.lt || {}).every(([k, v]) => r[k] < v)

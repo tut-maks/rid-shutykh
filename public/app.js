@@ -5,6 +5,16 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
+/* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
+const BUILD = '202610111313';
+async function checkUpdate() {
+  if (BUILD === 'dev' || document.querySelector('.updbar')) return;
+  try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
+    if (j.v && j.v !== BUILD) document.body.insertAdjacentHTML('beforeend', `<div class="updbar" role="status"><span>Вийшло оновлення сайту</span><button class="btn small" data-act="upd-reload">Оновити</button></div>`);
+  } catch {}
+}
+setInterval(checkUpdate, 300000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
 let P = {}, KIDS = {}, SPOUSES = {}, FAM = {};
 
 /* ───── API ───── */
@@ -15,7 +25,7 @@ async function api(path, opts = {}) {
   if (!r.ok) { const e = new Error(j.error || 'http_' + r.status); e.status = r.status; throw e; }
   return j;
 }
-const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.', empty: 'Напишіть кілька слів.', about: 'Вкажіть, кого шукаємо: ім\'я, роки, село.', too_many_q: 'У вас уже багато нових запитань — зачекайте відповіді на них.' };
+const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.', empty: 'Напишіть кілька слів.', pending: 'Вашу заявку ще розглядають. Максим відкриє доступ найближчим часом — тоді увійдете з цією поштою й паролем.', exists_login: 'З цією поштою вже є доступ — просто увійдіть.', parents: 'Вкажіть хоча б батька або матір — так ми знайдемо вас у дереві.', invalid_join: 'Посилання для реєстрації недійсне або вимкнене. Попросіть у Максима нове.', bad_person: 'Такої картки немає в дереві.', about: 'Вкажіть, кого шукаємо: ім\'я, роки, село.', too_many_q: 'У вас уже багато нових запитань — зачекайте відповіді на них.' };
 const errText = e => ERR[e.message] || 'Не вдалося. Спробуйте ще раз.';
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 
@@ -78,7 +88,7 @@ addEventListener('hashchange', () => { parse(); render(); window.scrollTo(0, 0);
 /* ───── Шапка ───── */
 function top() {
   const nav = [['tree', 'Дерево'], ['families', 'Родини'], ['people', 'Люди'], ['docs', 'Документи'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
-  if (isOwner()) nav.push(['admin', 'Власнику']);
+  if (isOwner()) nav.push(['admin', 'Власнику' + (S.data?.joinPending ? ` <b class="nb" title="Нові заявки на реєстрацію">${S.data.joinPending}</b>` : '')]);
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   return `<header class="top"><div class="wrap">
     <a class="brand" href="#/tree">Рід Шутих<small>Вороньки · з 1767</small></a>
@@ -497,6 +507,134 @@ async function qHandle(act, t, d) {
   return false;
 }
 
+
+/* ───── Реєстрація за посиланням ?join=<код> ─────
+   Людина розповідає про себе й рідних → заявка → Максим прив'язує до картки в дереві й відкриває доступ. */
+const RF = (id, label, ph, o = {}) => `<label class="f${o.wide ? ' wide' : ''}">${label}${o.area ? `<textarea class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="2000"></textarea>` : `<input class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="300"${o.type ? ` type="${o.type}"` : ''}${o.im ? ` inputmode="${o.im}"` : ''}${o.ac ? ` autocomplete="${o.ac}"` : ''}${o.req ? ' required' : ''}>`}</label>`;
+function vRegister() {
+  return `<div class="gate reg"><div class="card"><h1>Рід Шутих</h1><div class="sub">Реєстрація в родинному архіві</div><div class="orn">◆ ◆ ◆</div>
+  <form id="register" class="sec" autocomplete="on">
+    <p style="margin:0">Розкажіть, хто ви і хто ваші рідні — так Максим знайде вас у дереві й відкриє доступ. Пишіть як знаєте: прізвище, ім'я, по батькові й роки (можна приблизно).</p>
+    <h3>Про вас</h3>
+    <div class="rgrid">
+      ${RF('s', 'Прізвище *', 'Шутий', { req: 1, ac: 'family-name' })}${RF('n', "Ім'я *", 'Іван', { req: 1, ac: 'given-name' })}
+      ${RF('pt', 'По батькові', 'Петрович', { ac: 'additional-name' })}${RF('m', 'Дівоче прізвище (якщо змінювали)', '')}
+      <label class="f">Стать<select class="in" id="rg-sex"><option value="">—</option><option value="m">чоловік</option><option value="f">жінка</option></select></label>
+      ${RF('b', 'Дата або рік народження', '1985', { im: 'numeric' })}
+      ${RF('bp', 'Де народилися', 'село, район')}${RF('live', 'Де живете зараз', 'місто')}
+      ${RF('phone', 'Телефон або Telegram (щоб Максим міг уточнити)', '+380…', { type: 'tel', im: 'tel', ac: 'tel' })}
+    </div>
+    <h3>Ваші рідні</h3>
+    <div class="rgrid">
+      ${RF('father', 'Батько *', 'Шутий Петро Іванович, 1960')}${RF('mother', 'Мати *', 'Шута (Галай) Марія Іванівна, 1962')}
+      ${RF('gpf', 'Дідусь і бабуся по батькові', 'Шутий Іван Петрович (1930–1995), Ганна Федорівна', { area: 1 })}
+      ${RF('gpm', 'Дідусь і бабуся по матері', 'Галай Іван…, …', { area: 1 })}
+      ${RF('spouse', 'Чоловік / дружина', "прізвище, ім'я, рік")}${RF('sibs', 'Брати й сестри', 'імена й роки', { area: 1 })}
+      ${RF('kids', 'Діти', 'імена й роки народження', { area: 1, wide: 1 })}
+      ${RF('link', 'Як ви пов\'язані з родом Шутих (через кого)', 'напр.: моя бабуся — рідна сестра Василя Шутого з Вороньок', { area: 1, wide: 1 })}
+    </div>
+    <p class="small muted" style="margin:0">* Обов'язково: прізвище, ім'я і хоча б один із батьків.</p>
+    <h3>Вхід</h3>
+    <div class="rgrid">
+      <label class="f">Пошта (буде логіном) *<input class="in" id="rg-email" type="email" inputmode="email" autocomplete="email" required></label>
+      <label class="f">Придумайте пароль (від 8 символів) *<input class="in" id="rg-pass" type="password" autocomplete="new-password" minlength="8" required></label>
+    </div>
+    <button class="btn" type="submit">Надіслати заявку</button><div class="msg" id="rg-m"></div>
+    <p class="small muted" style="margin:0;text-align:center">Дані бачить лише Максим. <a href="#" data-act="to-login">Вже маєте доступ? Увійти</a></p>
+  </form></div></div>`;
+}
+const regDone = () => gate(`<div class="sec" style="text-align:center"><p style="margin:0"><b>Дякуємо! Заявку надіслано.</b></p><p class="muted" style="margin:0">Максим перевірить, хто ви в дереві, і відкриє доступ. Після цього входьте з вашою поштою й паролем на цьому ж сайті.</p><button class="btn line" data-act="to-login">До входу</button></div>`);
+
+/* Підказки власнику: хто з дерева схожий на написане в заявці */
+const nrm = t => String(t || '').toLowerCase().replace(/[ʼ'’`]/g, '').replace(/ё/g, 'е');
+function guessPeople(text, max = 3) {
+  const words = nrm(text).split(/[^a-zа-яіїєґ0-9]+/).filter(Boolean); if (!words.length) return [];
+  const has = (w, min = 4) => { if (!w) return false; w = nrm(w); const root = w.slice(0, Math.max(min, w.length - 2)); return words.some(x => x.startsWith(root) || (x.length >= min && w.startsWith(x.slice(0, Math.max(min, x.length - 2))))); };
+  const years = (String(text).match(/\b(1[6-9]\d\d|20\d\d)\b/g) || []);
+  return Object.values(P).map(p => {
+    let sc = 0;
+    if (has(p.s) || has(p.m)) sc += 2;
+    if (p.n && has(p.n.replace(/\s*\(.*\)/, ''), 3)) sc += 2;
+    if (p.pt) { if (has(p.pt, 5)) sc += 1; else if (words.some(w => /(ович|евич|івна|ївна|овна|евна|ич)$/.test(w))) sc -= 2; } // інше по батькові — мабуть, інша людина
+    const y = String(p.b || '').match(/\d{4}/);
+    if (y && years.includes(y[0])) sc += 2; else if (y && years.length && years.every(x => Math.abs(x - y[0]) > 3)) sc -= 1;
+    return { p, sc };
+  }).filter(x => x.sc >= 4).sort((a, b) => b.sc - a.sc).slice(0, max).map(x => x.p);
+}
+const plabel = p => full(p) + (life(p) ? ' (' + life(p) + ')' : '');
+const peopleList = id => `<datalist id="${id}">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(plabel(p))}"></option>`).join('')}</datalist>`;
+const JRF = [['s', 'Прізвище'], ['n', "Ім'я"], ['pt', 'По батькові'], ['m', 'Дівоче'], ['sex', 'Стать'], ['b', 'Народження'], ['bp', 'Де народ.'], ['live', 'Живе'], ['phone', 'Телефон'], ['father', 'Батько'], ['mother', 'Мати'], ['gpf', 'Діди по батькові'], ['gpm', 'Діди по матері'], ['spouse', 'Подружжя'], ['sibs', 'Брати й сестри'], ['kids', 'Діти'], ['link', "Зв'язок з родом"]];
+function jrText(r) { const d = r.data || {}; return `Заявка на реєстрацію: ${r.name} <${r.email}>, ${when(r.at)}\n` + JRF.filter(([k]) => d[k]).map(([k, t]) => `${t}: ${k === 'sex' ? (d[k] === 'f' ? 'жінка' : 'чоловік') : d[k]}`).join('\n') + '\nХто це в нашому дереві?'; }
+function jrCard(r) {
+  const d = r.data || {}, id = r.id;
+  const self = guessPeople([d.s, d.n, d.pt, d.m, d.b].join(' '));
+  const fG = guessPeople(d.father, 1)[0], mG = guessPeople(d.mother, 1)[0], sG = guessPeople(d.spouse, 1)[0];
+  const dl = `<dl class="jrd">${JRF.filter(([k]) => d[k] && !['s', 'n', 'pt'].includes(k)).map(([k, t]) => `<dt>${t}</dt><dd>${esc(k === 'sex' ? (d[k] === 'f' ? 'жінка' : 'чоловік') : d[k]).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>`;
+  if (r.status !== 'pending') return `<div class="jr done"><b>${esc(r.name)}</b> · <span class="small muted">${esc(r.email)} · ${r.status === 'approved' ? 'прийнято' : 'відхилено'} ${esc(when(r.decided_at))}${r.person_id && P[r.person_id] ? ` · <a href="${href('p', r.person_id)}">${esc(short(P[r.person_id]))}</a>` : ''}</span></div>`;
+  return `<article class="jr" data-jr="${id}">
+    <div class="qh"><span class="pill st-new">Нова заявка</span><b style="font-family:var(--f-display);font-size:19px">${esc([d.s, d.n, d.pt].filter(Boolean).join(' '))}</b><span class="small muted">${esc(r.email)} · ${esc(when(r.at))}</span></div>
+    ${dl}
+    <div class="jact">
+      <div class="small"><b>Хто це в дереві?</b> ${self.length ? 'Схоже на: ' + self.map(p => `<button type="button" class="chip" data-act="jr-pick" data-id="${id}" data-v="${esc(plabel(p))}">${esc(plabel(p))}</button>`).join(' ') : '<span class="muted">збігів за іменем не знайдено — мабуть, людини ще немає в дереві</span>'}</div>
+      <label class="f">Вже є в дереві — оберіть картку<input class="in" id="jp-${id}" list="jpeople" placeholder="Почніть вводити ім'я…" autocomplete="off"></label>
+      <details${self.length ? '' : ' open'}><summary class="small">Або створити нову картку з даних заявки й прив'язати до рідних</summary>
+        <div class="grid2" style="margin-top:8px">
+          <label class="f">Батько<input class="in" id="jf-${id}" list="jpeople" value="${fG ? esc(plabel(fG)) : ''}" placeholder="з дерева" autocomplete="off"></label>
+          <label class="f">Мати<input class="in" id="jm-${id}" list="jpeople" value="${mG ? esc(plabel(mG)) : ''}" placeholder="з дерева" autocomplete="off"></label>
+          <label class="f">Чоловік / дружина<input class="in" id="js-${id}" list="jpeople" value="${sG ? esc(plabel(sG)) : ''}" placeholder="з дерева" autocomplete="off"></label>
+        </div><p class="small muted" style="margin:4px 0 0">Підставлено найсхожіших — перевірте. Порожнє поле = не прив'язувати.</p></details>
+      <div class="btns"><label class="f" style="margin:0">Права<select class="in" id="jr-role-${id}" style="width:auto"><option value="viewer">глядач — дивиться, доповнює свою гілку</option><option value="editor">редактор — змінює картки</option></select></label></div>
+      <div class="btns"><button class="btn" data-act="jr-ok" data-id="${id}">Прийняти й відкрити доступ</button><button class="btn line" data-act="jr-no" data-id="${id}">Відхилити</button><button class="btn line small" data-act="copy" data-v="${esc(jrText(r))}">Скопіювати для Claude</button><span class="msg" id="jr-m-${id}"></span></div>
+    </div>
+  </article>`;
+}
+function joinBlock() {
+  const a = S.admin;
+  if (a.joinErr) return `<div class="sec"><h3>Реєстрація за посиланням</h3><p class="muted">Потрібно один раз виконати SQL-міграцію <span class="mono">003_join.sql</span> у Supabase.</p></div>`;
+  if (!a.join) return '';
+  const link = location.origin + '/?join=' + a.join.code;
+  const reqs = a.reqs || [], pend = reqs.filter(r => r.status === 'pending'), done = reqs.filter(r => r.status !== 'pending').slice(0, 20);
+  return `<div class="sec"><h3>Посилання для реєстрації</h3>
+    ${a.join.on ? `<div class="btns"><input class="in mono" value="${esc(link)}" readonly style="max-width:460px"><button class="btn line small" data-act="copy" data-v="${esc(link)}">Скопіювати</button><button class="btn line small" data-act="jl-rotate">Нове посилання</button><button class="btn line small" data-act="jl-off">Вимкнути</button></div>
+      <p class="small muted">Надішліть родичам (у групу чи особисто). Людина заповнює, хто вона і хто її рідні, — і чекає, поки ви приймете заявку. Без вашого «Прийняти» вона нічого не бачить. «Нове посилання» — старе перестає працювати.</p>`
+    : `<p class="muted">Реєстрацію вимкнено. <button class="btn line small" data-act="jl-on">Увімкнути</button></p>`}
+    </div>
+    <div class="sec" style="margin-top:22px"><h3>Заявки${pend.length ? ` <b class="nb">${pend.length}</b>` : ''}</h3>
+      ${pend.length ? peopleList('jpeople') + pend.map(jrCard).join('') : '<p class="muted">Нових заявок немає.</p>'}
+      ${done.length ? `<details style="margin-top:10px"><summary class="small">Розглянуті (${done.length})</summary>${done.map(jrCard).join('')}</details>` : ''}
+    </div>`;
+}
+async function joinHandle(act, t, d) {
+  if (act === 'to-register') { S.gate = vRegister; render(); return true; }
+  if (act === 'to-login') { S.gate = null; render(); return true; }
+  if (act === 'jl-rotate' || act === 'jl-off' || act === 'jl-on') {
+    if (act !== 'jl-on' && t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = act === 'jl-off' ? 'Точно вимкнути?' : 'Старе перестане працювати. Так?'; return true; }
+    S.admin.join = await api('/api/admin?a=join_link', { body: { do: act.slice(3) } }); S.ui.keepScroll = true; render(); toast(act === 'jl-rotate' ? 'Нове посилання готове' : act === 'jl-off' ? 'Реєстрацію вимкнено' : 'Реєстрацію увімкнено'); return true;
+  }
+  if (act === 'jr-pick') { $('#jp-' + d.id).value = d.v; return true; }
+  if (act === 'jr-ok' || act === 'jr-no') {
+    const m = $('#jr-m-' + d.id);
+    if (act === 'jr-no') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відхилити?'; return true; } await api('/api/admin?a=reject', { body: { id: d.id } }); }
+    else {
+      const pick = $('#jp-' + d.id).value.trim(), person_id = personByLabel(pick);
+      if (pick && !person_id) { m.className = 'msg err'; m.textContent = 'Оберіть людину зі списку-підказки (або очистіть поле, щоб створити нову картку).'; return true; }
+      const body = { id: d.id, role: $('#jr-role-' + d.id).value };
+      if (person_id) body.person_id = person_id;
+      else {
+        const g = k => { const v = $(`#j${k}-${d.id}`).value.trim(); return v ? personByLabel(v) : ''; };
+        body.create = { f: g('f'), mo: g('m'), spouse: g('s') };
+        if (!body.create.f && !body.create.mo && t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Без батьків картка буде окремо. Прийняти?'; return true; }
+      }
+      if (t.disabled) return true; t.disabled = true;
+      const r = await api('/api/admin?a=approve', { body });
+      if (body.create) await load();
+    }
+    S.admin.reqs = (await api('/api/admin?a=requests')).requests; S.admin.members = null; S.data.joinPending = S.admin.reqs.filter(r => r.status === 'pending').length;
+    S.ui.keepScroll = true; await loadAdmin(); toast(act === 'jr-ok' ? 'Доступ відкрито. Людина вже може увійти зі своєю поштою й паролем.' : 'Заявку відхилено'); return true;
+  }
+  return false;
+}
+
 function vPeople() {
   const q = (S.ui.q || '').toLowerCase();
   const famT = p => (p.fam || []).map(x => FAM[x]?.title).filter(Boolean).join(', ');
@@ -539,10 +677,10 @@ const delta = (a, b) => { if (!b) return a ? '<em class="up">нове</em>' : '<
 const PERIODS = [['7', '7 днів'], ['30', '30 днів'], ['90', '3 місяці'], ['365', 'Рік'], ['all', 'Весь час']];
 function periodRange() { const a = S.admin; if (a.period === 'custom' && a.from) return { from: a.from, to: a.to || new Date().toISOString().slice(0, 10) }; const n = a.period === 'all' ? 3650 : Number(a.period || 30); const to = new Date(); const from = new Date(to - n * 864e5); return { from: from.toISOString(), to: new Date(to.getTime() + 60000).toISOString() }; }
 async function loadAdmin() {
-  const a = S.admin; a.tab ||= 'stats'; a.period ||= '30';
+  const a = S.admin; a.tab ||= (S.data?.joinPending ? 'access' : 'stats'); a.period ||= '30';
   try {
     if (a.tab === 'stats') { const { from, to } = periodRange(); a.stats = await api(`/api/admin?a=stats&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); if (a.member) a.log = await api(`/api/admin?a=log&id=${a.member}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); }
-    if (a.tab === 'access') a.members = await api('/api/admin?a=members');
+    if (a.tab === 'access') { a.members = await api('/api/admin?a=members'); try { a.join = await api('/api/admin?a=join_link'); a.reqs = (await api('/api/admin?a=requests')).requests; a.joinErr = false; } catch { a.joinErr = true; } }
     if (a.tab === 'history') a.revs = await api('/api/admin?a=revisions');
   } catch (e) { a.err = errText(e); }
   render();
@@ -594,7 +732,7 @@ function vAdmin() {
       </div>`;
   } else if (a.tab === 'access' && a.members) {
     const m = a.members;
-    body = `<div class="sec"><h3>Запросити родича</h3>
+    body = joinBlock() + `<div class="sec" style="margin-top:26px"><h3>Запросити родича особисто</h3>
       <div class="grid2"><label class="f">Ім'я<input class="in" id="iv-name" placeholder="напр. Тетяна Іванівна"></label><label class="f">Пошта (буде логіном)<input class="in" id="iv-email" type="email" inputmode="email"></label>
       <label class="f">Права<select class="in" id="iv-role"><option value="editor">Редактор — додає й змінює картки</option><option value="viewer">Глядач — лише дивиться і пише спогади</option></select></label>
       <label class="f">Хто це в дереві<select class="in" id="iv-person"><option value="">—</option>${Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}</option>`).join('')}</select></label></div>
@@ -648,7 +786,7 @@ const introHtml = btn => `<div class="intro">${INTRO.map((l, i) => `<p class="il
 const introSeen = () => { try { return sessionStorage.getItem('rs_intro') === '1'; } catch { return S.ui.introSeen; } };
 const introMark = () => { S.ui.introSeen = true; try { sessionStorage.setItem('rs_intro', '1'); } catch {} };
 function gate(inner) { return `<div class="gate"><div class="card"><h1>Рід Шутих</h1><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
-function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта<input class="in" id="lg-e" type="email" inputmode="email" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form><p class="small muted" style="text-align:center;margin:0">Доступ лише за запрошенням. Забули пароль — напишіть Максиму.</p>`) + '</div>'; }
+function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта<input class="in" id="lg-e" type="email" inputmode="email" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form>${S.join ? `<p style="text-align:center;margin:0"><a href="#" data-act="to-register">Ще немає доступу? Зареєструватися</a></p>` : `<p class="small muted" style="text-align:center;margin:0">Доступ лише для родини. Забули пароль — напишіть Максиму.</p>`}`) + '</div>'; }
 function vInvite(inv) { return gate(`<form id="accept" class="sec"><p style="margin:0">${inv.purpose === 'reset' ? 'Задайте новий пароль' : 'Вас запросили до родинного архіву.'}</p><label class="f">Пошта<input class="in" value="${esc(inv.email)}" disabled></label><label class="f">Як вас підписувати<input class="in" id="ac-n" value="${esc(inv.name || '')}" required></label><label class="f">Придумайте пароль (від 8 символів)<input class="in" id="ac-p" type="password" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">${inv.purpose === 'reset' ? 'Зберегти пароль' : 'Увійти до архіву'}</button><div class="msg" id="ac-m"></div></form>`); }
 function vSetup() { return gate(`<form id="setup" class="sec"><p style="margin:0">Перше налаштування: створіть обліковий запис власника.</p><label class="f">Код налаштування (BOOTSTRAP_TOKEN з Vercel)<input class="in" id="su-t" type="password" required></label><label class="f">Ваше ім'я<input class="in" id="su-n" value="Максим" required></label><label class="f">Пошта<input class="in" id="su-e" type="email" required></label><label class="f">Пароль (від 10 символів)<input class="in" id="su-p" type="password" minlength="10" autocomplete="new-password" required></label><button class="btn" type="submit">Створити</button><div class="msg" id="su-m"></div></form>`); }
 function vSeed() { return gate(`<div class="sec"><p style="margin:0">База порожня. Імпортувати дерево, родини і скани документів із початкового набору?</p><button class="btn" data-act="seed">Імпортувати</button><div class="msg" id="sd-m"></div></div>`); }
@@ -678,6 +816,15 @@ document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target;
   try {
     if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); autoImport(); }
+    if (f.id === 'register') {
+      const m = $('#rg-m'), v = k => ($('#rg-' + k)?.value || '').trim();
+      const data = Object.fromEntries(['s', 'n', 'pt', 'm', 'sex', 'b', 'bp', 'live', 'phone', 'father', 'mother', 'gpf', 'gpm', 'spouse', 'sibs', 'kids', 'link'].map(k => [k, v(k)]));
+      if (!data.father && !data.mother) { m.className = 'msg err'; m.textContent = ERR.parents; return; }
+      const btn = f.querySelector('button[type=submit]'); if (btn.disabled) return; btn.disabled = true; m.className = 'msg'; m.textContent = 'Надсилаю…';
+      try { await api('/api/auth?a=register', { body: { c: S.join, email: v('email'), password: $('#rg-pass').value, data }, noRedirect: true }); S.gate = regDone; render(); window.scrollTo(0, 0); }
+      catch (err) { btn.disabled = false; m.className = 'msg err'; m.textContent = errText(err); }
+      return;
+    }
     if (f.id === 'accept') { const t = new URLSearchParams(location.search).get('invite'); const r = await api('/api/auth?a=accept', { body: { t, name: $('#ac-n').value, password: $('#ac-p').value }, noRedirect: true }); history.replaceState(null, '', '/'); S.gate = null; S.me = r.member; await load(); render(); }
     if (f.id === 'setup') { await api('/api/setup?a=init', { body: { token: $('#su-t').value, name: $('#su-n').value, email: $('#su-e').value, password: $('#su-p').value }, noRedirect: true }); S.gate = null; await start(); }
   } catch (err) { const m = f.querySelector('.msg'); if (m) { m.textContent = errText(err); m.className = 'msg err'; } }
@@ -728,7 +875,9 @@ document.addEventListener('click', async e => {
     if (d.active) { if (t.dataset.armed !== '1' && d.v === 'false') { t.dataset.armed = '1'; t.textContent = 'Точно вимкнути?'; return; } await api('/api/admin?a=member', { body: { id: d.active, active: d.v === 'true' } }); S.admin.members = null; return loadAdmin(); }
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
+    if (act === 'upd-reload') { t.disabled = true; t.textContent = 'Оновлюю…'; try { const ks = await caches?.keys?.(); for (const k of ks || []) await caches.delete(k); } catch {} location.reload(); return; }
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
+    if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; const r = await api('/api/setup?a=import', { body: {} }); const ok = (r.result || []).filter(x => x.endsWith('ok')).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
@@ -829,11 +978,16 @@ async function start() {
     catch { S.gate = () => gate(`<p class="msg err" style="text-align:center">${ERR.invalid}</p>`); }
     return render();
   }
+  const jc = new URLSearchParams(location.search).get('join');
+  if (jc) {
+    try { await api('/api/auth?a=join&c=' + encodeURIComponent(jc), { noRedirect: true }); S.join = jc; } catch { S.gate = () => gate(`<p class="msg err" style="text-align:center">${ERR.invalid_join}</p><p style="text-align:center"><a href="/">До входу</a></p>`); return render(); }
+  }
   try { const st = await api('/api/setup?a=status', { noRedirect: true }); if (!st.initialized) { S.gate = vSetup; return render(); } } catch {}
   try { const r = await api('/api/auth?a=me', { noRedirect: true }); S.me = r.member; } catch { S.me = null; }
   if (S.me) { render(); await load(); }
   render();
   autoImport();
+  setTimeout(checkUpdate, 4000);
 }
 // Власнику: нові фото й картки, які підготував Claude (seed/import), додаються самі — раз за сеанс, повторно нічого не дублюється
 async function autoImport() {

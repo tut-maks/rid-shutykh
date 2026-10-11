@@ -1,6 +1,6 @@
 // Вхід / вихід / запрошення. /api/auth?a=me|login|logout|invite|accept|password
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, sha, hashPass, checkPass, createSession, setSessionCookie, who, cookies, clientIp, tooMany, attempt, track, revision } from './_lib.js';
+import { handler, send, fail, readJSON, sha, hashPass, checkPass, createSession, setSessionCookie, who, cookies, clientIp, tooMany, attempt, track, revision, safeEq, joinCfg, cleanJoin } from './_lib.js';
 
 const pub = m => ({ id: m.id, name: m.name, email: m.email, role: m.role, person_id: m.person_id || null });
 const normEmail = e => String(e || '').trim().toLowerCase().slice(0, 200);
@@ -22,6 +22,8 @@ export default handler(async (req, res, _ctx, url) => {
     const m = e ? await db.get('members', { eq: { email: e } }) : null;
     if (!m || !m.active || !m.pass_hash || !checkPass(password, m.pass_hash)) {
       await attempt('login:' + e); await attempt('ip:' + ip);
+      // заявка на реєстрацію ще не розглянута — кажемо лише тому, хто знає її пароль
+      if (!m && e) { try { const rq = await db.list('join_requests', { eq: { email: e, status: 'pending' }, limit: 3 }); if (rq.some(r => checkPass(password, r.pass_hash))) return fail(res, 403, 'pending'); } catch {} }
       return fail(res, 401, 'wrong');
     }
     const sid = await createSession(res, req, m);
@@ -65,6 +67,34 @@ export default handler(async (req, res, _ctx, url) => {
     const sid = await createSession(res, req, m);
     track(m.id, sid, 'login');
     return send(res, 200, { member: pub(m) });
+  }
+
+  /* ── Самостійна реєстрація за посиланням ?join=<код> ── */
+  if (a === 'join') {
+    const ip = clientIp(req);
+    if (await tooMany('ip:' + ip, 30, 15)) return fail(res, 429, 'too_many');
+    const cfg = await joinCfg();
+    if (!cfg || !cfg.on || !safeEq(url.searchParams.get('c'), cfg.code)) { await attempt('ip:' + ip); return fail(res, 404, 'invalid_join'); }
+    return send(res, 200, { ok: true });
+  }
+  if (a === 'register' && req.method === 'POST') {
+    const b = await readJSON(req, 30_000); const ip = clientIp(req);
+    if (await tooMany('ip:' + ip, 30, 15) || await tooMany('reg:' + ip, 5, 60)) return fail(res, 429, 'too_many');
+    const cfg = await joinCfg();
+    if (!cfg || !cfg.on || !safeEq(b.c, cfg.code)) { await attempt('ip:' + ip); return fail(res, 404, 'invalid_join'); }
+    const e = normEmail(b.email);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return fail(res, 400, 'email');
+    if (!strong(b.password)) return fail(res, 400, 'weak');
+    const data = cleanJoin(b.data || {});
+    if (!data.n || !data.s) return fail(res, 400, 'name');
+    if (!data.father && !data.mother) return fail(res, 400, 'parents');
+    await attempt('reg:' + ip);
+    if (await db.get('members', { eq: { email: e } })) return fail(res, 409, 'exists_login');
+    if ((await db.list('join_requests', { eq: { email: e, status: 'pending' }, limit: 1 })).length) return fail(res, 409, 'pending');
+    const name = [data.n, data.s].filter(Boolean).join(' ').slice(0, 80);
+    const [r] = await db.insert('join_requests', { email: e, name, pass_hash: hashPass(b.password), data, status: 'pending', ip, ua: String(req.headers['user-agent'] || '').slice(0, 300) });
+    revision('join', r.id, 'create', null, { email: e, name }, null);
+    return send(res, 200, { ok: true });
   }
 
   if (a === 'password' && req.method === 'POST') {

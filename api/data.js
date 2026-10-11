@@ -25,6 +25,8 @@ async function bootstrap(ctx) {
     if (!can(ctx.member, 'editor')) f.eq.created_by = ctx.member.id;
     questions = (await db.list('questions', f)).map(qOut);
   } catch { qReady = false; }
+  let joinPending = 0;
+  if (can(ctx.member, 'owner')) { try { joinPending = (await db.list('join_requests', { eq: { status: 'pending' }, select: 'id' })).length; } catch {} }
   const last = {};
   for (const r of revs) if (!last[r.entity_id]) last[r.entity_id] = { by: r.by, at: r.at, action: r.action };
   return {
@@ -36,7 +38,7 @@ async function bootstrap(ctx) {
     photos: photos.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at })),
     stories: stories.map(s => ({ id: s.id, target: s.target, text: s.text, by: s.created_by, at: s.created_at })),
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
-    questions, qReady,
+    questions, qReady, joinPending,
   };
 }
 
