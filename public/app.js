@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610112116';
+const BUILD = '202610112124';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -123,7 +123,8 @@ function vPedigree(tabs) {
 const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
 
 /* ── Дерево згори вниз: людина в центрі, над нею батьки, діди…; біля кожного предка — брати й сестри ── */
-const T2 = { W: 156, H: 46, GX: 12, GY: 92, PAD: 50 };
+const T2 = { W: 160, H: 58, GX: 12, GY: 84, PAD: 50 };
+const tname = p => [String(p.n || '').replace(/\s*\([^)]*\)/g, ''), p.s].filter(Boolean).join(' ') || '(без імені)'; // у дереві — без «(Настя)», повне ім'я в підказці
 const P2 = T2.W + T2.GX;
 function treeCenter() { const f = S.ui.tf || {}; if (f.center && P[f.center]) return f.center; const r0 = rootId(); const k = (KIDS[r0] || []).slice().sort(byBirth).reverse(); return k[0] || r0; }
 function layoutTD(center) {
@@ -179,7 +180,7 @@ function vAll(tabs) {
     lines += `<path d="M${px} ${py}V${by}M${x1} ${by}H${x2}${xs.map(x => `M${x} ${by}V${top(kids[0])}`).join('')}" class="ln"/>`; });
   const q = (f.q || '').trim().toLowerCase();
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q);
-    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}">${ph(p)}<span><b>${esc(short(p))}</b><span class="y">${esc(life(p))}</span></span></a>`; }).join('');
+    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${ph(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(life(p))}</span></span></a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 22}px;top:${n.y + T2.H - 9}px" title="Показати братів і сестер">+${h.sib}</button>`;
