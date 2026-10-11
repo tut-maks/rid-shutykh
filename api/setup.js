@@ -77,8 +77,15 @@ export default handler(async (req, res, _c, url) => {
         const p = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!p) { out.push(key + ': no person'); continue; }
         const nd = { ...p.data }; let ch = false;
         for (const [k, v] of Object.entries(it.set || {})) if (nd[k] !== v) { nd[k] = v; ch = true; }
-        for (const k of it.unset || []) if (k in nd) { delete nd[k]; ch = true; }
-        for (const [from, to] of it.replace || []) if (typeof nd.note === 'string' && nd.note.includes(from)) { nd.note = nd.note.split(from).join(to); ch = true; }
+        for (const k of it.unset || []) if (nd[k]) { delete nd[k]; ch = true; }
+        for (const [from, to] of it.replace || []) {
+          if (typeof nd.note !== 'string') continue;
+          // доповнення «новий текст + старий» не повторювати; прибрати повтори, якщо вже задвоїлось
+          const pre = to && to.endsWith(from) ? to.slice(0, to.length - from.length) : '';
+          if (pre) { let n = nd.note; while (n.includes(pre + pre)) n = n.split(pre + pre).join(pre); if (n !== nd.note) { nd.note = n; ch = true; } }
+          if (to && nd.note.includes(to)) continue;
+          if (nd.note.includes(from)) { nd.note = nd.note.split(from).join(to); ch = true; }
+        }
         if (!ch) { out.push(key + ': без змін'); continue; }
         const data = cleanPerson(nd); await db.update('persons', { eq: { id: p.id } }, { data, version: p.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, by);
         out.push(key + ': ok');

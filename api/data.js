@@ -4,6 +4,9 @@ import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugI
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
+const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
+const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
+
 async function bootstrap(ctx) {
   const [persons, unions, families, documents, photos, stories, members, revs] = await Promise.all([
     db.list('persons', { eq: { deleted: false } }),
@@ -15,6 +18,13 @@ async function bootstrap(ctx) {
     db.list('members', { select: 'id,name,role,person_id,active' }),
     db.list('revisions', { eq: { entity: 'person' }, order: 'at', desc: true, limit: 3000 }),
   ]);
+  // Запитання: свої — кожному, усі — редакторам і власнику. Якщо таблиці ще немає (міграція 002 не виконана) — порожньо.
+  let questions = [], qReady = true;
+  try {
+    const f = { eq: { deleted: false }, order: 'created_at', desc: true, limit: 2000 };
+    if (!can(ctx.member, 'editor')) f.eq.created_by = ctx.member.id;
+    questions = (await db.list('questions', f)).map(qOut);
+  } catch { qReady = false; }
   const last = {};
   for (const r of revs) if (!last[r.entity_id]) last[r.entity_id] = { by: r.by, at: r.at, action: r.action };
   return {
@@ -26,6 +36,7 @@ async function bootstrap(ctx) {
     photos: photos.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at })),
     stories: stories.map(s => ({ id: s.id, target: s.target, text: s.text, by: s.created_by, at: s.created_at })),
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
+    questions, qReady,
   };
 }
 
@@ -170,6 +181,44 @@ export default handler(async (req, res, ctx) => {
     await db.update('families', { eq: { id: f.id } }, { data: nd, updated_by: me.id, updated_at: new Date().toISOString() });
     await revision('family', f.id, 'update', f.data, nd, me.id);
     return done({ ok: true }, 'fam:' + f.id);
+  }
+
+  /* ── запитання й уточнення ── */
+  if (op === 'q.add') {
+    const kind = QK.includes(body.kind) ? body.kind : 'ask';
+    const text = S(body.text, 5000), about = S(body.about, 300);
+    let person = S(body.person, 60);
+    if (!text) return fail(res, 400, 'empty');
+    if (person && !(await db.get('persons', { eq: { id: person, deleted: false } }))) person = '';
+    if (kind === 'find' && !about && !person) return fail(res, 400, 'about');
+    const open = await db.list('questions', { eq: { created_by: me.id, status: 'new', deleted: false }, limit: 60 });
+    if (open.length >= 50) return fail(res, 429, 'too_many_q');
+    const now = new Date().toISOString();
+    const [q] = await db.insert('questions', { kind, person_id: person || null, about, text, status: 'new', answer: '', deleted: false, created_by: me.id, created_at: now, updated_at: now });
+    await revision('question', q.id, 'create', null, { kind, person, about, text }, me.id);
+    return done({ question: qOut(q) }, person || 'q:' + q.id);
+  }
+  if (op === 'q.update') {
+    const q = await db.get('questions', { eq: { id: S(body.id, 60), deleted: false } }); if (!q) return fail(res, 404, 'not_found');
+    const patch = {};
+    if (editor) {
+      if (body.status !== undefined) { if (!QS.includes(body.status)) return fail(res, 400, 'bad'); patch.status = body.status; }
+      if (body.answer !== undefined) patch.answer = S(body.answer, 8000);
+    }
+    if (q.created_by === me.id && q.status === 'new' && body.text !== undefined) { const t = S(body.text, 5000); if (!t) return fail(res, 400, 'empty'); patch.text = t; }
+    if (!Object.keys(patch).length) return fail(res, 403, 'forbidden');
+    Object.assign(patch, { updated_by: me.id, updated_at: new Date().toISOString() });
+    const [row] = await db.update('questions', { eq: { id: q.id } }, patch);
+    const pick = x => ({ status: x.status, answer: x.answer, text: x.text });
+    await revision('question', q.id, 'update', pick(q), pick(row), me.id);
+    return done({ question: qOut(row) }, 'q:' + q.id);
+  }
+  if (op === 'q.delete') {
+    const q = await db.get('questions', { eq: { id: S(body.id, 60), deleted: false } }); if (!q) return fail(res, 404, 'not_found');
+    if (!owner && !(q.created_by === me.id && q.status === 'new')) return fail(res, 403, 'forbidden');
+    await db.update('questions', { eq: { id: q.id } }, { deleted: true, updated_by: me.id, updated_at: new Date().toISOString() });
+    await revision('question', q.id, 'delete', { kind: q.kind, text: q.text, about: q.about }, null, me.id);
+    return done({ ok: true }, 'q:' + q.id);
   }
 
   return fail(res, 400, 'unknown_op');

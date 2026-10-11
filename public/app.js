@@ -15,7 +15,7 @@ async function api(path, opts = {}) {
   if (!r.ok) { const e = new Error(j.error || 'http_' + r.status); e.status = r.status; throw e; }
   return j;
 }
-const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.' };
+const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.', empty: 'Напишіть кілька слів.', about: 'Вкажіть, кого шукаємо: ім\'я, роки, село.', too_many_q: 'У вас уже багато нових запитань — зачекайте відповіді на них.' };
 const errText = e => ERR[e.message] || 'Не вдалося. Спробуйте ще раз.';
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 
@@ -77,7 +77,7 @@ addEventListener('hashchange', () => { parse(); render(); window.scrollTo(0, 0);
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['tree', 'Дерево'], ['families', 'Родини'], ['people', 'Люди'], ['docs', 'Документи']];
+  const nav = [['tree', 'Дерево'], ['families', 'Родини'], ['people', 'Люди'], ['docs', 'Документи'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
   if (isOwner()) nav.push(['admin', 'Власнику']);
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   return `<header class="top"><div class="wrap">
@@ -260,8 +260,9 @@ function vPerson() {
     </div>
   </div>
   <div class="sec" style="align-content:start;gap:30px">
-    <div class="sec"><h3>Про людину ${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}</h3>
+    <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Уточнити / запитати</button></span></h3>
       ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>`}
+      ${qAboutHtml(p.id)}
       ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
     ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">FamilySearch</span></li>`).join('')}</ul></div>` : ''}
@@ -376,6 +377,126 @@ function famBlock(f) {
 function vFamily() { const f = FAM[S.arg]; if (!f) return vFamilies(); curTarget = 'fam:' + f.id; return `<p><a href="#/families" class="small">← Усі родини</a></p><div class="famlist">${famBlock(f)}</div>`; }
 
 /* ───── Люди ───── */
+
+/* ───── Запитання й уточнення ─────
+   Будь-хто з родичів пише: «тут помилка», «що відомо про…» або «знайдіть людину».
+   Автор бачить свої запитання й відповіді; Максим (і редактори) — усі, змінює стан і відповідає. */
+const QKIND = { find: 'Знайти людину', ask: 'Питання', fix: 'Уточнення / помилка' };
+const QSTAT = { new: 'Нове', work: 'Шукаємо', found: 'Знайдено', closed: 'Закрито' };
+const qList = () => S.data?.questions || [];
+const qSeen = () => { try { return localStorage.getItem('rs_qseen') || ''; } catch { return ''; } };
+function qBadge() {
+  if (!S.data) return 0;
+  if (canEdit()) return qList().filter(q => q.status === 'new').length;
+  const seen = qSeen(); return qList().filter(q => q.by === S.me.id && q.updBy && q.updBy !== S.me.id && q.upd > seen).length;
+}
+function qAboutHtml(pid) {
+  const list = qList().filter(q => q.person === pid);
+  if (!list.length) return '';
+  const open = list.filter(q => q.status === 'new' || q.status === 'work').length;
+  return `<p class="small" style="margin:8px 0 0"><a href="${href('q')}">${canEdit() ? 'Запитань про цю людину' : 'Ваших запитань про цю людину'}: ${list.length}${open ? ` (відкритих: ${open})` : ''}</a></p>`;
+}
+const personOpts = () => `<datalist id="qpeople">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(full(p) + (life(p) ? ' (' + life(p) + ')' : ''))}"></option>`).join('')}</datalist>`;
+const personByLabel = v => { v = String(v || '').trim(); if (!v) return ''; const p = Object.values(P).find(p => full(p) + (life(p) ? ' (' + life(p) + ')' : '') === v) || Object.values(P).find(p => full(p) === v); return p ? p.id : ''; };
+function qForm(pid, kind) {
+  kind = kind || (pid ? 'ask' : 'find');
+  const p = pid && P[pid];
+  return `<div class="qform" data-kind="${kind}">
+    <div class="seg" role="group" aria-label="Що саме">${Object.entries(QKIND).filter(([k]) => !(p && k === 'find')).map(([k, t]) => `<button type="button" class="${k === kind ? 'on' : ''}" data-act="q-kind" data-v="${k}">${t}</button>`).join('')}</div>
+    ${p ? `<input type="hidden" id="qf-person" value="${esc(p.id)}"><p class="small muted" style="margin:0">Про: <b>${esc(full(p))}</b> ${esc(life(p))}</p>`
+        : `<label class="f qf-about">Кого шукаємо<input class="in" id="qf-about" maxlength="300" placeholder="Ім'я, прізвище, приблизні роки, село"></label>
+           <label class="f qf-person">Про кого з дерева (необов'язково)<input class="in" id="qf-pick" list="qpeople" placeholder="Почніть вводити ім'я…" autocomplete="off"></label>${personOpts()}`}
+    <label class="f">${p ? 'Що уточнити або що ви хочете дізнатися' : 'Що відомо і що хочете дізнатися'}<textarea class="in" id="qf-text" maxlength="5000" placeholder="${esc(p ? 'Напр.: бабуся казала, що він народився не в 1905, а в 1907; або: де він похований?' : 'Напр.: брат прадіда, Петро, виїхав у 1930-х на Донбас — хотілося б знайти його нащадків. Хто розповідав, що пам\'ятаєте.')}"></textarea></label>
+    <div class="btns"><button class="btn" data-act="q-send">Надіслати</button>${p ? '<button class="btn line" data-act="close">Скасувати</button>' : ''}<span class="msg" id="qf-m"></span></div>
+  </div>`;
+}
+function qItem(q) {
+  const p = q.person && P[q.person], mine = q.by === S.me.id;
+  const subj = p ? `<a href="${href('p', p.id)}">${esc(full(p))}</a>` : q.about ? `<b>${esc(q.about)}</b>` : '';
+  const edit = canEdit();
+  return `<article class="qi st-${q.status}">
+    <div class="qh"><span class="pill st-${q.status}">${QSTAT[q.status] || q.status}</span><span class="small muted">${esc(QKIND[q.kind] || '')}</span>${subj ? `<span>${subj}</span>` : ''}</div>
+    <div class="qt">${esc(q.text).replace(/\n/g, '<br>')}</div>
+    <div class="small muted">${mine ? 'Ви' : esc(who(q.by))}, ${esc(when(q.at))}</div>
+    ${q.answer && !edit ? `<div class="qa"><span class="small muted">Відповідь${q.updBy ? ' · ' + esc(who(q.updBy)) : ''}, ${esc(when(q.upd))}</span><div>${glossify(esc(q.answer)).replace(/\n/g, '<br>')}</div></div>` : ''}
+    ${edit ? `<div class="qedit">
+      <div class="seg small">${Object.entries(QSTAT).map(([k, t]) => `<button type="button" class="${q.status === k ? 'on' : ''}" data-act="q-status" data-id="${q.id}" data-v="${k}">${t}</button>`).join('')}</div>
+      <textarea class="in" id="qa-${q.id}" placeholder="Відповідь — її побачить автор запитання">${esc(q.answer)}</textarea>
+      <div class="btns"><button class="btn line small" data-act="q-answer" data-id="${q.id}">Зберегти відповідь</button>${isOwner() ? `<button class="btn line small" data-act="q-del" data-id="${q.id}">Видалити</button>` : ''}<span class="msg" id="qa-m-${q.id}"></span></div></div>`
+    : mine && q.status === 'new' ? `<div class="btns"><button class="btn line small" data-act="q-del" data-id="${q.id}">Видалити</button></div>` : ''}
+  </article>`;
+}
+function vQuestions() {
+  curTarget = 'questions';
+  if (!S.data.qReady) return `<div class="sec"><h1>Запитання</h1><p class="muted">${isOwner() ? 'Розділ майже готовий: потрібно один раз виконати SQL-міграцію <span class="mono">002_questions.sql</span> у Supabase (SQL Editor → вставити → Run).' : 'Розділ ще налаштовується. Загляньте трохи пізніше.'}</p></div>`;
+  const edit = canEdit(), f = S.ui.qf || (edit ? 'open' : 'all');
+  const all = qList(); let list = all;
+  const cnt = k => all.filter(q => k === 'all' ? true : k === 'open' ? (q.status === 'new' || q.status === 'work') : q.status === k).length;
+  if (edit) list = list.filter(q => f === 'all' ? true : f === 'open' ? (q.status === 'new' || q.status === 'work') : q.status === f);
+  const fl = [['open', 'Відкриті'], ['new', 'Нові'], ['work', 'Шукаємо'], ['found', 'Знайдено'], ['closed', 'Закриті'], ['all', 'Усі']];
+  // відмітка «переглянуто» — для бейджа відповідей
+  try { localStorage.setItem('rs_qseen', new Date().toISOString()); } catch {}
+  return `<div class="qpage">
+    <div class="sec" style="gap:6px"><h1>Запитання й уточнення</h1>
+      <p class="muted" style="margin:0">Бачите помилку, знаєте щось інше або хочете, щоб ми пошукали когось у архівах — напишіть тут. ${edit ? '' : 'Відповідь з\'явиться на цій сторінці.'}</p></div>
+    <div class="sec qnew"><h3>Нове запитання</h3>${qForm(null)}</div>
+    <div class="sec"><h3>${edit ? 'Усі запитання' : 'Мої запитання'} ${isOwner() && cnt('open') ? `<button class="btn line small" data-act="q-claude">Скопіювати відкриті для Claude</button>` : ''}</h3>
+      ${edit ? `<div class="seg qfilter">${fl.map(([k, t]) => `<button type="button" class="${f === k ? 'on' : ''}" data-act="q-filter" data-v="${k}">${t} <span class="muted">${cnt(k)}</span></button>`).join('')}</div>` : ''}
+      <div class="qlist">${list.map(qItem).join('') || `<p class="muted">${edit ? 'Тут порожньо.' : 'Ви ще нічого не питали.'}</p>`}</div>
+    </div>
+  </div>`;
+}
+function qClaudeText() {
+  const open = qList().filter(q => q.status === 'new' || q.status === 'work');
+  return 'Запитання родичів із сайту shutyi.com.ua — допоможи пошукати:\n\n' + open.map((q, i) => {
+    const p = q.person && P[q.person];
+    return `${i + 1}. [${QKIND[q.kind]} · ${QSTAT[q.status]}] ${p ? `${full(p)} ${life(p)} (id: ${p.id})` : q.about}\n   Питає: ${who(q.by)}, ${when(q.at)}\n   ${q.text.replace(/\n/g, '\n   ')}${q.answer ? `\n   Уже відповіли: ${q.answer.replace(/\n/g, ' ')}` : ''}\n   (id запитання: ${q.id})`;
+  }).join('\n\n');
+}
+async function qHandle(act, t, d) {
+  if (act === 'q-ask') { modal(`<h2>Уточнити або запитати</h2>${qForm(S.arg)}`); return true; }
+  if (act === 'q-kind') { const f = t.closest('.qform'); f.dataset.kind = d.v; f.querySelectorAll('[data-act=q-kind]').forEach(b => b.classList.toggle('on', b === t)); return true; }
+  if (act === 'q-filter') { S.ui.qf = d.v; S.ui.keepScroll = true; render(); return true; }
+  if (act === 'q-send') {
+    const f = t.closest('.qform'), m = f.querySelector('#qf-m'), kind = f.dataset.kind;
+    const person = f.querySelector('#qf-person')?.value || personByLabel(f.querySelector('#qf-pick')?.value);
+    const pick = f.querySelector('#qf-pick')?.value.trim();
+    let about = f.querySelector('#qf-about')?.value.trim() || '';
+    if (pick && !person && !about) about = pick; // ввели ім'я, якого немає в дереві
+    const text = f.querySelector('#qf-text').value.trim();
+    if (!text) { m.textContent = ERR.empty; return true; }
+    if (kind === 'find' && !about && !person) { m.textContent = ERR.about; return true; }
+    if (t.disabled) return true; t.disabled = true; m.textContent = 'Надсилаю…';
+    try {
+      const r = await api('/api/data', { body: { op: 'q.add', kind, person, about, text } });
+      S.data.questions.unshift(r.question);
+      if ($('#layer').innerHTML) closeLayer();
+      S.ui.keepScroll = true; render(); toast('Надіслано. Відповідь з\'явиться в розділі «Запитання».');
+    } catch (err) { m.textContent = errText(err); t.disabled = false; }
+    return true;
+  }
+  if (act === 'q-status' || act === 'q-answer') {
+    const body = { op: 'q.update', id: d.id };
+    if (act === 'q-status') body.status = d.v; else { body.answer = $('#qa-' + d.id).value; if (body.answer.trim() && qList().find(q => q.id === d.id)?.status === 'new') body.status = 'work'; }
+    if (t.disabled) return true; t.disabled = true;
+    const r = await api('/api/data', { body });
+    const i = S.data.questions.findIndex(q => q.id === d.id); if (i >= 0) S.data.questions[i] = r.question;
+    S.ui.keepScroll = true; render(); toast(act === 'q-status' ? 'Стан змінено' : 'Відповідь збережено'); return true;
+  }
+  if (act === 'q-del') {
+    if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити?'; return true; }
+    await api('/api/data', { body: { op: 'q.delete', id: d.id } });
+    S.data.questions = S.data.questions.filter(q => q.id !== d.id); S.ui.keepScroll = true; render(); return true;
+  }
+  if (act === 'q-claude') {
+    const txt = qClaudeText();
+    try { await navigator.clipboard.writeText(txt); toast('Скопійовано — вставте в чат із Claude'); }
+    catch { modal(`<h2>Для Claude</h2><p class="small muted">Виділіть усе й скопіюйте.</p><textarea class="in mono" style="min-height:320px" readonly>${esc(txt)}</textarea><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); }
+    return true;
+  }
+  return false;
+}
+
 function vPeople() {
   const q = (S.ui.q || '').toLowerCase();
   const famT = p => (p.fam || []).map(x => FAM[x]?.title).filter(Boolean).join(', ');
@@ -492,9 +613,9 @@ function vAdmin() {
   }
   return `<div class="lede"><div class="eyebrow">Лише для вас</div><h1>Панель власника</h1></div><div class="docform" style="max-width:none;grid-template-columns:1fr auto;align-items:center"><span>Нові фото й скани, які підготував Claude</span><button class="btn line small" data-act="import">Імпортувати</button><div class="msg" id="imp-m" style="grid-column:1/-1"></div></div>${tabs}${body}`;
 }
-const ENT = { person: 'Картка', union: 'Подружжя', family: 'Родина', story: 'Спогад', photo: 'Фото', member: 'Доступ', seed: 'Імпорт' };
+const ENT = { person: 'Картка', union: 'Подружжя', family: 'Родина', story: 'Спогад', photo: 'Фото', member: 'Доступ', seed: 'Імпорт', question: 'Запитання' };
 const ACT = { create: 'створено', update: 'змінено', delete: 'видалено', restore: 'відкат', invite: 'запрошення', reset: 'новий пароль' };
-const FIELD = { n: "ім'я", pt: 'по батькові', s: 'прізвище', m: 'дівоче', b: 'народження', d: 'смерть', bp: 'місце народження', dp: 'місце смерті', note: 'опис', f: 'батько', mo: 'мати', sex: 'стать', hyp: 'гіпотеза', fam: 'гілки', portrait: 'головне фото', story: 'історія', text: 'текст', caption: 'підпис' };
+const FIELD = { n: "ім'я", pt: 'по батькові', s: 'прізвище', m: 'дівоче', b: 'народження', d: 'смерть', bp: 'місце народження', dp: 'місце смерті', note: 'опис', f: 'батько', mo: 'мати', sex: 'стать', hyp: 'гіпотеза', fam: 'гілки', portrait: 'головне фото', story: 'історія', text: 'текст', caption: 'підпис', status: 'стан', answer: 'відповідь' };
 function diff(b, a) {
   if (!b || !a || typeof b !== 'object') return '';
   const keys = [...new Set([...Object.keys(b), ...Object.keys(a)])].filter(k => JSON.stringify(b[k] ?? '') !== JSON.stringify(a[k] ?? ''));
@@ -540,7 +661,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin }[S.view] || vTree;
+  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions }[S.view] || vTree;
   const sy = window.scrollY;
   app.innerHTML = top() + `<main class="wrap">${V()}</main>`;
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
@@ -607,6 +728,7 @@ document.addEventListener('click', async e => {
     if (d.active) { if (t.dataset.armed !== '1' && d.v === 'false') { t.dataset.armed = '1'; t.textContent = 'Точно вимкнути?'; return; } await api('/api/admin?a=member', { body: { id: d.active, active: d.v === 'true' } }); S.admin.members = null; return loadAdmin(); }
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
+    if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; const r = await api('/api/setup?a=import', { body: {} }); const ok = (r.result || []).filter(x => x.endsWith('ok')).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
