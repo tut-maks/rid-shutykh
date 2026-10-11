@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610111313';
+const BUILD = '202610112116';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -342,7 +342,7 @@ function readForm() {
   return { n: g('n'), pt: g('pt'), s: g('s'), m: g('m'), sex: g('sex'), b: g('b'), bp: g('bp'), d: g('d'), dp: g('dp'), f: g('f'), mo: g('mo'), note: g('note'), hyp: !!$('#e-hyp')?.checked, fam: [...document.querySelectorAll('.e-fam:checked')].map(x => x.value) };
 }
 function modal(html) { $('#layer').innerHTML = `<div class="scrim" data-close-scrim><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; setTimeout(() => $('#layer .modal input, #layer .modal textarea')?.focus(), 30); }
-const closeLayer = () => { $('#layer').innerHTML = ''; };
+const closeLayer = () => { $('#layer').innerHTML = ''; document.body.classList.remove('noscroll'); };
 function openEdit(p) {
   const sp = SPOUSES[p.id] || [];
   modal(`<h2>${esc(full(p))}</h2>${personForm(p)}
@@ -655,19 +655,111 @@ function vDocs() {
   <div class="docs">${s.filter(d => !d.maybe).map(docCard).join('')}</div>
   ${s.some(d => d.maybe) ? `<h2 class="dbl" style="margin:40px 0 18px">Можлива рідня</h2><div class="docs">${s.filter(d => d.maybe).map(docCard).join('')}</div>` : ''}`;
 }
+/* ───── Перегляд фото й сканів ─────
+   Клік по мініатюрі — відкрито; клік по фото чи темному тлу — закрито (✕ і Esc теж).
+   Збільшити: подвійний клік / подвійний дотик, кнопка 🔍, колесо, два пальці; збільшене тягнеться пальцем чи мишею.
+   Кілька сторінок: стрілки ‹ ›, клавіші ← →, свайп убік. Свайп униз — закрити. */
 function viewer({ title, pages, line, text, src, people, photoId, docId }) {
-  let i = 0;
-  const draw = () => {
-    $('#layer').innerHTML = `<div class="viewer" role="dialog" aria-modal="true"><div class="vb"><b>${esc(title)}</b>${pages.length > 1 ? `<button data-pg="-1">‹</button><span class="mono">${i + 1} / ${pages.length}</span><button data-pg="1">›</button>` : ''}<button data-zoom>Збільшити</button>${docId && canEdit() ? `<label style="cursor:pointer">+ Сторінка<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label>` : ''}${photoId && canEdit() ? `<button data-portrait="${photoId}">Зробити головним</button>` : ''}${photoId ? `<button data-delphoto="${photoId}">Видалити</button>` : ''}<button data-act="close">Закрити</button></div>
-      <div class="stage">${pages.length ? `<img src="${pages[i]}" alt="${esc(title)}">` : '<p style="color:#EDE8DF">Скан ще не додано.</p>'}</div>
-      <div class="cap">${line ? `<div class="ln">${esc(line)}</div>` : ''}${text ? `<div>${esc(text)}</div>` : ''}${src ? `<div class="src">${esc(src)}</div>` : ''}${people?.length ? `<div>${people.filter(x => P[x]).map(x => `<a href="${href('p', x)}" data-act="close">${esc(short(P[x]))}</a>`).join(' · ')}</div>` : ''}${photoId ? `<div class="btns" style="margin-top:6px"><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Підпис: хто на фото, рік, звідки" style="max-width:520px;background:#26221C;color:#EDE8DF;border-color:#3B352C"><button data-capsave="${photoId}">Зберегти підпис</button></div>` : ''}</div></div>`;
-    const cs = $('#layer [data-capsave]'); if (cs) cs.onclick = async () => { try { await api('/api/data', { body: { op: 'photo.caption', id: photoId, caption: $('#cap-in').value } }); const x = S.data.photos.find(y => y.id === photoId); if (x) x.caption = $('#cap-in').value; toast('Підпис збережено'); } catch (err) { toast(errText(err)); } };
-    $('#layer [data-zoom]').onclick = z; $('#layer .stage img').onclick = z;
-    $('#layer').querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { i = (i + Number(b.dataset.pg) + pages.length) % pages.length; draw(); });
+  let i = 0, sc = 1, tx = 0, ty = 0;
+  const L = $('#layer');
+  document.body.classList.add('noscroll');
+  const who_ = (people || []).filter(x => P[x]);
+  L.innerHTML = `<div class="pv" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="pv-top"><div class="pv-t"><b>${esc(title)}</b>${pages.length > 1 ? `<span class="mono pv-n"></span>` : ''}</div>
+      <button class="pv-ic" data-pv="zoom" title="Збільшити (або двічі клацніть по фото)" aria-label="Збільшити">${ICO.zoom}</button>
+      ${(photoId && canEdit()) || photoId || (docId && canEdit()) ? `<button class="pv-ic" data-pv="more" title="Ще" aria-label="Ще дії">${ICO.more}</button>` : ''}
+      <button class="pv-ic" data-pv="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
+    <div class="pv-menu" hidden>
+      ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label>` : ''}
+      ${photoId && canEdit() ? `<button class="pv-mi" data-portrait="${photoId}">Зробити головним фото</button>` : ''}
+      ${photoId ? `<button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId}">Видалити фото</button>` : ''}
+    </div>
+    <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false">` : '<p class="pv-empty">Скан ще не додано.</p>'}
+      ${pages.length > 1 ? `<button class="pv-nav prev" data-pv="prev" aria-label="Попередня">${ICO.l}</button><button class="pv-nav next" data-pv="next" aria-label="Наступна">${ICO.r}</button>` : ''}
+      <div class="pv-load"></div></div>
+    <div class="pv-cap">
+      ${line ? `<div class="pv-line">${esc(line)}</div>` : ''}${text ? `<div>${esc(text)}</div>` : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
+      ${who_.length ? `<div class="pv-people">${who_.map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('')}</div>` : ''}
+      ${photoId ? `<div class="pv-capedit" hidden><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Хто на фото, рік, звідки"><button class="btn small" data-pv="capsave">Зберегти</button></div>` : ''}
+    </div></div>`;
+  const root = L.querySelector('.pv'), stage = root.querySelector('.pv-stage'), im = root.querySelector('.pv-img'), menu = root.querySelector('.pv-menu');
+  const apply = (anim) => { if (!im) return; im.style.transition = anim ? 'transform .22s ease' : 'none'; im.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; root.classList.toggle('zoomed', sc > 1.01); const zb = root.querySelector('[data-pv=zoom]'); zb.innerHTML = sc > 1.01 ? ICO.unzoom : ICO.zoom; zb.title = sc > 1.01 ? 'Зменшити' : 'Збільшити (або двічі клацніть по фото)'; };
+  const clamp = () => { if (!im) return; const r = stage.getBoundingClientRect(), w = im.offsetWidth * sc, h = im.offsetHeight * sc; const mx = Math.max(0, (w - r.width) / 2), my = Math.max(0, (h - r.height) / 2); tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty)); };
+  const zoomTo = (ns, cx, cy, anim = true) => { // cx, cy — точка відносно центру сцени, яка лишається під пальцем
+    ns = Math.min(6, Math.max(1, ns)); const k = ns / sc; tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k; sc = ns; if (sc <= 1.01) { sc = 1; tx = ty = 0; } clamp(); apply(anim);
   };
-  const z = () => { const st = $('#layer .stage'); st.classList.toggle('z'); $('#layer [data-zoom]').textContent = st.classList.contains('z') ? 'Зменшити' : 'Збільшити'; };
-  draw();
+  const rel = (x, y) => { const r = stage.getBoundingClientRect(); return [x - r.left - r.width / 2, y - r.top - r.height / 2]; };
+  const show = () => {
+    if (!im) return; sc = 1; tx = ty = 0; apply(false);
+    root.classList.add('loading'); im.onload = () => root.classList.remove('loading'); im.onerror = () => root.classList.remove('loading');
+    im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `${i + 1} / ${pages.length}`;
+    if (pages.length > 1) new Image().src = pages[(i + 1) % pages.length]; // наступна вантажиться заздалегідь
+  };
+  const go = d => { if (pages.length < 2) return; i = (i + d + pages.length) % pages.length; show(); };
+  const close = () => { document.body.classList.remove('noscroll'); document.removeEventListener('keydown', key, true); closeLayer(); };
+  const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.target.tagName === 'INPUT') return; if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); if (e.key === '+' || e.key === '=') zoomTo(sc * 1.5, 0, 0); if (e.key === '-') zoomTo(sc / 1.5, 0, 0); };
+  document.addEventListener('keydown', key, true);
+
+  // Кнопки
+  root.addEventListener('click', async e => {
+    const b = e.target.closest('[data-pv]'); if (!b) { if (!menu.hidden && !e.target.closest('.pv-menu')) menu.hidden = true; return; }
+    const a = b.dataset.pv; e.stopPropagation();
+    if (a === 'close') return close();
+    if (a === 'go') { e.preventDefault(); const h = b.getAttribute('href'); close(); location.hash = h; return; }
+    if (a === 'prev') return go(-1);
+    if (a === 'next') return go(1);
+    if (a === 'zoom') return sc > 1.01 ? zoomTo(1, 0, 0) : zoomTo(2.5, 0, 0);
+    if (a === 'more') { menu.hidden = !menu.hidden; return; }
+    if (a === 'cap') { menu.hidden = true; const c = root.querySelector('.pv-capedit'); c.hidden = false; c.querySelector('input').focus(); return; }
+    if (a === 'capsave') { try { const v = $('#cap-in').value; await api('/api/data', { body: { op: 'photo.caption', id: photoId, caption: v } }); const x = S.data.photos.find(y => y.id === photoId); if (x) x.caption = v; root.querySelector('.pv-t b').textContent = v || title; root.querySelector('.pv-capedit').hidden = true; toast('Підпис збережено'); } catch (err) { toast(errText(err)); } }
+  });
+
+  // Жести: один дотик/клік — закрити (якщо не збільшено), подвійний — збільшити, тягнути — пан/свайп, два пальці — масштаб
+  if (!pages.length) { stage.addEventListener('click', e => { if (e.target === stage) close(); }); return; }
+  const pts = new Map(); let start = null, moved = false, lastTap = 0, tapTimer = null, pinch = null;
+  stage.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]); stage.setPointerCapture?.(e.pointerId);
+    if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, tx, ty, t: Date.now() }; moved = false; }
+    if (pts.size === 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; pinch = { d: Math.hypot(x2 - x1, y2 - y1), sc, c: rel((x1 + x2) / 2, (y1 + y2) / 2), tx, ty }; moved = true; }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pts.size >= 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; const ns = Math.min(6, Math.max(1, pinch.sc * Math.hypot(x2 - x1, y2 - y1) / pinch.d)); const k = ns / pinch.sc; const c = rel((x1 + x2) / 2, (y1 + y2) / 2); tx = c[0] - (pinch.c[0] - pinch.tx) * k; ty = c[1] - (pinch.c[1] - pinch.ty) * k; sc = ns; clamp(); apply(false); return; }
+    if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!moved && Math.hypot(dx, dy) < 8) return; moved = true;
+    if (sc > 1.01) { tx = start.tx + dx; ty = start.ty + dy; clamp(); apply(false); }
+    else { im.style.transition = 'none'; im.style.transform = Math.abs(dy) > Math.abs(dx) ? `translateY(${Math.max(0, dy)}px)` : `translateX(${pages.length > 1 ? dx : dx / 4}px)`; root.style.backgroundColor = `rgba(14,12,10,${Math.abs(dy) > Math.abs(dx) ? Math.max(.35, 1 - Math.max(0, dy) / 500) : 1})`; }
+  });
+  const up = e => {
+    if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if (pinch) { if (pts.size < 2) { pinch = null; if (sc <= 1.01) zoomTo(1, 0, 0); start = null; } return; }
+    if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y, st = start; start = null;
+    root.style.backgroundColor = '';
+    if (moved) {
+      if (sc > 1.01) return;
+      if (dy > 110 && dy > Math.abs(dx)) return close();
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) && pages.length > 1) return go(dx < 0 ? 1 : -1);
+      apply(true); return;
+    }
+    // дотик без руху: подвійний — масштаб, одинарний — закрити (або зменшити, якщо збільшено)
+    const now = Date.now();
+    if (now - lastTap < 300) { clearTimeout(tapTimer); lastTap = 0; const [cx, cy] = rel(e.clientX, e.clientY); return sc > 1.01 ? zoomTo(1, 0, 0) : zoomTo(2.5, cx, cy); }
+    lastTap = now;
+    tapTimer = setTimeout(() => { if (!menu.hidden) { menu.hidden = true; return; } if (sc > 1.01) zoomTo(1, 0, 0); else close(); }, 280);
+  };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; start = null; apply(true); });
+  stage.addEventListener('wheel', e => { e.preventDefault(); const [cx, cy] = rel(e.clientX, e.clientY); zoomTo(sc * (e.deltaY < 0 ? 1.2 : 1 / 1.2), cx, cy, false); }, { passive: false });
+  show();
 }
+const ICO = {
+  x: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  zoom: '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M11 8v6M8 11h6"/></svg>',
+  unzoom: '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M8 11h6"/></svg>',
+  more: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+  l: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  r: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+};
 function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
 function openPhoto(id) { const x = S.data.photos.find(y => y.id === id); if (!x) return; if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; } viewer({ title: x.caption || short(P[x.person] || {}), pages: [img('photo=' + id)], text: `Додав(ла): ${who(x.by)}, ${when(x.at)}`, people: [x.person], photoId: (canEdit() || x.by === S.me.id) ? id : null }); }
 
