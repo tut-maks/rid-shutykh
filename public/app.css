@@ -276,3 +276,19 @@ sup.gl{color:var(--seal);font-weight:700;cursor:help;margin-left:1px}
 .gnotes b{color:var(--ink2);font-weight:600}
 .story>div:first-child{white-space:pre-wrap;font-family:var(--f-display);font-size:17px;line-height:1.5}
 .about .gnotes,.story .gnotes{white-space:normal;font-family:var(--f-body,inherit);font-size:13px}
+/* Згортання гілок і повноекранний режим дерева */
+.tg{position:absolute;z-index:2;min-width:30px;height:24px;padding:0 6px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:12px;font:600 12px/22px var(--f-mono);cursor:pointer;box-shadow:0 2px 6px -3px rgba(0,0,0,.35)}
+.tg.up{background:var(--ink);color:var(--paper)}
+.tg.sib{min-width:28px;background:#F3EFE6}
+.tg.cl{min-width:20px;width:20px;height:20px;line-height:18px;padding:0;border-radius:50%;opacity:.75}
+.tg:hover{opacity:1;transform:scale(1.06)}
+.vp.full{position:fixed;inset:0;z-index:60;height:auto;min-height:0;border:0}
+body.noscroll{overflow:hidden}
+.vpctl button[data-full]{font-size:17px}
+@media(max-width:820px){
+  .vp{height:calc(100dvh - 150px);min-height:360px;margin:0 -16px;border-left:0;border-right:0}
+  .vpctl{left:10px;bottom:calc(10px + env(safe-area-inset-bottom))}
+  .vpctl button{width:46px;height:46px}
+  .tg{height:30px;min-width:36px;line-height:28px;font-size:13px}
+  .tbar{gap:6px}.tbar label.small{display:none}.tbar #tcenter{flex:1 1 100%}
+}

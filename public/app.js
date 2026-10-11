@@ -110,7 +110,7 @@ function vPedigree(tabs) {
     <div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>
     <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
 }
-const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
+const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
 
 /* ── Дерево згори вниз: людина в центрі, над нею батьки, діди…; біля кожного предка — брати й сестри ── */
 const T2 = { W: 156, H: 46, GX: 12, GY: 92, PAD: 50 };
@@ -125,11 +125,14 @@ function layoutTD(center) {
   const sep = (A, B) => { let d = -Infinity; for (const r in A.c) if (B.c[r]) d = Math.max(d, A.c[r][1] - B.c[r][0] + P2); return d === -Infinity ? 0 : d; };
   const seen = new Set();
   const sibs = c => { const p = P[c]; const ps = [p.f, p.mo].filter(x => x && P[x]); if (!ps.length) return [c]; return [...new Set(ps.flatMap(x => KIDS[x] || []))].filter(x => x === c || !seen.has(x)).sort(sortS); };
+  const EXP = S.ui.exp ||= {}; const SIBX = S.ui.sibx ||= {}; const DEF = innerWidth < 820 ? 2 : 3; const hid = S.ui.hid = {};
   function up(c, r, side) { // блок предків людини c (c у x=0, ряд r)
-    const B = mk(); const g = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
+    const B = mk(); const all = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
+    const g = SIBX[c] || f.allOpen ? all : [c]; if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
     let order = g.filter(x => x !== c); order = side === 'L' ? [...order, c] : side === 'R' ? [c, ...order] : g;
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
-    const p = P[c]; const fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
+    const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
+    if ((fa || mo) && r >= DEF && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
     if (fa || mo) {
       let F = fa ? up(fa, r + 1, mo ? 'L' : 'C') : null; let M = mo ? up(mo, r + 1, fa ? 'R' : 'C') : null;
       let mid;
@@ -167,14 +170,18 @@ function vAll(tabs) {
   const q = (f.q || '').trim().toLowerCase();
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q);
     return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}">${ph(p)}<span><b>${esc(short(p))}</b><span class="y">${esc(life(p))}</span></span></a>`; }).join('');
+  const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
+    if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
+    if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 22}px;top:${n.y + T2.H - 9}px" title="Показати братів і сестер">+${h.sib}</button>`;
+    return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `<div class="lede"><div class="eyebrow">Родовід згори вниз</div><h1>${esc(short(P[center]))}: предки й родина</h1></div>${tabs}
     <div class="tbar"><label class="small muted">Від кого будувати</label><select class="in" id="tcenter" aria-label="Від кого будувати дерево">${opts}</select>
       <input class="in" id="tq" type="search" placeholder="Знайти в дереві…" value="${esc(f.q || '')}" aria-label="Пошук у дереві">
       <select class="in" id="tsort" aria-label="Порядок братів і сестер"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>Брати й сестри: за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select>
-      <span class="small muted">${V.size} осіб</span></div>
-    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}</svg>${cards}</div>${vpCtl(true)}</div>
+      <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button><span class="small muted">${V.size} осіб</span></div>
+    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
     <p class="small muted" style="margin-top:8px">Тягніть мишкою або пальцем; коліщатко або два пальці — масштаб. Натисніть на людину — відкриється картка. Щоб побачити гілку іншої людини (наприклад, родину Олени), виберіть її у полі «Від кого будувати».</p>`;
 }
 
@@ -190,14 +197,25 @@ function vpMount() {
   function mini() { const c = $('#minimap'); if (!c || !S.ui.tl) return; const g = c.getContext('2d'), L = S.ui.tl; const k = Math.min(c.width / L.w, c.height / L.h); g.clearRect(0, 0, c.width, c.height); g.fillStyle = '#B9B2A6';
     Object.values(L.N).forEach(n => g.fillRect(n.x * k, n.y * k, Math.max(1.5, T2.W * k), Math.max(1.5, T2.H * k)));
     g.strokeStyle = '#2C4A6E'; g.lineWidth = 1.5; g.strokeRect(-V.x / V.s * k, -V.y / V.s * k, vp.clientWidth / V.s * k, vp.clientHeight / V.s * k); c._k = k; }
-  if (fresh) { if (mode === 'all') { V.s = 0.85; center(vp.dataset.center); } else fit(); } else apply();
-  let drag = null, moved = false; const pts = new Map();
-  vp.onpointerdown = e => { if (e.target.closest('.vpctl,.minimap')) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y }; moved = false; };
-  vp.onpointermove = e => { if (!pts.has(e.pointerId)) return; const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; const d1 = Math.hypot(a.x - b.x, a.y - b.y); const o = [...pts.entries()].find(([k]) => k !== e.pointerId)[1]; const d0 = Math.hypot(prev.x - o.x, prev.y - o.y); const r = vp.getBoundingClientRect(); if (d0 > 0) zoomAt(d1 / d0, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); moved = true; return; }
-    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!moved && Math.abs(dx) + Math.abs(dy) > 5) { moved = true; try { vp.setPointerCapture(e.pointerId); } catch {} } if (!moved) return; V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); };
-  vp.onpointerup = vp.onpointercancel = e => { pts.delete(e.pointerId); if (!pts.size) drag = null; };
+  if (S.ui.anchor && mode === 'all') { const an = S.ui.anchor; S.ui.anchor = null; const el = st.querySelector(`[data-id="${an.id}"]`); if (el) { V.x = an.sx - el.offsetLeft * V.s; V.y = an.sy - el.offsetTop * V.s; } apply(); }
+  else if (fresh) { if (mode === 'all') { V.s = innerWidth < 820 ? 0.6 : 0.85; center(vp.dataset.center); } else fit(); } else apply();
+  vp.classList.toggle('full', !!S.ui.full); document.body.classList.toggle('noscroll', !!S.ui.full);
+  let drag = null, moved = false, pinch = null; const pts = new Map();
+  const pinchStart = () => { const [p1, p2] = [...pts.values()]; const r = vp.getBoundingClientRect(); pinch = { d: Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1, s: V.s, mx: (p1.x + p2.x) / 2 - r.left, my: (p1.y + p2.y) / 2 - r.top, vx: V.x, vy: V.y }; };
+  vp.onpointerdown = e => { if (e.target.closest('.vpctl,.minimap,.tg')) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { pinchStart(); drag = null; moved = true; try { vp.setPointerCapture(e.pointerId); } catch {} } else { drag = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y }; moved = false; } };
+  vp.onpointermove = e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 && pinch) { const [p1, p2] = [...pts.values()]; const r = vp.getBoundingClientRect(); const d = Math.hypot(p1.x - p2.x, p1.y - p2.y); const mx = (p1.x + p2.x) / 2 - r.left, my = (p1.y + p2.y) / 2 - r.top;
+      const s2 = Math.min(2.5, Math.max(0.12, pinch.s * d / pinch.d)); // точка між пальцями лишається на місці
+      V.x = mx - (pinch.mx - pinch.vx) * s2 / pinch.s; V.y = my - (pinch.my - pinch.vy) * s2 / pinch.s; V.s = s2; apply(); return; }
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!moved && Math.abs(dx) + Math.abs(dy) > 6) { moved = true; try { vp.setPointerCapture(e.pointerId); } catch {} } if (!moved) return; V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); };
+  vp.onpointerup = vp.onpointercancel = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (pts.size === 1) { const [p] = [...pts.values()]; drag = { x: p.x, y: p.y, vx: V.x, vy: V.y }; } if (!pts.size) drag = null; };
   vp.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+  const fb = vp.querySelector('[data-full]'); if (fb) fb.onclick = () => { S.ui.full = !S.ui.full; vp.classList.toggle('full', S.ui.full); document.body.classList.toggle('noscroll', S.ui.full); requestAnimationFrame(() => apply()); };
+  vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.coll; const el = st.querySelector(`[data-id="${id}"]`);
+    S.ui.anchor = el ? { id, sx: V.x + el.offsetLeft * V.s, sy: V.y + el.offsetTop * V.s } : null;
+    if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else { delete S.ui.exp[id]; delete S.ui.sibx[id]; }
+    render(); });
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
   vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
   vp.querySelector('[data-zoom-out]').onclick = () => zoomAt(0.8, vp.clientWidth / 2, vp.clientHeight / 2);
@@ -589,6 +607,7 @@ document.addEventListener('click', async e => {
     if (d.active) { if (t.dataset.armed !== '1' && d.v === 'false') { t.dataset.armed = '1'; t.textContent = 'Точно вимкнути?'; return; } await api('/api/admin?a=member', { body: { id: d.active, active: d.v === 'true' } }); S.admin.members = null; return loadAdmin(); }
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
+    if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; const r = await api('/api/setup?a=import', { body: {} }); const ok = (r.result || []).filter(x => x.endsWith('ok')).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
     if (act === 'logout') { await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
