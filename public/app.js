@@ -472,7 +472,7 @@ function vAdmin() {
   } else if (a.tab === 'history' && a.revs) {
     body = `<p class="small muted">Усі зміни в дереві. Будь-яку можна відкотити: попередній стан повернеться, а сам відкат теж запишеться в історію.</p>${revList(a.revs.revisions)}`;
   }
-  return `<div class="lede"><div class="eyebrow">Лише для вас</div><h1>Панель власника</h1></div>${tabs}${body}`;
+  return `<div class="lede"><div class="eyebrow">Лише для вас</div><h1>Панель власника</h1></div><div class="docform" style="max-width:none;grid-template-columns:1fr auto;align-items:center"><span>Нові фото й скани, які підготував Claude</span><button class="btn line small" data-act="import">Імпортувати</button><div class="msg" id="imp-m" style="grid-column:1/-1"></div></div>${tabs}${body}`;
 }
 const ENT = { person: 'Картка', union: 'Подружжя', family: 'Родина', story: 'Спогад', photo: 'Фото', member: 'Доступ', seed: 'Імпорт' };
 const ACT = { create: 'створено', update: 'змінено', delete: 'видалено', restore: 'відкат', invite: 'запрошення', reset: 'новий пароль' };
@@ -589,6 +589,7 @@ document.addEventListener('click', async e => {
     if (d.active) { if (t.dataset.armed !== '1' && d.v === 'false') { t.dataset.armed = '1'; t.textContent = 'Точно вимкнути?'; return; } await api('/api/admin?a=member', { body: { id: d.active, active: d.v === 'true' } }); S.admin.members = null; return loadAdmin(); }
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
+    if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; const r = await api('/api/setup?a=import', { body: {} }); const ok = (r.result || []).filter(x => x.endsWith('ok')).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
     if (act === 'logout') { await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
     if (act === 'docform') { S.ui.docform = !S.ui.docform; S.ui.keepScroll = true; render(); setTimeout(() => $('#dtitle')?.focus(), 30); return; }
