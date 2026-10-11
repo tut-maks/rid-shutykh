@@ -556,7 +556,7 @@ function render() {
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target;
   try {
-    if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); }
+    if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); autoImport(); }
     if (f.id === 'accept') { const t = new URLSearchParams(location.search).get('invite'); const r = await api('/api/auth?a=accept', { body: { t, name: $('#ac-n').value, password: $('#ac-p').value }, noRedirect: true }); history.replaceState(null, '', '/'); S.gate = null; S.me = r.member; await load(); render(); }
     if (f.id === 'setup') { await api('/api/setup?a=init', { body: { token: $('#su-t').value, name: $('#su-n').value, email: $('#su-e').value, password: $('#su-p').value }, noRedirect: true }); S.gate = null; await start(); }
   } catch (err) { const m = f.querySelector('.msg'); if (m) { m.textContent = errText(err); m.className = 'msg err'; } }
@@ -711,6 +711,17 @@ async function start() {
   try { const r = await api('/api/auth?a=me', { noRedirect: true }); S.me = r.member; } catch { S.me = null; }
   if (S.me) { render(); await load(); }
   render();
+  autoImport();
+}
+// Власнику: нові фото й картки, які підготував Claude (seed/import), додаються самі — раз за сеанс, повторно нічого не дублюється
+async function autoImport() {
+  if (!isOwner()) return;
+  try { if (sessionStorage.getItem('rs_imp')) return; sessionStorage.setItem('rs_imp', '1'); } catch {}
+  try {
+    const r = await api('/api/setup?a=import', { body: {}, noRedirect: true });
+    const ok = (r.result || []).filter(x => x.endsWith('ok')).length;
+    if (ok) { await load(); render(); toast(`Додано нових матеріалів від Claude: ${ok}`); }
+  } catch {}
 }
 start();
 })();
