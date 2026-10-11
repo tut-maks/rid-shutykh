@@ -192,10 +192,10 @@ function vpMount() {
     g.strokeStyle = '#2C4A6E'; g.lineWidth = 1.5; g.strokeRect(-V.x / V.s * k, -V.y / V.s * k, vp.clientWidth / V.s * k, vp.clientHeight / V.s * k); c._k = k; }
   if (fresh) { if (mode === 'all') { V.s = 0.85; center(vp.dataset.center); } else fit(); } else apply();
   let drag = null, moved = false; const pts = new Map();
-  vp.onpointerdown = e => { if (e.target.closest('.vpctl,.minimap')) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y }; moved = false; vp.setPointerCapture?.(e.pointerId); };
+  vp.onpointerdown = e => { if (e.target.closest('.vpctl,.minimap')) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y }; moved = false; };
   vp.onpointermove = e => { if (!pts.has(e.pointerId)) return; const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pts.size === 2) { const [a, b] = [...pts.values()]; const d1 = Math.hypot(a.x - b.x, a.y - b.y); const o = [...pts.entries()].find(([k]) => k !== e.pointerId)[1]; const d0 = Math.hypot(prev.x - o.x, prev.y - o.y); const r = vp.getBoundingClientRect(); if (d0 > 0) zoomAt(d1 / d0, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); moved = true; return; }
-    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 4) moved = true; V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); };
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!moved && Math.abs(dx) + Math.abs(dy) > 5) { moved = true; try { vp.setPointerCapture(e.pointerId); } catch {} } if (!moved) return; V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); };
   vp.onpointerup = vp.onpointercancel = e => { pts.delete(e.pointerId); if (!pts.size) drag = null; };
   vp.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
@@ -568,6 +568,7 @@ document.addEventListener('click', async e => {
     if (act === 'edit') return openEdit(P[S.arg]);
     if (act === 'history') { e.preventDefault(); const r = await api(`/api/admin?a=revisions&entity=person&id=${encodeURIComponent(S.arg)}`); modal(`<h2>Історія змін</h2>${revList(r.revisions)}<div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
     if (act === 'save' || act === 'create') {
+      if (t.disabled) return; t.disabled = true; // захист від подвійного натискання
       const data = readForm(); const m = $('#emsg'); m.textContent = 'Зберігаю…'; m.className = 'msg';
       const cur = act === 'save' ? P[S.ui.editing] : null;
       const body = cur ? { op: 'person.save', id: cur.id, v: cur.v, data: { ...data, ...(cur.portrait ? { portrait: cur.portrait } : {}) } } : { op: 'person.save', data, link: S.ui.adding?.link || {} };
