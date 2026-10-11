@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610112148';
+const BUILD = '202610112212';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -303,6 +303,7 @@ const GLOSS = [
   [/консисторі[а-яіїєґ']*/i, 'консисторія', 'церковна управа єпархії; у її архіві зберігаються копії метричних книг і сповідних відомостей.'],
   [/запасн[а-яіїєґ']* солдат[а-яіїєґ']*|відставн[а-яіїєґ']* солдат[а-яіїєґ']*/i, 'запасний (відставний) солдат', 'чоловік, що відслужив строкову військову службу і був звільнений у запас.'],
   [/хрещен[а-яіїєґ']* (?:батьк|мат)[а-яіїєґ']*|восприємник[а-яіїєґ']*/i, 'хрещені', 'хресні батьки (восприємники), записані в метриці при хрещенні дитини.'],
+  [/граф[а-яіїєґ']* Апраксин[а-яіїєґ']*|Апраксин[а-яіїєґ']*/i, 'граф Апраксин', 'граф Олександр Петрович Апраксин (1784–1845) — полковник, учасник війни 1812 року, камергер. По матері — онук останнього гетьмана Кирила Розумовського, якому в 1787 р. належали Вороньки. Є припущення, що маєток перейшов до Апраксиних через матір, Єлизавету Кирилівну Розумовську. Граф помер 1845 р., тому в метриках 1848 р. селяни — кріпаки «спадкоємців покійного графа Апраксина». 1850 р. Вороньки купив Аркадій Кочубей для сина Миколи.'],
   [/⚭/, '⚭', 'знак шлюбу: «одружився / одружилася з», далі дата вінчання.'],
 ];
 function glossify(html) { // html уже безпечний (екранований); замінюємо лише текст поза тегами, кожне слово — один раз
@@ -688,20 +689,23 @@ function fitAffine(pts) { // пікселі зображення -> «світо
   const [A, B, C] = solve(N, bx), [D, E, F] = solve(N, by); return { A, B, C, D, E, F };
 }
 function openOverlay(id) {
-  const m = S.data.documents.find(d => d.id === id); if (!m || (m.geo || []).length < 3) return;
-  const T = fitAffine(m.geo);
+  const geoMaps = mapsList().filter(x => x.pages && (x.geo || []).length >= 3);
+  let m = S.data.documents.find(d => d.id === id); if (!m || (m.geo || []).length < 3) return;
+  const mkT = mm => { const t = fitAffine(mm.geo); if (mm.shift) { t.C += mm.shift[0]; t.F += mm.shift[1]; } return t; };
+  let T = mkT(m), adj = false, adjStart = null;
   ev('open', 'map', 'map:' + id);
   const L = $('#layer'); document.body.classList.add('noscroll');
   let base = S.ui.mbase || 'sat', op = S.ui.mop ?? 0.7, show = true;
   L.innerHTML = `<div class="ov" role="dialog" aria-modal="true" aria-label="${esc(m.title)}">
     <div class="ov-map"><div class="ov-tiles"></div><img class="ov-old" alt="" draggable="false"></div>
-    <div class="ov-top"><b>${esc(m.title)}</b><button class="pv-ic" data-ov="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
+    <div class="ov-top"><select class="ov-sel" aria-label="Яку стару карту накласти">${geoMaps.map(x => `<option value="${x.id}"${x.id === m.id ? ' selected' : ''}>${esc((x.year ? x.year + ' · ' : '') + x.title)}</option>`).join('')}</select><button class="pv-ic" data-ov="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
     <div class="ov-ctl">
       <div class="seg">${Object.entries(BASES).map(([k, b]) => `<button type="button" data-ov="base" data-v="${k}" class="${k === base ? 'on' : ''}">${b.name}</button>`).join('')}</div>
       <label class="ov-op"><span>Стара</span><input type="range" min="0" max="100" value="${Math.round(op * 100)}" aria-label="Прозорість старої карти"></label>
       <button class="btn small line" data-ov="toggle">Сховати</button>
       <button class="btn small line" data-ov="zin" aria-label="Збільшити">+</button><button class="btn small line" data-ov="zout" aria-label="Зменшити">−</button>
       <a class="btn small line" data-ov="gmaps" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>
+      ${canEdit() ? `<button class="btn small line" data-ov="adj" title="Тягніть стару карту, щоб точніше суміщалася з сучасною">Підігнати</button>` : ''}
     </div>
     <div class="ov-attr"></div></div>`;
   const root = L.querySelector('.ov'), box = root.querySelector('.ov-map'), tiles = root.querySelector('.ov-tiles'), old = root.querySelector('.ov-old'), attr = root.querySelector('.ov-attr');
@@ -730,9 +734,17 @@ function openOverlay(id) {
   const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === '+' || e.key === '=') zoomAt(z + 1, W() / 2, H() / 2); if (e.key === '-') zoomAt(z - 1, W() / 2, H() / 2); };
   document.addEventListener('keydown', key, true); addEventListener('resize', draw);
   root.querySelector('input[type=range]').addEventListener('input', e => { op = e.target.value / 100; S.ui.mop = op; old.style.opacity = show ? op : 0; });
-  root.addEventListener('click', e => {
+  root.querySelector('.ov-sel').addEventListener('change', e => { m = S.data.documents.find(d => d.id === e.target.value); T = mkT(m); old.onload = draw; old.src = img('doc=' + m.id + '&page=0'); attr.textContent = ''; draw(); });
+  root.addEventListener('click', async e => {
     const b = e.target.closest('[data-ov]'); if (!b) return; const a = b.dataset.ov;
     if (a === 'close') return close();
+    if (a === 'adj') {
+      if (!adj) { adj = true; b.textContent = 'Зберегти суміщення'; b.classList.remove('line'); toast('Тягніть стару карту, поки дороги й річки не збіжуться'); return; }
+      adj = false; b.textContent = 'Підігнати'; b.classList.add('line');
+      const base0 = fitAffine(m.geo), dx = T.C - base0.C, dy = T.F - base0.F;
+      try { await api('/api/data', { body: { op: 'doc.geoshift', id: m.id, dx, dy } }); m.shift = [dx, dy]; toast('Суміщення збережено для всіх'); } catch (err) { toast(errText(err)); }
+      return;
+    }
     if (a === 'base') { base = S.ui.mbase = b.dataset.v; root.querySelectorAll('[data-ov=base]').forEach(x => x.classList.toggle('on', x === b)); cache.forEach(el => el.remove()); cache.clear(); draw(); }
     if (a === 'toggle') { show = !show; old.style.opacity = show ? op : 0; b.textContent = show ? 'Сховати' : 'Показати'; }
     if (a === 'zin') zoomAt(z + 1, W() / 2, H() / 2);
@@ -742,8 +754,8 @@ function openOverlay(id) {
   // жести: тягнути, колесо, два пальці
   const pts = new Map(); let st = null, pin = null;
   box.addEventListener('pointerdown', e => { pts.set(e.pointerId, [e.clientX, e.clientY]); box.setPointerCapture?.(e.pointerId); if (pts.size === 1) st = { x: e.clientX, y: e.clientY, cx, cy }; if (pts.size === 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; const r = box.getBoundingClientRect(); pin = { d: Math.hypot(x2 - x1, y2 - y1), z, mx: (x1 + x2) / 2 - r.left, my: (y1 + y2) / 2 - r.top }; } });
-  box.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]); if (pin && pts.size >= 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; zoomAt(pin.z + Math.log2(Math.hypot(x2 - x1, y2 - y1) / pin.d), pin.mx, pin.my); return; } if (st) { const S1 = 2 ** z; cx = st.cx - (e.clientX - st.x) / S1; cy = st.cy - (e.clientY - st.y) / S1; draw(); } });
-  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pin = null; if (!pts.size) st = null; else { const [[x, y]] = [...pts.values()]; st = { x, y, cx, cy }; } };
+  box.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]); if (adj && st && pts.size === 1) { const S1 = 2 ** z; adjStart ||= { C: T.C, F: T.F }; T.C = adjStart.C + (e.clientX - st.x) / S1; T.F = adjStart.F + (e.clientY - st.y) / S1; draw(); return; } if (pin && pts.size >= 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; zoomAt(pin.z + Math.log2(Math.hypot(x2 - x1, y2 - y1) / pin.d), pin.mx, pin.my); return; } if (st) { const S1 = 2 ** z; cx = st.cx - (e.clientX - st.x) / S1; cy = st.cy - (e.clientY - st.y) / S1; draw(); } });
+  const up = e => { adjStart = null; pts.delete(e.pointerId); if (pts.size < 2) pin = null; if (!pts.size) st = null; else { const [[x, y]] = [...pts.values()]; st = { x, y, cx, cy }; } };
   box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
   box.addEventListener('wheel', e => { e.preventDefault(); const r = box.getBoundingClientRect(); zoomAt(z - e.deltaY / 300, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   if (old.complete && old.naturalWidth) fitOld(); else { old.onload = fitOld; old.onerror = fitOld; }
@@ -792,7 +804,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId }) {
       ${pages.length > 1 ? `<button class="pv-nav prev" data-pv="prev" aria-label="Попередня">${ICO.l}</button><button class="pv-nav next" data-pv="next" aria-label="Наступна">${ICO.r}</button>` : ''}
       <div class="pv-load"></div></div>
     <div class="pv-cap">
-      ${line ? `<div class="pv-line">${esc(line)}</div>` : ''}${text ? `<div>${esc(text)}</div>` : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
+      ${line || text ? glossify((line ? `<div class="pv-line">${esc(line)}</div>` : '') + (text ? `<div>${esc(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
       ${who_.length ? `<div class="pv-people">${who_.map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('')}</div>` : ''}
       ${photoId ? `<div class="pv-capedit" hidden><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Хто на фото, рік, звідки"><button class="btn small" data-pv="capsave">Зберегти</button></div>` : ''}
     </div></div>`;

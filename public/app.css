@@ -442,3 +442,5 @@ main.wrap.wide{max-width:none;padding-inline:20px}
 .ov-op input{width:140px}
 .ov-attr{position:absolute;right:6px;bottom:4px;font-size:10.5px;color:#cfc8bc;background:rgba(0,0,0,.45);padding:1px 6px;border-radius:3px;max-width:70vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:600px){.ov-op input{width:110px}.ov-ctl{gap:6px;padding:8px}.ov-ctl .btn{min-height:40px}}
+.pv-cap .gnotes{color:#A39B8E;border-top-color:#3B352C;margin-top:4px}.pv-cap .gnotes b{color:#D9D2C6}.pv-cap sup.gl{color:#E8B9A6}
+.ov-sel{flex:1;min-width:0;pointer-events:auto;background:rgba(36,32,27,.85);color:#EDE8DF;border:1px solid #3B352C;border-radius:6px;padding:8px 10px;font:inherit;font-size:15px;max-width:640px}

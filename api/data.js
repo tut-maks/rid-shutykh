@@ -136,6 +136,16 @@ export default handler(async (req, res, ctx) => {
     await revision('document', id, 'create', null, data, me.id);
     return send(res, 200, { ok: true, id });
   }
+  if (op === 'doc.geoshift') { // підігнати стару карту на сучасній: зсув у «світових» пікселях (зум 0)
+    if (!editor) return fail(res, 403, 'forbidden');
+    const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc || doc.data.type !== 'map') return fail(res, 404, 'not_found');
+    const dx = Number(body.dx), dy = Number(body.dy);
+    if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) return fail(res, 400, 'bad');
+    const data = { ...doc.data, shift: [dx, dy] };
+    await db.update('documents', { eq: { id: doc.id } }, { data, updated_by: me.id, updated_at: new Date().toISOString() });
+    await revision('document', doc.id, 'update', { shift: doc.data.shift || null }, { shift: data.shift }, me.id);
+    return done({ ok: true, shift: data.shift }, 'map:' + doc.id);
+  }
   if (op === 'doc.page.delete') { // прибрати зайву сторінку зі скану документа (файл лишається в сховищі)
     if (!editor) return fail(res, 403, 'forbidden');
     const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc) return fail(res, 404, 'not_found');
