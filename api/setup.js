@@ -47,5 +47,38 @@ export default handler(async (req, res, _c, url) => {
     return send(res, 200, { ok: true, persons: seed.persons.length, documents: seed.documents.length, files });
   }
 
+  // Нові файли, які Claude додав у репозиторій (seed/import/manifest.json): фото людей і сторінки документів. Лише власник; повторно не імпортує.
+  if (a === 'import' && req.method === 'POST') {
+    const ctx = await who(req);
+    if (!ctx || !can(ctx.member, 'owner')) return fail(res, 403, 'forbidden');
+    const mf = path.join(ROOT, 'seed/import/manifest.json');
+    if (!fs.existsSync(mf)) return send(res, 200, { ok: true, added: 0 });
+    const items = JSON.parse(fs.readFileSync(mf, 'utf8')); const by = ctx.member.id; const out = [];
+    const read = f => { const fp = path.join(ROOT, 'seed/import', path.basename(String(f || ''))); return fs.existsSync(fp) ? fs.readFileSync(fp) : null; };
+    for (const it of items) {
+      const key = String(it.key || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 60); if (!key) continue;
+      if (it.kind === 'photo') {
+        const person = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!person) { out.push(key + ': no person'); continue; }
+        const p = `photos/${person.id}/imp-${key}.jpg`;
+        if ((await db.list('photos', { eq: { path: p }, limit: 1 })).length) { out.push(key + ': вже є'); continue; }
+        const buf = read(it.file); if (!buf) { out.push(key + ': no file'); continue; }
+        await db.put(p, buf, 'image/jpeg'); let thumb = null; const tb = read(it.thumb); if (tb) { thumb = p.replace(/\.jpg$/, '-t.jpg'); await db.put(thumb, tb, 'image/jpeg'); }
+        const [ph] = await db.insert('photos', { person_id: person.id, path: p, thumb, caption: String(it.caption || '').slice(0, 500), mime: 'image/jpeg', size: buf.length, created_by: by });
+        await revision('photo', ph.id, 'create', null, { person_id: person.id, caption: it.caption, path: p }, by);
+        if (it.portrait) { const nd = { ...person.data, portrait: ph.id }; await db.update('persons', { eq: { id: person.id } }, { data: nd, version: person.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', person.id, 'update', person.data, nd, by); }
+        out.push(key + ': ok');
+      } else if (it.kind === 'docpage') {
+        const d = await db.get('documents', { eq: { id: String(it.doc) } }); if (!d) { out.push(key + ': no doc'); continue; }
+        const p = `docs/imp-${key}.jpg`; if ((d.data.pages || []).includes(p)) { out.push(key + ': вже є'); continue; }
+        const buf = read(it.file); if (!buf) { out.push(key + ': no file'); continue; }
+        await db.put(p, buf, 'image/jpeg'); const tb = read(it.thumb); if (tb) await db.put('docs/t-imp-' + key + '.jpg', tb, 'image/jpeg');
+        const data = { ...d.data, pages: [...(d.data.pages || []), p] };
+        await db.update('documents', { eq: { id: d.id } }, { data, updated_by: by, updated_at: new Date().toISOString() }); await revision('document', d.id, 'update', d.data, data, by);
+        out.push(key + ': ok');
+      }
+    }
+    return send(res, 200, { ok: true, result: out });
+  }
+
   return fail(res, 404, 'unknown');
 }, { auth: false });
