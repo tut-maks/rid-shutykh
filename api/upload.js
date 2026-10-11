@@ -43,6 +43,7 @@ export default handler(async (req, res, ctx, url) => {
       data = { title: S(m.title, 200) || 'Документ', date: S(m.date, 40), place: S(m.place, 120), src: S(m.src, 400), line: S(m.line, 400), text: S(m.text, 4000),
         maybe: !!m.maybe, people: (Array.isArray(m.people) ? m.people : []).map(x => S(x, 60)).filter(Boolean).slice(0, 40), pages: [] };
       if (/^https:\/\//.test(S(m.url, 300))) data.url = S(m.url, 300);
+      if (m.type === 'map') { data.type = 'map'; data.people = []; data.villages = (Array.isArray(m.villages) ? m.villages : []).map(x => S(x, 60)).filter(Boolean).slice(0, 20); const y = Number(m.year); if (Number.isInteger(y) && y > 1500 && y < 2100) data.year = y; }
     }
     const n = (data.pages || []).length;
     const path = `docs/${docId}-${n}-${crypto.randomBytes(3).toString('hex')}.${OK[mime]}`;

@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610112139';
+const BUILD = '202610112145';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -87,7 +87,7 @@ addEventListener('hashchange', () => { parse(); render(); window.scrollTo(0, 0);
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['tree', 'Дерево'], ['families', 'Родини'], ['people', 'Люди'], ['docs', 'Документи'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
+  const nav = [['tree', 'Дерево'], ['families', 'Родини'], ['people', 'Люди'], ['docs', 'Документи'], ['maps', 'Карти'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
   if (isOwner()) nav.push(['admin', 'Власнику' + (S.data?.joinPending ? ` <b class="nb" title="Нові заявки на реєстрацію">${S.data.joinPending}</b>` : '')]);
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   return `<header class="top"><div class="wrap">
@@ -636,6 +636,119 @@ async function joinHandle(act, t, d) {
   return false;
 }
 
+
+/* ───── Старі карти сіл ─────
+   Карта — документ з type:'map'. Якщо є прив'язка geo (контрольні точки [x, y, широта, довгота] у пікселях зображення),
+   її можна «накласти» на сучасну карту (OpenStreetMap або супутник) з прозорістю. */
+const mapsList = () => S.data.documents.filter(d => d.type === 'map').sort((a, b) => (a.year || 0) - (b.year || 0) || String(a.title).localeCompare(String(b.title), 'uk'));
+function vMaps() {
+  curTarget = 'maps';
+  const all = mapsList(), vs = [...new Set(all.flatMap(m => m.villages || []))].sort((a, b) => a.localeCompare(b, 'uk'));
+  const f = S.ui.mapv || '', list = f ? all.filter(m => (m.villages || []).includes(f)) : all;
+  return `<div class="lede"><div class="eyebrow">Архів</div><h1>Старі карти</h1><p>Як виглядали наші села 100–150 років тому. Будь-яку карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок і побачити, що де було.</p></div>
+  <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
+    ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
+  ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
+  <div class="maps">${list.map(m => `<article class="mapc">
+    <button class="mapim" data-doc="${m.id}" title="Відкрити карту">${m.pages ? `<img src="${img('doc=' + m.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph">зображення ще немає</span>'}</button>
+    <div class="mapt"><b>${esc(m.title)}</b><span class="mono small">${esc(m.date || m.year || '')}</span>
+      ${(m.villages || []).length ? `<span class="small muted">${m.villages.map(esc).join(' · ')}</span>` : ''}
+      ${m.text ? `<p class="small">${glossify(esc(m.text))}</p>` : ''}
+      ${m.src ? `<p class="small muted">${esc(m.src)}${m.url ? ` <a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">оригінал</a>` : ''}</p>` : ''}
+      <div class="btns"><button class="btn line small" data-doc="${m.id}">Відкрити</button>${m.pages && (m.geo || []).length >= 3 ? `<button class="btn small" data-act="map-over" data-id="${m.id}">Накласти на сучасну карту</button><span class="small muted">прив'язана</span>` : `<span class="small muted">ще не прив'язана до сучасної карти</span>`}</div></div>
+  </article>`).join('') || '<p class="muted">Карт поки немає.</p>'}</div>`;
+}
+async function uploadMap(files) {
+  const m = $('#mmsg'), v = id => ($('#' + id)?.value || '').trim();
+  if (!v('mtitle')) { m.className = 'msg err'; m.textContent = 'Вкажіть назву карти.'; return; }
+  const meta = { type: 'map', title: v('mtitle'), date: v('myear'), year: Number(v('myear')) || undefined, src: v('msrc'), villages: v('mvil').split(',').map(x => x.trim()).filter(Boolean) };
+  const id = 'map' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); let n = 0;
+  for (const f of files) {
+    try {
+      m.className = 'msg'; m.textContent = `Завантажую ${n + 1} з ${files.length}…`;
+      let full = await toJpeg(f, 4000, 0.86); if (full.size > 4e6) full = await toJpeg(f, 3000, 0.82); if (full.size > 4e6) full = await toJpeg(f, 2400, 0.8);
+      const r = await api(`/api/upload?doc=${id}${n ? '' : '&meta=' + encodeURIComponent(JSON.stringify(meta))}`, { raw: full });
+      await api(`/api/upload?doc=${id}&kind=thumb&page=${r.page}`, { raw: await toJpeg(f, 420, 0.78) }).catch(() => {});
+      n++;
+    } catch (err) { m.className = 'msg err'; m.textContent = `«${f.name}»: ${errText(err)}`; }
+  }
+  if (n) { S.ui.mapform = false; await load(); S.ui.keepScroll = true; render(); toast('Карту додано'); }
+}
+
+/* Накладання на сучасну карту: власна проста «карта» з плиток OSM / супутника (без бібліотек) */
+const BASES = {
+  osm: { name: 'Схема', url: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`, attr: '© учасники OpenStreetMap', max: 19 },
+  sat: { name: 'Супутник', url: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, attr: 'Знімок: Esri, Maxar, Earthstar Geographics', max: 18 },
+};
+const merc = (lat, lon) => { const s = Math.sin(lat * Math.PI / 180); return [(lon + 180) / 360 * 256, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 256]; };
+function fitAffine(pts) { // пікселі зображення -> «світові» пікселі (зум 0), найменші квадрати
+  const solve = (M, v) => { const a = M.map((r, i) => [...r, v[i]]); for (let i = 0; i < 3; i++) { let p = i; for (let j = i + 1; j < 3; j++) if (Math.abs(a[j][i]) > Math.abs(a[p][i])) p = j; [a[i], a[p]] = [a[p], a[i]]; for (let j = 0; j < 3; j++) if (j !== i) { const k = a[j][i] / a[i][i]; for (let c = i; c < 4; c++) a[j][c] -= k * a[i][c]; } } return a.map((r, i) => r[3] / r[i]); };
+  const N = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], bx = [0, 0, 0], by = [0, 0, 0];
+  for (const [ix, iy, lat, lon] of pts) { const [wx, wy] = merc(lat, lon), r = [ix, iy, 1]; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) N[i][j] += r[i] * r[j]; bx[i] += r[i] * wx; by[i] += r[i] * wy; } }
+  const [A, B, C] = solve(N, bx), [D, E, F] = solve(N, by); return { A, B, C, D, E, F };
+}
+function openOverlay(id) {
+  const m = S.data.documents.find(d => d.id === id); if (!m || (m.geo || []).length < 3) return;
+  const T = fitAffine(m.geo);
+  ev('open', 'map', 'map:' + id);
+  const L = $('#layer'); document.body.classList.add('noscroll');
+  let base = S.ui.mbase || 'sat', op = S.ui.mop ?? 0.7, show = true;
+  L.innerHTML = `<div class="ov" role="dialog" aria-modal="true" aria-label="${esc(m.title)}">
+    <div class="ov-map"><div class="ov-tiles"></div><img class="ov-old" alt="" draggable="false"></div>
+    <div class="ov-top"><b>${esc(m.title)}</b><button class="pv-ic" data-ov="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
+    <div class="ov-ctl">
+      <div class="seg">${Object.entries(BASES).map(([k, b]) => `<button type="button" data-ov="base" data-v="${k}" class="${k === base ? 'on' : ''}">${b.name}</button>`).join('')}</div>
+      <label class="ov-op"><span>Стара</span><input type="range" min="0" max="100" value="${Math.round(op * 100)}" aria-label="Прозорість старої карти"></label>
+      <button class="btn small line" data-ov="toggle">Сховати</button>
+      <button class="btn small line" data-ov="zin" aria-label="Збільшити">+</button><button class="btn small line" data-ov="zout" aria-label="Зменшити">−</button>
+      <a class="btn small line" data-ov="gmaps" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>
+    </div>
+    <div class="ov-attr"></div></div>`;
+  const root = L.querySelector('.ov'), box = root.querySelector('.ov-map'), tiles = root.querySelector('.ov-tiles'), old = root.querySelector('.ov-old'), attr = root.querySelector('.ov-attr');
+  old.src = img('doc=' + id + '&page=0'); old.style.opacity = op;
+  const W = () => box.clientWidth, H = () => box.clientHeight;
+  // початковий вигляд — уся стара карта
+  let cx, cy, z;
+  const fitOld = () => { const w = old.naturalWidth || 2000, h = old.naturalHeight || 1500; const cs = [[0, 0], [w, 0], [0, h], [w, h]].map(([x, y]) => [T.A * x + T.B * y + T.C, T.D * x + T.E * y + T.F]); const xs = cs.map(c => c[0]), ys = cs.map(c => c[1]); cx = (Math.min(...xs) + Math.max(...xs)) / 2; cy = (Math.min(...ys) + Math.max(...ys)) / 2; z = Math.log2(Math.min(W() / (Math.max(...xs) - Math.min(...xs)), H() / (Math.max(...ys) - Math.min(...ys)))); z = Math.min(17, Math.max(3, z)); draw(); };
+  let raf = 0; const draw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(paint); };
+  const cache = new Map();
+  function paint() {
+    const B = BASES[base], zt = Math.max(0, Math.min(B.max, Math.round(z))), S2 = 2 ** z, ts = 256 * 2 ** (z - zt), n = 2 ** zt;
+    const x0 = (cx - W() / 2 / S2) / 256 * n, y0 = (cy - H() / 2 / S2) / 256 * n, x1 = (cx + W() / 2 / S2) / 256 * n, y1 = (cy + H() / 2 / S2) / 256 * n;
+    const want = new Set();
+    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) {
+      if (ty < 0 || ty >= n) continue; const wx = ((tx % n) + n) % n, key = base + '/' + zt + '/' + tx + '/' + ty; want.add(key);
+      let el = cache.get(key); if (!el) { el = new Image(); el.referrerPolicy = 'strict-origin-when-cross-origin'; el.alt = ''; el.onerror = () => { el.style.visibility = 'hidden'; }; el.draggable = false; el.src = B.url(zt, wx, ty); cache.set(key, el); tiles.appendChild(el); }
+      el.style.transform = `translate(${(tx * 256 / n - cx) * S2 + W() / 2}px,${(ty * 256 / n - cy) * S2 + H() / 2}px) scale(${ts / 256})`;
+    }
+    for (const [k, el] of cache) if (!want.has(k)) { el.remove(); cache.delete(k); }
+    old.style.transform = `matrix(${T.A * S2},${T.D * S2},${T.B * S2},${T.E * S2},${(T.C - cx) * S2 + W() / 2},${(T.F - cy) * S2 + H() / 2})`;
+    attr.textContent = B.attr + ' · Стара карта: ' + (m.src || '').split('.')[0];
+  }
+  const zoomAt = (nz, sx, sy) => { nz = Math.min(BASES[base].max + 1, Math.max(3, nz)); const S1 = 2 ** z, S2 = 2 ** nz; const wx = cx + (sx - W() / 2) / S1, wy = cy + (sy - H() / 2) / S1; cx = wx - (sx - W() / 2) / S2; cy = wy - (sy - H() / 2) / S2; z = nz; draw(); };
+  const close = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', key, true); removeEventListener('resize', draw); closeLayer(); };
+  const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === '+' || e.key === '=') zoomAt(z + 1, W() / 2, H() / 2); if (e.key === '-') zoomAt(z - 1, W() / 2, H() / 2); };
+  document.addEventListener('keydown', key, true); addEventListener('resize', draw);
+  root.querySelector('input[type=range]').addEventListener('input', e => { op = e.target.value / 100; S.ui.mop = op; old.style.opacity = show ? op : 0; });
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-ov]'); if (!b) return; const a = b.dataset.ov;
+    if (a === 'close') return close();
+    if (a === 'base') { base = S.ui.mbase = b.dataset.v; root.querySelectorAll('[data-ov=base]').forEach(x => x.classList.toggle('on', x === b)); cache.forEach(el => el.remove()); cache.clear(); draw(); }
+    if (a === 'toggle') { show = !show; old.style.opacity = show ? op : 0; b.textContent = show ? 'Сховати' : 'Показати'; }
+    if (a === 'zin') zoomAt(z + 1, W() / 2, H() / 2);
+    if (a === 'zout') zoomAt(z - 1, W() / 2, H() / 2);
+    if (a === 'gmaps') { const lon = cx / 256 * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * cy / 256))) * 180 / Math.PI; b.href = `https://www.google.com/maps/@${lat.toFixed(5)},${lon.toFixed(5)},${Math.round(z)}z`; }
+  });
+  // жести: тягнути, колесо, два пальці
+  const pts = new Map(); let st = null, pin = null;
+  box.addEventListener('pointerdown', e => { pts.set(e.pointerId, [e.clientX, e.clientY]); box.setPointerCapture?.(e.pointerId); if (pts.size === 1) st = { x: e.clientX, y: e.clientY, cx, cy }; if (pts.size === 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; const r = box.getBoundingClientRect(); pin = { d: Math.hypot(x2 - x1, y2 - y1), z, mx: (x1 + x2) / 2 - r.left, my: (y1 + y2) / 2 - r.top }; } });
+  box.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]); if (pin && pts.size >= 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; zoomAt(pin.z + Math.log2(Math.hypot(x2 - x1, y2 - y1) / pin.d), pin.mx, pin.my); return; } if (st) { const S1 = 2 ** z; cx = st.cx - (e.clientX - st.x) / S1; cy = st.cy - (e.clientY - st.y) / S1; draw(); } });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pin = null; if (!pts.size) st = null; else { const [[x, y]] = [...pts.values()]; st = { x, y, cx, cy }; } };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  box.addEventListener('wheel', e => { e.preventDefault(); const r = box.getBoundingClientRect(); zoomAt(z - e.deltaY / 300, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  if (old.complete && old.naturalWidth) fitOld(); else { old.onload = fitOld; old.onerror = fitOld; }
+}
+
 function vPeople() {
   const q = (S.ui.q || '').toLowerCase();
   const famT = p => (p.fam || []).map(x => FAM[x]?.title).filter(Boolean).join(', ');
@@ -650,7 +763,7 @@ function vPeople() {
 /* ───── Документи ───── */
 const docCard = d => `<button class="doc" data-doc="${d.id}"><span class="im">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph" style="width:100%;height:100%">скан ще не додано</span>'}</span><b>${esc(d.title)}</b><span class="mono">${esc(d.date || '')}${d.place ? ' · ' + esc(d.place) : ''}</span></button>`;
 function vDocs() {
-  const s = [...S.data.documents].sort((a, b) => yearOf(a.date).localeCompare(yearOf(b.date)));
+  const s = S.data.documents.filter(d => d.type !== 'map').sort((a, b) => yearOf(a.date).localeCompare(yearOf(b.date)));
   return `<div class="lede"><div class="eyebrow">Архів</div><h1>Документи</h1><p>Метричні книги Покровської церкви села Вороньки, записи ЗАГС і сімейні документи. Під кожним указано, яка саме строчка стосується нашої родини.</p></div>
   ${canEdit() && s.some(d => !d.pages) ? `<div class="docform" style="max-width:none"><b>Документи без сканів: ${s.filter(d => !d.pages).length}</b><span class="small muted">Виберіть файли, назви яких починаються з коду документа (напр. «fs1834-dvir240.jpg»), — сайт сам розкладе їх по документах.</span><label class="btn line small" style="cursor:pointer;justify-self:start">Вибрати скани<input type="file" accept="image/*" multiple data-docbulk="1" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
   <div class="docs">${s.filter(d => !d.maybe).map(docCard).join('')}</div>
@@ -892,7 +1005,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions }[S.view] || vTree;
+  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps }[S.view] || vTree;
   const sy = window.scrollY;
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>`;
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
@@ -933,6 +1046,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.docbulk) return uploadBulk([...t.files]);
   if (t.dataset.docpage) return uploadPages(t.dataset.docpage, [...t.files]);
+  if (t.dataset.mapup) return uploadMap([...t.files]);
   if (t.dataset.role) { try { await api('/api/admin?a=member', { body: { id: t.dataset.role, role: t.value } }); toast('Права змінено'); } catch (err) { toast(errText(err)); } }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#layer').innerHTML) closeLayer(); });
@@ -969,6 +1083,9 @@ document.addEventListener('click', async e => {
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
     if (act === 'upd-reload') { t.disabled = true; t.textContent = 'Оновлюю…'; try { const ks = await caches?.keys?.(); for (const k of ks || []) await caches.delete(k); } catch {} location.reload(); return; }
+    if (act === 'map-v') { S.ui.mapv = d.v; S.ui.keepScroll = true; render(); return; }
+    if (act === 'map-form') { S.ui.mapform = !S.ui.mapform; S.ui.keepScroll = true; render(); return; }
+    if (act === 'map-over') return openOverlay(d.id);
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
