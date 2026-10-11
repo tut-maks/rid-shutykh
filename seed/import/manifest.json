@@ -1,14 +1,281 @@
 [
-  { "key": "nastia-portret", "kind": "photo", "person": "nastia", "file": "nastia-portret.jpg", "thumb": "nastia-portret-t.jpg", "portrait": true, "caption": "Анастасія Макарівна Шута (Семена) — фрагмент родинного фото" },
-  { "key": "nastia-sestry", "kind": "photo", "person": "nastia", "file": "nastia-sestry.jpg", "thumb": "nastia-sestry-t.jpg", "caption": "Анастасія Макарівна Шута — у центрі. Родинне фото (кольоризоване)" },
-  { "key": "olha-portret", "kind": "photo", "person": "olha_y", "file": "olha-portret.jpg", "thumb": "olha-portret-t.jpg", "portrait": true, "caption": "Ольга Яківна — фрагмент фото з Іваном Пархомовичем" },
-  { "key": "ivan-portret", "kind": "photo", "person": "ivan_k", "file": "ivan-portret.jpg", "thumb": "ivan-portret-t.jpg", "portrait": true, "caption": "Іван Пархомович («Пахомович») — фрагмент фото з Ольгою Яківною" },
-  { "key": "olha-ivan", "kind": "photo", "person": "olha_y", "file": "olha-ivan.jpg", "thumb": "olha-ivan-t.jpg", "caption": "Ольга Яківна та Іван Пархомович Красновиди" },
-  { "key": "olha-ivan-2", "kind": "photo", "person": "ivan_k", "file": "olha-ivan.jpg", "thumb": "olha-ivan-t.jpg", "caption": "Іван Пархомович та Ольга Яківна Красновиди" },
-  { "key": "tania-z-batkamy", "kind": "photo", "person": "tetiana", "file": "tania-z-batkamy.jpg", "thumb": "tania-z-batkamy-t.jpg", "caption": "Іван Пархомович і Ольга Яківна тримають на руках маленьку Тетяну" },
-  { "key": "tania-z-batkamy-o", "kind": "photo", "person": "olha_y", "file": "tania-z-batkamy.jpg", "thumb": "tania-z-batkamy-t.jpg", "caption": "Ольга Яківна та Іван Пархомович з маленькою Тетяною на руках" },
-  { "key": "tania-z-batkamy-i", "kind": "photo", "person": "ivan_k", "file": "tania-z-batkamy.jpg", "thumb": "tania-z-batkamy-t.jpg", "caption": "Іван Пархомович та Ольга Яківна з маленькою Тетяною на руках" },
-  { "key": "krasnovydy-dity", "kind": "photo", "person": "tetiana", "file": "krasnovydy-dity.jpg", "thumb": "krasnovydy-dity-t.jpg", "caption": "Тетяна з рідними братами й сестрами — шестеро дітей Красновидів" },
-  { "key": "krasnovydy-rodyna", "kind": "photo", "person": "tetiana", "file": "krasnovydy-rodyna.jpg", "thumb": "krasnovydy-rodyna-t.jpg", "caption": "Шестеро дітей Красновидів із батьками — Іваном Пархомовичем і Ольгою Яківною — та Олексієм Костюком, чоловіком Оксани (рідної сестри Тетяни)" },
-  { "key": "krasnovydy-rodyna-o", "kind": "photo", "person": "olha_y", "file": "krasnovydy-rodyna.jpg", "thumb": "krasnovydy-rodyna-t.jpg", "caption": "Ольга Яківна та Іван Пархомович із шістьма дітьми та зятем Олексієм Костюком" }
+ {
+  "key": "nastia-portret",
+  "kind": "photo",
+  "person": "nastia",
+  "file": "nastia-portret.jpg",
+  "thumb": "nastia-portret-t.jpg",
+  "portrait": true,
+  "caption": "Анастасія Макарівна Шута (Семена) — фрагмент родинного фото"
+ },
+ {
+  "key": "nastia-sestry",
+  "kind": "photo",
+  "person": "nastia",
+  "file": "nastia-sestry.jpg",
+  "thumb": "nastia-sestry-t.jpg",
+  "caption": "Анастасія Макарівна Шута — у центрі. Родинне фото (кольоризоване)"
+ },
+ {
+  "key": "olha-portret",
+  "kind": "photo",
+  "person": "olha_y",
+  "file": "olha-portret.jpg",
+  "thumb": "olha-portret-t.jpg",
+  "portrait": true,
+  "caption": "Ольга Яківна — фрагмент фото з Іваном Пархомовичем"
+ },
+ {
+  "key": "ivan-portret",
+  "kind": "photo",
+  "person": "ivan_k",
+  "file": "ivan-portret.jpg",
+  "thumb": "ivan-portret-t.jpg",
+  "portrait": true,
+  "caption": "Іван Пархомович («Пахомович») — фрагмент фото з Ольгою Яківною"
+ },
+ {
+  "key": "olha-ivan",
+  "kind": "photo",
+  "person": "olha_y",
+  "file": "olha-ivan.jpg",
+  "thumb": "olha-ivan-t.jpg",
+  "caption": "Ольга Яківна та Іван Пархомович Красновиди"
+ },
+ {
+  "key": "olha-ivan-2",
+  "kind": "photo",
+  "person": "ivan_k",
+  "file": "olha-ivan.jpg",
+  "thumb": "olha-ivan-t.jpg",
+  "caption": "Іван Пархомович та Ольга Яківна Красновиди"
+ },
+ {
+  "key": "tania-z-batkamy",
+  "kind": "photo",
+  "person": "tetiana",
+  "file": "tania-z-batkamy.jpg",
+  "thumb": "tania-z-batkamy-t.jpg",
+  "caption": "Іван Пархомович і Ольга Яківна тримають на руках маленьку Тетяну"
+ },
+ {
+  "key": "tania-z-batkamy-o",
+  "kind": "photo",
+  "person": "olha_y",
+  "file": "tania-z-batkamy.jpg",
+  "thumb": "tania-z-batkamy-t.jpg",
+  "caption": "Ольга Яківна та Іван Пархомович з маленькою Тетяною на руках"
+ },
+ {
+  "key": "tania-z-batkamy-i",
+  "kind": "photo",
+  "person": "ivan_k",
+  "file": "tania-z-batkamy.jpg",
+  "thumb": "tania-z-batkamy-t.jpg",
+  "caption": "Іван Пархомович та Ольга Яківна з маленькою Тетяною на руках"
+ },
+ {
+  "key": "krasnovydy-dity",
+  "kind": "photo",
+  "person": "tetiana",
+  "file": "krasnovydy-dity.jpg",
+  "thumb": "krasnovydy-dity-t.jpg",
+  "caption": "Тетяна з рідними братами й сестрами — шестеро дітей Красновидів"
+ },
+ {
+  "key": "krasnovydy-rodyna",
+  "kind": "photo",
+  "person": "tetiana",
+  "file": "krasnovydy-rodyna.jpg",
+  "thumb": "krasnovydy-rodyna-t.jpg",
+  "caption": "Шестеро дітей Красновидів із батьками — Іваном Пархомовичем і Ольгою Яківною — та Олексієм Костюком, чоловіком Оксани (рідної сестри Тетяни)"
+ },
+ {
+  "key": "krasnovydy-rodyna-o",
+  "kind": "photo",
+  "person": "olha_y",
+  "file": "krasnovydy-rodyna.jpg",
+  "thumb": "krasnovydy-rodyna-t.jpg",
+  "caption": "Ольга Яківна та Іван Пархомович із шістьма дітьми та зятем Олексієм Костюком"
+ },
+ {
+  "key": "vasyl-t-legend",
+  "kind": "personpatch",
+  "person": "vasyl_t",
+  "unset": [
+   "d"
+  ],
+  "replace": [
+   [
+    " За родинним переказом, був начальником залізниці в Баришівці. Його засудили, за переказом через зниклий вагон солі, і він помер в ув'язненні приблизно 1953 року. Стаття була кримінальна, тому в базах репресованих його немає.",
+    ""
+   ]
+  ]
+ },
+ {
+  "key": "voronky-legend",
+  "kind": "familypatch",
+  "family": "voronky",
+  "replace": [
+   [
+    ", за родинним переказом, був начальником залізниці в Баришівці, а помер в ув'язненні.",
+    "."
+   ]
+  ]
+ },
+ {
+  "key": "ivan-k-pakhomovych",
+  "kind": "personpatch",
+  "person": "ivan_k",
+  "replace": [
+   [
+    "Прізвище отримав від матері",
+    "У селі його всі звали просто «Пахомович». Прізвище отримав від матері"
+   ]
+  ]
+ },
+ {
+  "key": "tetiana-siblings",
+  "kind": "personpatch",
+  "person": "tetiana",
+  "replace": [
+   [
+    "У паспорті",
+    "Шестеро рідних братів і сестер Красновидів; серед сестер — Оксана Іванівна Костюк і Любов Іванівна Митрюк. У паспорті"
+   ]
+  ]
+ },
+ {
+  "key": "p-oksana",
+  "kind": "person",
+  "id": "oksana_kr",
+  "data": {
+   "n": "Оксана",
+   "pt": "Іванівна",
+   "s": "Костюк",
+   "m": "Красновид",
+   "sex": "f",
+   "f": "ivan_k",
+   "mo": "olha_y",
+   "fam": [
+    "krasnovyd"
+   ],
+   "note": "Рідна сестра Тетяни Іванівни. Чоловік — Олексій Костюк."
+  }
+ },
+ {
+  "key": "p-oleksii",
+  "kind": "person",
+  "id": "oleksii_kost",
+  "spouseOf": "oksana_kr",
+  "data": {
+   "n": "Олексій",
+   "s": "Костюк",
+   "sex": "m",
+   "fam": [
+    "krasnovyd"
+   ],
+   "note": "Чоловік Оксани Іванівни (з Красновидів)."
+  }
+ },
+ {
+  "key": "p-liubov",
+  "kind": "person",
+  "id": "liubov_kr",
+  "data": {
+   "n": "Любов",
+   "pt": "Іванівна",
+   "s": "Митрюк",
+   "m": "Красновид",
+   "sex": "f",
+   "f": "ivan_k",
+   "mo": "olha_y",
+   "fam": [
+    "krasnovyd"
+   ],
+   "note": "Рідна сестра Тетяни Іванівни."
+  }
+ },
+ {
+  "key": "maksym-portret",
+  "kind": "photo",
+  "person": "maksym",
+  "file": "maksym-portret.jpg",
+  "thumb": "maksym-portret-t.jpg",
+  "portrait": true,
+  "caption": "Максим Васильович Шутий"
+ },
+ {
+  "key": "maksym-moto",
+  "kind": "photo",
+  "person": "maksym",
+  "file": "maksym-moto.jpg",
+  "thumb": "maksym-moto-t.jpg",
+  "caption": "Максим Васильович Шутий"
+ },
+ {
+  "key": "tetiana-portret",
+  "kind": "photo",
+  "person": "tetiana",
+  "file": "tetiana-portret.jpg",
+  "thumb": "tetiana-portret-t.jpg",
+  "portrait": true,
+  "caption": "Тетяна Іванівна Шута (з Красновидів)"
+ },
+ {
+  "key": "tetiana-kvity",
+  "kind": "photo",
+  "person": "tetiana",
+  "file": "tetiana-kvity.jpg",
+  "thumb": "tetiana-kvity-t.jpg",
+  "caption": "Тетяна Іванівна Шута"
+ },
+ {
+  "key": "olha-dochky-o",
+  "kind": "photo",
+  "person": "olha_y",
+  "file": "olha-z-dochkamy.jpg",
+  "thumb": "olha-z-dochkamy-t.jpg",
+  "caption": "Ольга Яківна з трьома дочками: Тетяною (Шута), Оксаною (Костюк) і Любов'ю (Митрюк) — у дівоцтві всі Красновид"
+ },
+ {
+  "key": "olha-dochky-t",
+  "kind": "photo",
+  "person": "tetiana",
+  "file": "olha-z-dochkamy.jpg",
+  "thumb": "olha-z-dochkamy-t.jpg",
+  "caption": "Ольга Яківна з трьома дочками: Тетяною (Шута), Оксаною (Костюк) і Любов'ю (Митрюк) — у дівоцтві всі Красновид"
+ },
+ {
+  "key": "olha-dochky-ok",
+  "kind": "photo",
+  "person": "oksana_kr",
+  "file": "olha-z-dochkamy.jpg",
+  "thumb": "olha-z-dochkamy-t.jpg",
+  "caption": "Ольга Яківна з трьома дочками: Тетяною (Шута), Оксаною (Костюк) і Любов'ю (Митрюк) — у дівоцтві всі Красновид"
+ },
+ {
+  "key": "olha-dochky-l",
+  "kind": "photo",
+  "person": "liubov_kr",
+  "file": "olha-z-dochkamy.jpg",
+  "thumb": "olha-z-dochkamy-t.jpg",
+  "caption": "Ольга Яківна з трьома дочками: Тетяною (Шута), Оксаною (Костюк) і Любов'ю (Митрюк) — у дівоцтві всі Красновид"
+ },
+ {
+  "key": "ivan-mykola-i",
+  "kind": "photo",
+  "person": "ivan_k",
+  "file": "ivan-mykola.jpg",
+  "thumb": "ivan-mykola-t.jpg",
+  "caption": "Іван Пархомович («Пахомович») — ймовірно, з молодшим братом Миколою Левченком"
+ },
+ {
+  "key": "ivan-mykola-m",
+  "kind": "photo",
+  "person": "mykola_lev",
+  "file": "ivan-mykola.jpg",
+  "thumb": "ivan-mykola-t.jpg",
+  "caption": "Іван Пархомович («Пахомович») — ймовірно, з молодшим братом Миколою Левченком"
+ }
 ]

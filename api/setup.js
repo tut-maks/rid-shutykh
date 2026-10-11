@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, env, safeEq, hashPass, createSession, who, can, tooMany, attempt, clientIp, revision } from './_lib.js';
+import { handler, send, fail, readJSON, env, safeEq, hashPass, createSession, who, can, tooMany, attempt, clientIp, revision, cleanPerson } from './_lib.js';
 
 const ROOT = process.cwd();
 
@@ -66,6 +66,27 @@ export default handler(async (req, res, _c, url) => {
         const [ph] = await db.insert('photos', { person_id: person.id, path: p, thumb, caption: String(it.caption || '').slice(0, 500), mime: 'image/jpeg', size: buf.length, created_by: by });
         await revision('photo', ph.id, 'create', null, { person_id: person.id, caption: it.caption, path: p }, by);
         if (it.portrait) { const nd = { ...person.data, portrait: ph.id }; await db.update('persons', { eq: { id: person.id } }, { data: nd, version: person.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', person.id, 'update', person.data, nd, by); }
+        out.push(key + ': ok');
+      } else if (it.kind === 'person') { // нова картка з фіксованим id (повторно не створюється)
+        const id = String(it.id || '').replace(/[^a-z0-9_]/gi, '').slice(0, 60);
+        if (!id || await db.get('persons', { eq: { id } })) { out.push(key + ': вже є'); continue; }
+        const data = cleanPerson(it.data || {}); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by);
+        if (it.spouseOf && await db.get('persons', { eq: { id: String(it.spouseOf) } })) { const u = { id: 'u_' + id, a: String(it.spouseOf), b: id, date: String(it.date || ''), created_by: by }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, by); }
+        out.push(key + ': ok');
+      } else if (it.kind === 'personpatch') { // точкові виправлення тексту/полів картки
+        const p = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!p) { out.push(key + ': no person'); continue; }
+        const nd = { ...p.data }; let ch = false;
+        for (const [k, v] of Object.entries(it.set || {})) if (nd[k] !== v) { nd[k] = v; ch = true; }
+        for (const k of it.unset || []) if (k in nd) { delete nd[k]; ch = true; }
+        for (const [from, to] of it.replace || []) if (typeof nd.note === 'string' && nd.note.includes(from)) { nd.note = nd.note.split(from).join(to); ch = true; }
+        if (!ch) { out.push(key + ': без змін'); continue; }
+        const data = cleanPerson(nd); await db.update('persons', { eq: { id: p.id } }, { data, version: p.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, by);
+        out.push(key + ': ok');
+      } else if (it.kind === 'familypatch') {
+        const f = await db.get('families', { eq: { id: String(it.family) } }); if (!f) { out.push(key + ': no family'); continue; }
+        let story = f.data.story || ''; const before = story; for (const [from, to] of it.replace || []) story = story.split(from).join(to);
+        if (story === before) { out.push(key + ': без змін'); continue; }
+        const data = { ...f.data, story }; await db.update('families', { eq: { id: f.id } }, { data, updated_by: by, updated_at: new Date().toISOString() }); await revision('family', f.id, 'update', f.data, data, by);
         out.push(key + ': ok');
       } else if (it.kind === 'docpage') {
         const d = await db.get('documents', { eq: { id: String(it.doc) } }); if (!d) { out.push(key + ': no doc'); continue; }
