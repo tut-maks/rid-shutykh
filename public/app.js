@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610112304';
+const BUILD = '202610120556';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1000,8 +1000,9 @@ function vAdmin() {
       ${m.members.map(x => `<tr><td><b>${esc(x.name || '—')}</b><br><span class="small muted">${esc(x.email)}</span>${!x.active ? ' <span class="badge">вимкнено</span>' : ''}</td>
         <td>${x.id === S.me.id ? 'власник' : `<select class="in" data-role="${x.id}" style="width:auto;font-size:14px"><option value="editor"${x.role === 'editor' ? ' selected' : ''}>редактор</option><option value="viewer"${x.role === 'viewer' ? ' selected' : ''}>глядач</option><option value="owner"${x.role === 'owner' ? ' selected' : ''}>власник</option></select>`}</td>
         <td class="num" title="${esc(x.sessions.devices.map(d => d.ua).join('\n'))}">${x.sessions.n}</td><td class="num small">${esc(when(x.sessions.last))}</td>
-        <td>${x.id === S.me.id ? '' : `<div class="btns"><button class="btn line small" data-reset="${x.id}">Новий пароль</button><button class="btn line small" data-revoke="${x.id}">Вийти з усіх пристроїв</button><button class="btn ${x.active ? 'danger' : 'line'} small" data-active="${x.id}" data-v="${!x.active}">${x.active ? 'Вимкнути доступ' : 'Увімкнути'}</button></div>`}</td></tr>`).join('')}
-      </tbody></table></div></div>
+        <td>${x.id === S.me.id ? '' : `<div class="btns"><button class="btn line small" data-reset="${x.id}">Новий пароль</button><button class="btn line small" data-revoke="${x.id}">Вийти з усіх пристроїв</button><button class="btn ${x.active ? 'danger' : 'line'} small" data-active="${x.id}" data-v="${!x.active}">${x.active ? 'Вимкнути доступ' : 'Увімкнути'}</button>${x.role !== 'owner' ? `<button class="btn danger small" data-act="mdel" data-id="${x.id}">Видалити акаунт</button>` : ''}</div>`}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="small muted">«Вимкнути доступ» — тимчасово: людина не зможе зайти, доки не ввімкнете знову. «Видалити акаунт» — назавжди: вхід стерто, з усіх пристроїв вийде одразу; її спогади й запитання лишаться в архіві з позначкою «видалено».${m.deleted ? ` Видалених акаунтів: ${m.deleted}.` : ''}</p></div>
       ${m.invites.length ? `<div class="sec" style="margin-top:26px"><h3>Очікують</h3>${m.invites.map(i => `<div class="small">${esc(i.name || i.email)} · ${esc(i.email)} · ${i.purpose === 'reset' ? 'новий пароль' : 'запрошення'} · діє до ${esc(when(i.expires_at))}</div>`).join('')}</div>` : ''}`;
   } else if (a.tab === 'history' && a.revs) {
     body = `<p class="small muted">Усі зміни в дереві. Будь-яку можна відкотити: попередній стан повернеться, а сам відкат теж запишеться в історію.</p>${revList(a.revs.revisions)}`;
@@ -1134,6 +1135,9 @@ document.addEventListener('click', async e => {
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
     if (act === 'upd-reload') { t.disabled = true; t.textContent = 'Оновлюю…'; try { const ks = await caches?.keys?.(); for (const k of ks || []) await caches.delete(k); } catch {} location.reload(); return; }
+    if (act === 'mdel') { const x = S.admin.members.members.find(y => y.id === t.dataset.id); if (!x) return;
+      if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити назавжди?'; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ''; t.textContent = 'Видалити акаунт'; } }, 5000); return; }
+      t.disabled = true; await api('/api/admin?a=delete', { body: { id: x.id } }); toast(`Акаунт «${x.name || x.email}» видалено`); S.admin.members = null; return loadAdmin(); }
     if (act === 'map-tab') { S.ui.mtab = d.v; render(); return; }
     if (act === 'map-v') { S.ui.mapv = d.v; S.ui.keepScroll = true; render(); return; }
     if (act === 'map-form') { S.ui.mapform = !S.ui.mapform; S.ui.keepScroll = true; render(); return; }

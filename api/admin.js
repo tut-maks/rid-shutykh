@@ -88,7 +88,8 @@ export default handler(async (req, res, ctx, url) => {
     ]);
     const act = {}; for (const s of sessions) { const x = (act[s.member_id] ||= { n: 0, last: null, devices: [] }); x.n++; if (!x.last || s.last_seen > x.last) x.last = s.last_seen; x.devices.push({ ua: s.ua, ip: s.ip, last: s.last_seen, created: s.created_at }); }
     return send(res, 200, {
-      members: members.map(m => ({ id: m.id, email: m.email, name: m.name, role: m.role, person_id: m.person_id, active: m.active, created_at: m.created_at, hasPass: !!m.pass_hash, sessions: act[m.id] || { n: 0, last: null, devices: [] } })),
+      members: members.filter(m => !String(m.email).endsWith('@deleted.local')).map(m => ({ id: m.id, email: m.email, name: m.name, role: m.role, person_id: m.person_id, active: m.active, created_at: m.created_at, hasPass: !!m.pass_hash, sessions: act[m.id] || { n: 0, last: null, devices: [] } })),
+      deleted: members.filter(m => String(m.email).endsWith('@deleted.local')).length,
       invites: invites.filter(i => !i.used_at && new Date(i.expires_at) > new Date()).map(i => ({ email: i.email, name: i.name, role: i.role, purpose: i.purpose, expires_at: i.expires_at, created_at: i.created_at })),
     });
   }
@@ -123,6 +124,20 @@ export default handler(async (req, res, ctx, url) => {
     const [row] = await db.update('members', { eq: { id: m.id } }, patch);
     if (patch.active === false) await db.update('sessions', { eq: { member_id: m.id } }, { revoked: true });
     await revision('member', m.id, 'update', { role: m.role, active: m.active, name: m.name }, { role: row.role, active: row.active, name: row.name }, me.id);
+    return send(res, 200, { ok: true });
+  }
+
+  // Видалити акаунт: вхід неможливий назавжди (пароль стерто, пошту звільнено), усі сеанси й запрошення — анульовано.
+  // Спогади й запитання людини лишаються в архіві з її ім'ям. Власника видалити не можна — спершу змініть права.
+  if (a === 'delete' && req.method === 'POST') {
+    const b = await readJSON(req, 10_000);
+    const m = await db.get('members', { eq: { id: S(b.id, 60) } }); if (!m) return fail(res, 404, 'not_found');
+    if (m.id === me.id || m.role === 'owner') return fail(res, 400, 'owner');
+    const patch = { active: false, pass_hash: null, email: `deleted-${m.id}@deleted.local`, name: (m.name || 'Родич') + ' (видалено)' };
+    await db.update('members', { eq: { id: m.id } }, patch);
+    await db.update('sessions', { eq: { member_id: m.id } }, { revoked: true });
+    await db.remove('invites', { eq: { email: m.email } }).catch(() => {});
+    await revision('member', m.id, 'delete', { email: m.email, name: m.name, role: m.role, active: m.active }, { name: patch.name, active: false }, me.id);
     return send(res, 200, { ok: true });
   }
 
