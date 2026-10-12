@@ -1,4 +1,6 @@
 // Дані дерева. GET /api/data — усе для показу; POST /api/data {op, ...} — зміни (з історією).
+import fs from 'node:fs';
+import path from 'node:path';
 import { db } from './_db.js';
 import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugId, canAddTo } from './_lib.js';
 
@@ -46,7 +48,12 @@ export default handler(async (req, res, ctx, url) => {
   const me = ctx.member;
   if (req.method === 'GET') {
     const tk = url?.searchParams?.get('text'); // великі тексти (історія роду, історія сіл) — окремо, щоб не важчало завантаження
-    if (tk) { if (!['history', 'villages'].includes(tk)) return fail(res, 400, 'bad'); const row = await db.get('settings', { eq: { key: 'text:' + tk } }).catch(() => null); return send(res, 200, { text: row?.value || null }); }
+    if (tk) { if (!['history', 'villages'].includes(tk)) return fail(res, 400, 'bad'); const row = await db.get('settings', { eq: { key: 'text:' + tk } }).catch(() => null);
+      let text = row?.value || null;
+      if (!text) try { // ще не імпортовано — віддаємо одразу з репозиторію
+        const it = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'seed/import/manifest.json'), 'utf8')).find(x => x.kind === 'text' && x.id === tk); text = it?.value || null;
+      } catch {}
+      return send(res, 200, { text }); }
     return send(res, 200, await bootstrap(ctx));
   }
   if (req.method !== 'POST') return fail(res, 405, 'method');

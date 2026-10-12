@@ -49,12 +49,19 @@ export default handler(async (req, res, _c, url) => {
   }
 
   // Нові файли, які Claude додав у репозиторій (seed/import/manifest.json): фото людей і сторінки документів. Лише власник; повторно не імпортує.
-  if (a === 'import' && req.method === 'POST') {
+  // a=sync — те саме, але сам сайт: будь-хто з родини, хто відкрив сайт, запускає (лише вміст із репозиторію, не з браузера).
+  // Якщо manifest не змінився з минулого разу — одразу «нічого нового».
+  if ((a === 'import' || a === 'sync') && req.method === 'POST') {
     const ctx = await who(req);
-    if (!ctx || !can(ctx.member, 'owner')) return fail(res, 403, 'forbidden');
+    if (!ctx || (a === 'import' && !can(ctx.member, 'owner'))) return fail(res, 403, 'forbidden');
     const mf = path.join(ROOT, 'seed/import/manifest.json');
     if (!fs.existsSync(mf)) return send(res, 200, { ok: true, added: 0 });
-    const items = JSON.parse(fs.readFileSync(mf, 'utf8')); const by = ctx.member.id; const out = [];
+    const raw = fs.readFileSync(mf, 'utf8'), ver = crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16);
+    const verRow = await db.get('settings', { eq: { key: 'import_ver' } }).catch(() => null);
+    if (verRow?.value?.v === ver) return send(res, 200, { ok: true, result: [], more: false, fresh: true });
+    let by = ctx.member.id;
+    if (a === 'sync') { const ow = (await db.list('members', { eq: { role: 'owner', active: true }, limit: 1 }).catch(() => []))[0]; if (ow) by = ow.id; } // автор змін — власник сайту
+    const items = JSON.parse(raw); const out = [];
     const read = f => { const fp = path.join(ROOT, 'seed/import', path.basename(String(f || ''))); return fs.existsSync(fp) ? fs.readFileSync(fp) : null; };
     // Уже оброблені пункти (за хешем змісту) пропускаємо без звернень до бази; час обмежено, решта — наступним запуском
     let doneRow = null; try { doneRow = await db.get('settings', { eq: { key: 'import_done' } }); } catch {}
@@ -67,6 +74,7 @@ export default handler(async (req, res, _c, url) => {
       const h = H(it); if (done[key] === h) continue;
       if (Date.now() - t0 > 40000) { more = true; break; }
       prev = { key, h };
+      try {
       if (it.kind === 'photo') {
         const person = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!person) { out.push(key + ': no person'); continue; }
         const p = `photos/${person.id}/imp-${key}.jpg`;
@@ -145,8 +153,10 @@ export default handler(async (req, res, _c, url) => {
         await db.update('documents', { eq: { id: d.id } }, { data, updated_by: by, updated_at: new Date().toISOString() }); await revision('document', d.id, 'update', d.data, data, by);
         out.push(key + ': ok');
       }
+      } catch (e) { out.push(key + ': error ' + String(e?.message || e).slice(0, 160)); console.error('[import]', key, e); } // один збій не зупиняє решту
     }
     fin(); try { await db.upsert('settings', { key: 'import_done', value: done, updated_by: by, updated_at: new Date().toISOString() }); } catch {}
+    if (!more && !out.some(x => / error /.test(x))) try { await db.upsert('settings', { key: 'import_ver', value: { v: ver, at: new Date().toISOString(), errors: out.filter(x => / error /.test(x)).slice(0, 20) }, updated_by: by, updated_at: new Date().toISOString() }); } catch {}
     return send(res, 200, { ok: true, result: out, more });
   }
 

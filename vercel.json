@@ -6,6 +6,9 @@
       "maxDuration": 60,
       "includeFiles": "seed/**"
     },
+    "api/data.js": {
+      "includeFiles": "seed/import/manifest.json"
+    },
     "api/upload.js": {
       "maxDuration": 30
     },
