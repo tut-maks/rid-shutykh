@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122354';
+const BUILD = '202610122358';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -148,7 +148,7 @@ const IC = {
 const initials = p => ((String(p.n || '').replace(/\s*\(.*?\)/g, '')[0] || '') + (String(p.s || '')[0] || '')).toUpperCase() || '?';
 const avatar = (p, cls = '') => { const u = portrait(p); return `<span class="av ${cls}">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(initials(p))}</span>`; };
 const years = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '?'} – ${d}` : b ? (String(p.b).startsWith('~') ? '≈' + b : b) : ''; };
-const treeHead = () => `<div class="thead"><h1>Наше родинне дерево</h1><p>Кожен із нас — продовження когось.</p></div>`;
+const treeHead = () => '';
 function famSelect(f) {
   return `<select class="in tfam" id="tfam" aria-label="Гілка"><option value="">Усі гілки</option>${Object.values(FAM).map(x => `<option value="${x.id}"${f.fam === x.id ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}</select>`;
 }
@@ -323,7 +323,7 @@ function layoutTD(center) {
 function treeBar(tabs, extra = '') {
   const f = S.ui.tf || {}, center = treeCenter();
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
-  return `<div class="tbar tbar1 tbar2"><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
+  return `<div class="tbar tbar1 tbar2"><h1 class="th1" title="Кожен із нас — продовження когось.">Родинне дерево</h1><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
       ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button>
       <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
         <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
@@ -351,7 +351,7 @@ function vAll(tabs) {
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 22}px;top:${n.y + T2.H - 9}px" title="Показати братів і сестер">+${h.sib}</button>`;
     return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}).filter(k => S.ui.sibx[k]), Object.keys(S.ui.dsib || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
-  const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
+  const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 50}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
     ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span>`)}
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
@@ -549,8 +549,8 @@ function famMembersHtml(f) {
 }
 function vFamilies() {
   const ft = S.ui.ftab || 'rid', tabs = `<div class="seg mtabs"><button type="button" class="${ft === 'rid' ? 'on' : ''}" data-act="fam-tab" data-v="rid">Історія роду</button><button type="button" class="${ft === 'br' ? 'on' : ''}" data-act="fam-tab" data-v="br">Гілки</button></div>`;
-  if (ft === 'rid') return `<div class="lede"><h1>Історія</h1><p>Розповідь про родину й гілки — за документами.</p></div>${tabs}<p class="tabnote">Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.</p>${vRid()}`;
-  return `<div class="lede"><h1>Історія</h1><p>Розповідь про родину й гілки — за документами.</p></div>${tabs}<p class="tabnote">Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.</p>
+  if (ft === 'rid') return `<div class="pghead"><h1 title="Розповідь про родину й гілки — за документами.">Історія</h1>${tabs}<p class="tabnote" title="Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.">Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.</p></div>${vRid()}`;
+  return `<div class="pghead"><h1 title="Розповідь про родину й гілки — за документами.">Історія</h1>${tabs}<p class="tabnote" title="Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.">Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.</p></div>
   <div class="chips" style="margin-bottom:24px">${S.data.families.map(f => `<a class="btn line small" href="#/fam/${f.id}">${esc(f.title)}</a>`).join('')}</div>
   <div class="famlist">${S.data.families.map(famBlock).join('')}</div>`;
 }
@@ -1147,8 +1147,8 @@ function vMaps() {
   const all = mapsList(), vs = [...new Set(all.flatMap(m => m.villages || []))].sort((a, b) => a.localeCompare(b, 'uk'));
   const f = S.ui.mapv || '', list = f ? all.filter(m => (m.villages || []).includes(f)) : all;
   const htab = `<div class="seg mtabs"><button type="button" class="${S.ui.mtab !== 'hist' ? 'on' : ''}" data-act="map-tab" data-v="">Старі карти</button><button type="button" class="${S.ui.mtab === 'hist' ? 'on' : ''}" data-act="map-tab" data-v="hist">Історія сіл</button></div>`;
-  if (S.ui.mtab === 'hist') return `<div class="lede"><h1>Місця</h1><p>Старі карти й історія наших сіл.</p></div>${htab}<p class="tabnote">Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.</p>${vHistory()}`;
-  return `<div class="lede"><h1>Місця</h1><p>Старі карти й історія наших сіл.</p></div>${htab}<p class="tabnote">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p>
+  if (S.ui.mtab === 'hist') return `<div class="pghead"><h1 title="Старі карти й історія наших сіл.">Місця</h1>${htab}<p class="tabnote" title="Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.">Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.</p></div>${vHistory()}`;
+  return `<div class="pghead"><h1 title="Старі карти й історія наших сіл.">Місця</h1>${htab}<p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p></div>
   <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
     ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
   ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
@@ -1499,7 +1499,7 @@ function vAdmin() {
   } else if (a.tab === 'history' && a.revs) {
     body = `<p class="small muted">Усі зміни в дереві. Будь-яку можна відкотити: попередній стан повернеться, а сам відкат теж запишеться в історію.</p>${revList(a.revs.revisions)}`;
   }
-  return `<div class="lede"><h1>Власнику</h1><p>Аналітика, доступи родичів та історія змін.</p></div>${tabs}${body}`;
+  return `<div class="pghead"><h1 title="Аналітика, доступи родичів та історія змін.">Власнику</h1>${tabs}</div>${body}`;
 }
 const ENT = { person: 'Картка', union: 'Подружжя', family: 'Родина', story: 'Спогад', photo: 'Фото', member: 'Доступ', seed: 'Імпорт', question: 'Запитання' };
 const ACT = { create: 'створено', update: 'змінено', delete: 'видалено', restore: 'відкат', invite: 'запрошення', reset: 'новий пароль' };
