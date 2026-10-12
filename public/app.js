@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610120740';
+const BUILD = '202610121011';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -691,6 +691,7 @@ function md(src) {
   for (const line of String(src || '').split('\n')) {
     const l = line.trim(); let m;
     if (!l) { flush(); continue; }
+    if (/^-{3,}$/.test(l)) { flush(); out.push('<hr>'); continue; }
     if ((m = l.match(/^(#{1,4})\s+(.*)$/))) { flush(); const lv = Math.min(4, m[1].length + 1); const id = 'h-' + out.length; out.push(`<h${lv} id="${id}">${inl(m[2])}</h${lv}>`); continue; }
     if ((m = l.match(/^[-*]\s+(.*)$/))) { if (para.length) { out.push(`<p>${inl(para.join(' '))}</p>`); para = []; } list.push(m[1]); continue; }
     if (list.length) { out.push(`<ul>${list.map(x => `<li>${inl(x)}</li>`).join('')}</ul>`); list = []; }
@@ -698,13 +699,198 @@ function md(src) {
   }
   flush(); return out.join('');
 }
+/* ───── «Історія роду» як стара книга: гортання сторінок, музика й звуки ───── */
+const SND = {
+  on: (() => { try { return localStorage.getItem('rs_snd') !== '0'; } catch { return true; } })(),
+  music: null, fx: {},
+  play(name, vol = 0.6) { if (!this.on) return; try { const a = (this.fx[name] ||= new Audio('/audio/' + name + '.mp3')); const c = a.cloneNode(); c.volume = vol; c.play().catch(() => {}); } catch {} },
+  page() { this.play('page' + Math.floor(Math.random() * 3), 0.55); },
+  startMusic() {
+    if (!this.on) return;
+    if (!this.music) { this.music = new Audio('/audio/music.mp3'); this.music.loop = true; this.music.volume = 0; }
+    const m = this.music; if (!m.paused && m.volume > 0.05) return;
+    m.play().then(() => { clearInterval(this._f); this._f = setInterval(() => { m.volume = Math.min(0.32, m.volume + 0.02); if (m.volume >= 0.32) clearInterval(this._f); }, 120); }).catch(() => {});
+  },
+  stopMusic() { const m = this.music; if (!m || m.paused) return; clearInterval(this._f); this._f = setInterval(() => { m.volume = Math.max(0, m.volume - 0.03); if (m.volume <= 0.01) { clearInterval(this._f); m.pause(); } }, 60); },
+  toggle() { this.on = !this.on; try { localStorage.setItem('rs_snd', this.on ? '1' : '0'); } catch {} if (this.on) this.startMusic(); else this.stopMusic(); },
+};
+const BOOK = { key: '', pages: [], chapters: [], spread: true, busy: false };
+function bookShell() {
+  return `<div class="bk" id="bk">
+    <div class="bk-bar">
+      <button class="bk-b" data-bk="toc" title="Зміст" aria-label="Зміст">☰ <span>Зміст</span></button>
+      <button class="bk-b" data-bk="prev" title="Попередня сторінка (←)" aria-label="Попередня">‹</button>
+      <span class="bk-n mono" id="bk-n"></span>
+      <button class="bk-b" data-bk="next" title="Наступна сторінка (→)" aria-label="Наступна">›</button>
+      <button class="bk-b" data-bk="snd" id="bk-snd" title="${SND.on ? 'Вимкнути звук' : 'Увімкнути звук'}" aria-label="Звук">${SND.on ? '🔊' : '🔇'}</button>
+      <button class="bk-b txt" data-bk="plain" title="Читати звичайним текстом">Текстом</button>
+    </div>
+    <div class="bk-toc" id="bk-toc" hidden></div>
+    <div class="bk-stage" id="bk-stage"><div class="bk-book" id="bk-book"></div></div>
+    <p class="bk-hint small">Гортайте: клік по краю сторінки, стрілки ← → або свайп. Імена — посилання на картки людей.</p>
+  </div>`;
+}
+function bookDims() {
+  const st = document.getElementById('bk-stage'); const W = st.clientWidth, vh = window.innerHeight;
+  const spread = W >= 860;
+  let pw, ph;
+  if (spread) { pw = Math.min((W - 48) / 2, 520, (vh - 210) / 1.42); ph = pw * 1.42; }
+  else { pw = Math.min(W - 16, 460, (vh - 190) / 1.5); ph = pw * 1.5; }
+  return { spread, pw: Math.floor(pw), ph: Math.floor(ph) };
+}
+function bookPaginate(html, d) {
+  // розкладаємо текст по сторінках: міряємо в прихованій сторінці такого самого розміру
+  const meas = document.createElement('div'); meas.className = 'bk-page bk-meas'; meas.style.width = d.pw + 'px'; meas.style.height = d.ph + 'px'; meas.style.setProperty('--pw', d.pw + 'px');
+  meas.innerHTML = '<div class="bk-body"></div>'; document.body.appendChild(meas);
+  const body = meas.firstChild, src = document.createElement('div'); src.innerHTML = html;
+  const pages = [], chapters = []; let cur = [], chapter = '';
+  const fits = () => body.scrollHeight <= body.clientHeight + 1;
+  const used = () => { const l = body.lastElementChild; return l ? l.offsetTop + l.offsetHeight - body.offsetTop : 0; };
+  const flush = () => { if (!cur.length) return; pages.push({ html: cur.map(n => n.outerHTML).join(''), chapter }); cur = []; body.innerHTML = ''; };
+  const push = n => { body.appendChild(n); cur.push(n); };
+  const blocks = [...src.children];
+  for (let i = 0; i < blocks.length; i++) {
+    let n = blocks[i].cloneNode(true);
+    if (n.tagName === 'HR') continue;
+    if (n.tagName === 'H3') { flush(); chapter = n.textContent; chapters.push({ title: chapter, page: pages.length }); n.classList.add('ch'); }
+    push(n);
+    if (fits()) continue;
+    body.removeChild(n); cur.pop();
+    if ((n.tagName === 'P' || n.tagName === 'UL') && used() < body.clientHeight * 0.9) {
+      // ділимо абзац/список: беремо скільки влазить
+      if (n.tagName === 'UL') {
+        const items = [...n.children], part = n.cloneNode(false); push(part); let k = 0;
+        for (; k < items.length; k++) { part.appendChild(items[k].cloneNode(true)); if (!fits()) { part.removeChild(part.lastChild); break; } }
+        if (!part.children.length) { body.removeChild(part); cur.pop(); } else { const rest = n.cloneNode(false); items.slice(k).forEach(x => rest.appendChild(x.cloneNode(true))); flush(); if (rest.children.length) { blocks.splice(i + 1, 0, rest); } continue; }
+      } else {
+        const words = n.innerHTML.split(/(?<=\s)(?![^<]*>)/); const part = n.cloneNode(false); push(part);
+        let lo = 0, hi = words.length;
+        while (lo < hi) { const mid = (lo + hi + 1) >> 1; part.innerHTML = words.slice(0, mid).join(''); if (fits()) lo = mid; else hi = mid - 1; }
+        if (lo >= 4) { part.innerHTML = words.slice(0, lo).join(''); const rest = n.cloneNode(false); rest.innerHTML = words.slice(lo).join(''); rest.classList.add('cont'); flush(); blocks.splice(i + 1, 0, rest); continue; }
+        body.removeChild(part); cur.pop();
+      }
+    }
+    if (!cur.length) { push(n); flush(); continue; } // блок більший за порожню сторінку — кладемо як є
+    // не залишати заголовок самотнім унизу сторінки
+    const moved = []; while (cur.length > 1 && /^H[2-4]$/.test(cur[cur.length - 1].tagName)) { moved.unshift(cur.pop()); }
+    moved.forEach(m => body.removeChild(m));
+    flush(); moved.forEach(push); i--; // повторюємо цей блок на новій сторінці
+  }
+  flush(); meas.remove();
+  return { pages, chapters };
+}
+function bookBuild(d) {
+  const t = TXT.history; if (!t) return false;
+  const key = [d.pw, d.ph, d.spread, (t.md || '').length, t.updated].join('|');
+  if (BOOK.key === key) return true;
+  const html = glossify(md(t.md || t)).replace(/<div class="gnotes">([\s\S]*?)<\/div>\s*$/, (m, inner) => '<h3>Пояснення старих слів</h3>' + inner.replace(/<p>/g, '<p class="gl-n">'));
+  const { pages, chapters } = bookPaginate(html, d);
+  const title = { kind: 'title' }, toc = { kind: 'toc' }, end = { kind: 'end' };
+  const off = 2; chapters.forEach(c => { c.page += off; });
+  const list = [title, toc, ...pages, end];
+  if (d.spread) { list.unshift({ kind: 'paper' }); if (list.length % 2) list.push({ kind: 'paper' }); chapters.forEach(c => { c.page += 1; }); }
+  BOOK.key = key; BOOK.pages = list; BOOK.chapters = chapters; BOOK.spread = d.spread; BOOK.d = d; BOOK.updated = t.updated;
+  return true;
+}
+function bookPageHtml(i) {
+  const p = BOOK.pages[i]; if (!p) return '<div class="bk-page blank"></div>';
+  const num = BOOK.spread ? i : i + 1;
+  if (p.kind === 'paper') return `<div class="bk-page paper"><div class="bk-orn big">❦</div></div>`;
+  if (p.kind === 'title') return `<div class="bk-page title"><div class="bk-tp"><div class="bk-orn">✥</div><div class="small caps">Родинний літопис</div><h2>Історія роду<br>Шутих</h2><div class="bk-rule"></div><p>Вороньки · Веприк · Лідин<br>Розкошівка · Ємилівка</p><p class="small">з 1791 року до наших днів</p><div class="bk-orn">❧</div><p class="small muted">Записано за метричними книгами, сповідними відомостями, записами ЗАГС і спогадами родини.${BOOK.updated ? ' Редакція ' + esc(BOOK.updated) + '.' : ''}</p></div></div>`;
+  if (p.kind === 'toc') return `<div class="bk-page"><div class="bk-body"><h3 class="ch">Зміст</h3><ol class="bk-tocl">${BOOK.chapters.map(c => `<li><a href="#" data-bkgo="${c.page}"><span>${esc(c.title)}</span><i></i><b>${BOOK.spread ? c.page : c.page + 1}</b></a></li>`).join('')}</ol></div><div class="bk-foot">${num}</div></div>`;
+  if (p.kind === 'end') return `<div class="bk-page title"><div class="bk-tp"><div class="bk-orn">❦</div><p><i>Історія роду пишеться далі.</i></p><p class="small">Знаєте більше — напишіть спогад на картці людини або натисніть «Уточнити / запитати».</p><div class="bk-orn">✥</div></div></div>`;
+  return `<div class="bk-page"><div class="bk-head">${esc(p.chapter || '')}</div><div class="bk-body">${p.html}</div><div class="bk-foot">${num}</div></div>`;
+}
+function bookCoverHtml() {
+  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>роду Шутих</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><button class="bk-open" data-bk="open">Відкрити книгу</button></div></div>`;
+}
+function bookRender() {
+  const book = document.getElementById('bk-book'); if (!book) return;
+  const d = BOOK.d, open = S.ui.bkOpen; let i = Math.max(0, Math.min(S.ui.bkPos || 0, BOOK.pages.length - 1));
+  if (BOOK.spread && i % 2) i--; S.ui.bkPos = i;
+  book.style.setProperty('--pw', d.pw + 'px'); book.style.setProperty('--ph', d.ph + 'px');
+  book.className = 'bk-book ' + (BOOK.spread ? 'spread' : 'single') + (open ? ' open' : ' closed');
+  if (!open) book.innerHTML = `<div class="bk-side r">${bookCoverHtml()}</div>`;
+  else if (BOOK.spread) book.innerHTML = `<div class="bk-side l" data-bk="prev">${bookPageHtml(i)}</div><div class="bk-side r" data-bk="next">${bookPageHtml(i + 1)}</div><div class="bk-spine"></div>`;
+  else book.innerHTML = `<div class="bk-side r" data-bk="next">${bookPageHtml(i)}</div>`;
+  const n = document.getElementById('bk-n'), N = BOOK.pages.length;
+  if (n) n.textContent = !open ? 'обкладинка' : BOOK.spread ? `${i}–${i + 1} з ${N - 1}` : `${i + 1} з ${N}`;
+  const toc = document.getElementById('bk-toc');
+  if (toc) toc.innerHTML = BOOK.chapters.map(c => `<a href="#" data-bkgo="${c.page}">${esc(c.title)} <span class="mono">${BOOK.spread ? c.page : c.page + 1}</span></a>`).join('');
+}
+function bookFlip(dir, target) {
+  if (BOOK.busy) return; const book = document.getElementById('bk-book'); if (!book) return;
+  const step = BOOK.spread ? 2 : 1, N = BOOK.pages.length, i = S.ui.bkPos || 0;
+  if (!S.ui.bkOpen) { if (dir > 0) bookOpen(); return; }
+  let j = target != null ? target : i + dir * step; if (BOOK.spread && j % 2) j--;
+  if (j === i) return;
+  if (j < 0) { bookClose(); return; }
+  if (j >= N) return;
+  dir = j > i ? 1 : -1; BOOK.busy = true; SND.page();
+  const leaf = document.createElement('div'); leaf.className = 'bk-leaf ' + (dir > 0 ? 'fwd' : 'back') + (BOOK.spread ? '' : ' one');
+  if (BOOK.spread) {
+    if (dir > 0) { leaf.innerHTML = `<div class="bk-face front">${bookPageHtml(i + 1)}</div><div class="bk-face backf">${bookPageHtml(j)}</div>`; book.querySelector('.bk-side.r').innerHTML = bookPageHtml(j + 1); }
+    else { leaf.innerHTML = `<div class="bk-face front">${bookPageHtml(i)}</div><div class="bk-face backf">${bookPageHtml(j + 1)}</div>`; book.querySelector('.bk-side.l').innerHTML = bookPageHtml(j); }
+  } else {
+    if (dir > 0) { leaf.innerHTML = `<div class="bk-face front">${bookPageHtml(i)}</div><div class="bk-face backf"><div class="bk-page paper"></div></div>`; book.querySelector('.bk-side.r').innerHTML = bookPageHtml(j); }
+    else { leaf.className += ' in'; leaf.innerHTML = `<div class="bk-face front">${bookPageHtml(j)}</div><div class="bk-face backf"><div class="bk-page paper"></div></div>`; }
+  }
+  book.appendChild(leaf);
+  requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
+  const done = () => { S.ui.bkPos = j; BOOK.busy = false; bookRender(); };
+  leaf.addEventListener('transitionend', done, { once: true }); setTimeout(() => { if (BOOK.busy) done(); }, 1200);
+}
+function bookOpen() {
+  if (BOOK.busy) return; const book = document.getElementById('bk-book'); if (!book) return;
+  BOOK.busy = true; SND.play('creak', 0.5); SND.startMusic();
+  const stg = document.getElementById('bk-stage'); if (stg && stg.getBoundingClientRect().top > window.innerHeight * 0.35) stg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const i = 0; S.ui.bkPos = 0;
+  if (BOOK.spread) {
+    book.className = book.className.replace('closed', 'open');
+    book.innerHTML = `<div class="bk-side l">${bookPageHtml(i)}</div><div class="bk-side r">${bookPageHtml(i + 1)}</div><div class="bk-spine"></div>`;
+    const leaf = document.createElement('div'); leaf.className = 'bk-leaf fwd cover'; leaf.innerHTML = `<div class="bk-face front">${bookCoverHtml()}</div><div class="bk-face backf"><div class="bk-page endp"></div></div>`;
+    book.appendChild(leaf); requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
+    const done = () => { S.ui.bkOpen = true; BOOK.busy = false; bookRender(); };
+    leaf.addEventListener('transitionend', done, { once: true }); setTimeout(() => { if (BOOK.busy) done(); }, 1700);
+  } else { S.ui.bkOpen = true; BOOK.busy = false; bookRender(); }
+}
+function bookClose() { SND.play('thud', 0.5); S.ui.bkOpen = false; S.ui.bkPos = 0; bookRender(); }
+function bookMount() {
+  const st = document.getElementById('bk-stage'); if (!st) return;
+  if (TXT.history === undefined) return; // ще вантажиться — render() викличе знову
+  const d = bookDims(); if (!bookBuild(d)) { st.innerHTML = '<p class="muted">Історію роду ще не написано.</p>'; return; }
+  BOOK.d = d; bookRender();
+  if (S.ui.bkOpen) SND.startMusic();
+}
+// події книги
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-bkgo]'); if (g) { e.preventDefault(); const t = +g.dataset.bkgo; const tc = document.getElementById('bk-toc'); if (tc) tc.hidden = true; if (!S.ui.bkOpen) { S.ui.bkOpen = true; SND.startMusic(); S.ui.bkPos = t; bookRender(); } else bookFlip(0, t); return; }
+  const b = e.target.closest('[data-bk]'); if (!b || !document.getElementById('bk')) return;
+  if (e.target.closest('a') && !e.target.closest('[data-bk="toc"]')) return; // посилання всередині сторінки працюють як звичайно
+  const a = b.dataset.bk;
+  if (a === 'next') return bookFlip(1);
+  if (a === 'prev') return bookFlip(-1);
+  if (a === 'open') return bookOpen();
+  if (a === 'toc') { const tc = document.getElementById('bk-toc'); tc.hidden = !tc.hidden; return; }
+  if (a === 'snd') { SND.toggle(); b.textContent = SND.on ? '🔊' : '🔇'; b.title = SND.on ? 'Вимкнути звук' : 'Увімкнути звук'; return; }
+  if (a === 'plain') { S.ui.ridPlain = true; SND.stopMusic(); render(); return; }
+});
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('bk') || document.querySelector('.pv, .modal') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); bookFlip(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); bookFlip(-1); }
+});
+(() => { let sx = null, sy = 0; document.addEventListener('pointerdown', e => { if (e.target.closest('#bk-stage') && !e.target.closest('a,button')) { sx = e.clientX; sy = e.clientY; } else sx = null; });
+  document.addEventListener('pointerup', e => { if (sx == null) return; const dx = e.clientX - sx, dy = e.clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { BOOK.swiped = Date.now(); bookFlip(dx < 0 ? 1 : -1); } }); })();
+let bkRs; window.addEventListener('resize', () => { clearTimeout(bkRs); bkRs = setTimeout(() => { if (!document.getElementById('bk')) return; const d = bookDims(); if (d.pw !== BOOK.d?.pw || d.spread !== BOOK.spread) { const frac = (S.ui.bkPos || 0) / Math.max(1, BOOK.pages.length); BOOK.key = ''; bookBuild(d); S.ui.bkPos = Math.round(frac * BOOK.pages.length); bookRender(); } }, 250); });
+
 function vRid() {
   const t = loadText('history');
   if (t === undefined) return '<p class="muted">Завантажую…</p>';
   if (!t) return '<p class="muted">Історію роду ще не написано.</p>';
+  if (!S.ui.ridPlain) return bookShell();
   const html = md(t.md || t);
   const toc = [...html.matchAll(/<h3 id="(h-\d+)">(.*?)<\/h3>/g)].map(m => `<a href="#" data-toh="${m[1]}">${m[2].replace(/<[^>]+>/g, '')}</a>`).join('');
-  return `<div class="rid">${toc ? `<nav class="rid-toc">${toc}</nav>` : ''}<div class="rid-body">${glossify(html)}</div>${t.updated ? `<p class="small muted">Текст оновлено: ${esc(t.updated)}. Помітили помилку — натисніть «Уточнити / запитати» на картці людини.</p>` : ''}</div>`;
+  return `<p><button class="btn line small" data-act="ridbook">📖 Відкрити як книгу</button></p><div class="rid">${toc ? `<nav class="rid-toc">${toc}</nav>` : ''}<div class="rid-body">${glossify(html)}</div>${t.updated ? `<p class="small muted">Текст оновлено: ${esc(t.updated)}. Помітили помилку — натисніть «Уточнити / запитати» на картці людини.</p>` : ''}</div>`;
 }
 function vHistory() {
   const v = loadText('villages');
@@ -1132,6 +1318,7 @@ function render() {
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
+  if (document.getElementById('bk')) requestAnimationFrame(bookMount); else if (SND.music && !SND.music.paused) SND.stopMusic();
   if (S.view === 'fam' && S.arg) {} // окрема сторінка родини
   const key = S.view + ':' + (S.arg || '');
   if (S.ui.lastView !== key) { S.ui.lastView = key; ev('view', S.view, curTarget); if (curTarget) ev('open', S.view, curTarget); }
@@ -1208,6 +1395,7 @@ document.addEventListener('click', async e => {
     if (act === 'mdel') { const x = S.admin.members.members.find(y => y.id === t.dataset.id); if (!x) return;
       if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити назавжди?'; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ''; t.textContent = 'Видалити акаунт'; } }, 5000); return; }
       t.disabled = true; await api('/api/admin?a=delete', { body: { id: x.id } }); toast(`Акаунт «${x.name || x.email}» видалено`); S.admin.members = null; return loadAdmin(); }
+    if (act === 'ridbook') { S.ui.ridPlain = false; render(); return; }
     if (act === 'fam-tab') { S.ui.ftab = d.v; render(); return; }
     if (act === 'map-tab') { S.ui.mtab = d.v; render(); return; }
     if (act === 'map-v') { S.ui.mapv = d.v; S.ui.keepScroll = true; render(); return; }
