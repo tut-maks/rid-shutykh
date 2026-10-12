@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122350';
+const BUILD = '202610122352';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -249,7 +249,7 @@ function vPedigree(tabs) {
   const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди', '9-ті прадіди'];
   const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
   return `${treeHead()}
-    <div class="tbar tbar1 tbar2">${tabs}<button class="btn line tme" data-act="t-me" title="Від мене">${IC.target}<span>До мене</span></button><div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div></div>
+    ${treeBar(tabs, `<div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>`)}
     <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
 }
 const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
@@ -320,6 +320,16 @@ function layoutTD(center) {
   const N = {}; A.n.forEach(o => { N[o.id] = { x: o.x - minX + T2.PAD, y: ri[o.r] * (T2.H + T2.GY) + T2.PAD, r: o.r }; });
   return { N, w: maxX - minX + T2.W + T2.PAD * 2, h: rows.length * (T2.H + T2.GY) - T2.GY + T2.PAD * 2, rows };
 }
+function treeBar(tabs, extra = '') {
+  const f = S.ui.tf || {}, center = treeCenter();
+  const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
+  return `<div class="tbar tbar1 tbar2"><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
+      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button>
+      <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
+        <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
+        <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
+        <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button>${extra}</div></details></div>`;
+}
 function vAll(tabs) {
   const center = treeCenter(); const L = layoutTD(center); S.ui.tl = L; const f = S.ui.tf || {}; const V = new Set(Object.keys(L.N));
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
@@ -343,12 +353,7 @@ function vAll(tabs) {
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
-    <div class="tbar tbar1 tbar2"><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
-      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button>
-      <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
-        <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
-        <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
-        <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button><span class="small muted">${V.size} осіб у дереві</span></div></details></div>
+    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span>`)}
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
     `;
 }
@@ -544,8 +549,8 @@ function famMembersHtml(f) {
 }
 function vFamilies() {
   const ft = S.ui.ftab || 'rid', tabs = `<div class="seg mtabs"><button type="button" class="${ft === 'rid' ? 'on' : ''}" data-act="fam-tab" data-v="rid">Історія роду</button><button type="button" class="${ft === 'br' ? 'on' : ''}" data-act="fam-tab" data-v="br">Гілки</button></div>`;
-  if (ft === 'rid') return `<div class="lede"><div class="eyebrow">Родини</div><h1>Історія роду</h1><p>Розповідь про всі гілки — за документами. Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки, документи відкриваються одразу.</p></div>${tabs}${vRid()}`;
-  return `<div class="lede"><div class="eyebrow">Гілки роду</div><h1>Родини</h1><p>Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади: їх побачать усі родичі з доступом.</p></div>${tabs}
+  if (ft === 'rid') return `<div class="lede"><h1>Історія</h1><p>Розповідь про родину й гілки — за документами.</p></div>${tabs}<p class="tabnote">Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.</p>${vRid()}`;
+  return `<div class="lede"><h1>Історія</h1><p>Розповідь про родину й гілки — за документами.</p></div>${tabs}<p class="tabnote">Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.</p>
   <div class="chips" style="margin-bottom:24px">${S.data.families.map(f => `<a class="btn line small" href="#/fam/${f.id}">${esc(f.title)}</a>`).join('')}</div>
   <div class="famlist">${S.data.families.map(famBlock).join('')}</div>`;
 }
@@ -1142,8 +1147,8 @@ function vMaps() {
   const all = mapsList(), vs = [...new Set(all.flatMap(m => m.villages || []))].sort((a, b) => a.localeCompare(b, 'uk'));
   const f = S.ui.mapv || '', list = f ? all.filter(m => (m.villages || []).includes(f)) : all;
   const htab = `<div class="seg mtabs"><button type="button" class="${S.ui.mtab !== 'hist' ? 'on' : ''}" data-act="map-tab" data-v="">Старі карти</button><button type="button" class="${S.ui.mtab === 'hist' ? 'on' : ''}" data-act="map-tab" data-v="hist">Історія сіл</button></div>`;
-  if (S.ui.mtab === 'hist') return `<div class="lede"><div class="eyebrow">Архів</div><h1>Історія Вороньків і Веприка</h1></div>${htab}${vHistory()}`;
-  return `<div class="lede"><div class="eyebrow">Архів</div><h1>Старі карти</h1><p>Як виглядали наші села 100–150 років тому. Будь-яку карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок і побачити, що де було.</p></div>${htab}
+  if (S.ui.mtab === 'hist') return `<div class="lede"><h1>Місця</h1><p>Старі карти й історія наших сіл.</p></div>${htab}<p class="tabnote">Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.</p>${vHistory()}`;
+  return `<div class="lede"><h1>Місця</h1><p>Старі карти й історія наших сіл.</p></div>${htab}<p class="tabnote">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p>
   <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
     ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
   ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
@@ -1494,7 +1499,7 @@ function vAdmin() {
   } else if (a.tab === 'history' && a.revs) {
     body = `<p class="small muted">Усі зміни в дереві. Будь-яку можна відкотити: попередній стан повернеться, а сам відкат теж запишеться в історію.</p>${revList(a.revs.revisions)}`;
   }
-  return `<div class="lede"><div class="eyebrow">Лише для вас</div><h1>Панель власника</h1></div><div class="docform" style="max-width:none;grid-template-columns:1fr auto;align-items:center"><span>Нові фото й скани, які підготував Claude</span><button class="btn line small" data-act="import">Імпортувати</button><div class="msg" id="imp-m" style="grid-column:1/-1"></div></div>${tabs}${body}`;
+  return `<div class="lede"><h1>Власнику</h1><p>Аналітика, доступи родичів та історія змін.</p></div>${tabs}${body}`;
 }
 const ENT = { person: 'Картка', union: 'Подружжя', family: 'Родина', story: 'Спогад', photo: 'Фото', member: 'Доступ', seed: 'Імпорт', question: 'Запитання' };
 const ACT = { create: 'створено', update: 'змінено', delete: 'видалено', restore: 'відкат', invite: 'запрошення', reset: 'новий пароль' };
