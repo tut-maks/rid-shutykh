@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610121140';
+const BUILD = '202610121153';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -706,7 +706,20 @@ const VHIST = [
 const VHIST_ASK = ['ЦДІАК України, ф. 57 — Генеральний (Румянцевський) опис 1765–69 рр. по Басанській сотні: поіменно всі двори Вороньків і Веприка.', 'ЦДІАК, ф. 51 — Генеральне слідство про маєтності Переяславського полку 1729–31 рр.: хто володів селами раніше.', 'ЦДІАК, ф. 127 — метрики й сповідні Вороньків і Веприка 1782–1797 рр. (коли повіт був у Київському намісництві).', 'ДАЧО — ревізькі казки 1795–1858 рр. по Козелецькому повіту; клірові відомості Покровської церкви (історія храму й священики).'];
 /* ── Великі тексти з сервера (історія роду, історія сіл) ── */
 const TXT = {};
-function loadText(k) { if (k in TXT) return TXT[k]; TXT[k] = undefined; api('/api/data?text=' + k).then(r => { TXT[k] = r.text; S.ui.keepScroll = true; render(); }).catch(() => { TXT[k] = null; }); return undefined; }
+const TXT_T = {};
+function loadText(k) { // порожній результат не кешуємо назавжди: через 15 с спробуємо ще (текст міг щойно імпортуватись)
+  if (k in TXT && !(TXT[k] === null && Date.now() - (TXT_T[k] || 0) > 15000)) return TXT[k];
+  TXT[k] = undefined; TXT_T[k] = Date.now();
+  api('/api/data?text=' + k).then(r => { TXT[k] = r.text || null; TXT_T[k] = Date.now(); if (k === 'history') BOOK.key = ''; S.ui.keepScroll = true; render(); }).catch(() => { TXT[k] = null; TXT_T[k] = Date.now(); });
+  return undefined;
+}
+async function importNow(btn) { // власник: дотягнути все з імпорту і одразу показати
+  if (btn) { btn.disabled = true; btn.textContent = 'Завантажую…'; }
+  let ok = 0; try { for (let k = 0; k < 25; k++) { const x = await api('/api/setup?a=import', { body: {}, noRedirect: true }); ok += (x.result || []).filter(r => / ok/.test(r)).length; if (!x.more) break; } } catch {}
+  delete TXT.history; delete TXT.villages; BOOK.key = '';
+  if (ok) { await load(); toast(`Додано нових матеріалів від Claude: ${ok}`); }
+  S.ui.keepScroll = true; render(); return ok;
+}
 function mdLinks(h) { // [[p:id|Ім'я]] → посилання на картку; [[d:id|текст]] → відкрити документ
   return h.replace(/\[\[([pd]):([a-z0-9_]+)\|([^\]]+)\]\]/gi, (m, t, id, label) => t === 'p' ? (P[id] ? `<a href="${href('p', id)}">${label}</a>` : label) : (S.data.documents.some(d => d.id === id) ? `<a href="#" class="doclink" data-doc="${id}">${label}</a>` : label));
 }
@@ -901,7 +914,7 @@ function bookMount() {
   const st = document.getElementById('bk-stage'); if (!st) return;
   if (document.fonts && document.fonts.status !== 'loaded' && !BOOK.fontWait) { BOOK.fontWait = true; document.fonts.ready.then(() => { BOOK.key = ''; bookMount(); }); }
   if (TXT.history === undefined) return; // ще вантажиться — render() викличе знову
-  const d = bookDims(); if (!bookBuild(d)) { st.innerHTML = '<p class="muted">Історію роду ще не написано.</p>'; return; }
+  const d = bookDims(); if (!bookBuild(d)) { st.innerHTML = `<div class="bk-empty"><p>Історію роду ще не завантажено на сайт.</p>${isOwner() ? '<button class="btn" data-act="imp-now">Завантажити зараз</button>' : '<p class="small">Вона з\'явиться, щойно власник оновить сайт.</p>'}</div>`; return; }
   BOOK.d = d; bookRender();
   if (S.ui.bkOpen) SND.startMusic();
 }
@@ -942,7 +955,7 @@ let bkRs; window.addEventListener('resize', () => { clearTimeout(bkRs); bkRs = s
 function vRid() {
   const t = loadText('history');
   if (t === undefined) return '<p class="muted">Завантажую…</p>';
-  if (!t) return '<p class="muted">Історію роду ще не написано.</p>';
+  if (!t) return `<div class="bk-empty"><p>Історію роду ще не завантажено на сайт.</p>${isOwner() ? '<button class="btn" data-act="imp-now">Завантажити зараз</button>' : ''}</div>`;
   if (!S.ui.ridPlain) return bookShell();
   const html = md(t.md || t);
   const toc = [...html.matchAll(/<h3 id="(h-\d+)">(.*?)<\/h3>/g)].map(m => `<a href="#" data-toh="${m[1]}">${m[2].replace(/<[^>]+>/g, '')}</a>`).join('');
@@ -1463,7 +1476,8 @@ document.addEventListener('click', async e => {
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
-    if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; let r = { result: [] }; for (let k = 0; k < 6; k++) { const x = await api('/api/setup?a=import', { body: {} }); r.result.push(...(x.result || [])); if (!x.more) break; } const ok = (r.result || []).filter(x => / ok/.test(x)).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; await load(); return; }
+    if (act === 'imp-now') { if (!t.disabled) importNow(t); return; }
+    if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; let r = { result: [] }; for (let k = 0; k < 25; k++) { const x = await api('/api/setup?a=import', { body: {} }); r.result.push(...(x.result || [])); if (!x.more) break; } const ok = (r.result || []).filter(x => / ok/.test(x)).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; delete TXT.history; delete TXT.villages; BOOK.key = ''; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
     if (act === 'msheet') { mSheet(); return; }
     if (act === 'mshclose') { if (e.target.closest('.msh') && !e.target.closest('a')) return; $('#layer').innerHTML = ''; document.documentElement.classList.remove('msh-open'); return; }
@@ -1578,12 +1592,8 @@ async function start() {
 // Власнику: нові фото й картки, які підготував Claude (seed/import), додаються самі — раз за сеанс, повторно нічого не дублюється
 async function autoImport() {
   if (!isOwner()) return;
-  try { if (sessionStorage.getItem('rs_imp')) return; sessionStorage.setItem('rs_imp', '1'); } catch {}
-  try {
-    let r = { result: [] }; for (let k = 0; k < 6; k++) { const x = await api('/api/setup?a=import', { body: {}, noRedirect: true }); r.result.push(...(x.result || [])); if (!x.more) break; }
-    const ok = (r.result || []).filter(x => / ok/.test(x)).length;
-    if (ok) { await load(); render(); toast(`Додано нових матеріалів від Claude: ${ok}`); }
-  } catch {}
+  try { if (sessionStorage.getItem('rs_imp') === BUILD) return; sessionStorage.setItem('rs_imp', BUILD); } catch {} // раз після кожного оновлення сайту
+  await importNow();
 }
 start();
 })();
