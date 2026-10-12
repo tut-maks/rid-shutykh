@@ -42,9 +42,13 @@ async function bootstrap(ctx) {
   };
 }
 
-export default handler(async (req, res, ctx) => {
+export default handler(async (req, res, ctx, url) => {
   const me = ctx.member;
-  if (req.method === 'GET') return send(res, 200, await bootstrap(ctx));
+  if (req.method === 'GET') {
+    const tk = url?.searchParams?.get('text'); // великі тексти (історія роду, історія сіл) — окремо, щоб не важчало завантаження
+    if (tk) { if (!['history', 'villages'].includes(tk)) return fail(res, 400, 'bad'); const row = await db.get('settings', { eq: { key: 'text:' + tk } }).catch(() => null); return send(res, 200, { text: row?.value || null }); }
+    return send(res, 200, await bootstrap(ctx));
+  }
   if (req.method !== 'POST') return fail(res, 405, 'method');
 
   const body = await readJSON(req, 200_000);

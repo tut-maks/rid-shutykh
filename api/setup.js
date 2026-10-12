@@ -99,6 +99,13 @@ export default handler(async (req, res, _c, url) => {
         if (!ch) { out.push(key + ': без змін'); continue; }
         const data = cleanPerson(nd); await db.update('persons', { eq: { id: p.id } }, { data, version: p.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, by);
         out.push(key + ': ok');
+      } else if (it.kind === 'text') { // великий текст сторінки (історія роду / історія сіл) у settings 'text:<k>'
+        const k = String(it.id || ''); if (!['history', 'villages'].includes(k)) { out.push(key + ': bad'); continue; }
+        const cur = await db.get('settings', { eq: { key: 'text:' + k } }).catch(() => null);
+        if (JSON.stringify(cur?.value) === JSON.stringify(it.value)) { out.push(key + ': вже є'); continue; }
+        await db.upsert('settings', { key: 'text:' + k, value: it.value, updated_by: by, updated_at: new Date().toISOString() });
+        await revision('text', k, cur ? 'update' : 'create', null, { len: JSON.stringify(it.value).length }, by);
+        out.push(key + ': ok');
       } else if (it.kind === 'docpatch') { // уточнити існуючий документ (рамки, точніший опис рядка); не чіпає, якщо вже так
         const d = await db.get('documents', { eq: { id: String(it.id) } }); if (!d) { out.push(key + ': no doc'); continue; }
         const patch = it.data || {}; if (Object.keys(patch).every(k => JSON.stringify(d.data[k]) === JSON.stringify(patch[k]))) { out.push(key + ': вже є'); continue; }
