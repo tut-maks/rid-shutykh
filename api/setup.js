@@ -89,6 +89,12 @@ export default handler(async (req, res, _c, url) => {
         if (!ch) { out.push(key + ': без змін'); continue; }
         const data = cleanPerson(nd); await db.update('persons', { eq: { id: p.id } }, { data, version: p.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, by);
         out.push(key + ': ok');
+      } else if (it.kind === 'docpatch') { // уточнити існуючий документ (рамки, точніший опис рядка); не чіпає, якщо вже так
+        const d = await db.get('documents', { eq: { id: String(it.id) } }); if (!d) { out.push(key + ': no doc'); continue; }
+        const patch = it.data || {}; if (Object.keys(patch).every(k => JSON.stringify(d.data[k]) === JSON.stringify(patch[k]))) { out.push(key + ': вже є'); continue; }
+        const data = { ...d.data, ...patch }; await db.update('documents', { eq: { id: d.id } }, { data, updated_by: by, updated_at: new Date().toISOString() });
+        await revision('document', d.id, 'update', Object.fromEntries(Object.keys(patch).map(k => [k, d.data[k] ?? null])), patch, by);
+        out.push(key + ': ok');
       } else if (it.kind === 'familypatch') {
         const f = await db.get('families', { eq: { id: String(it.family) } }); if (!f) { out.push(key + ': no family'); continue; }
         let story = f.data.story || ''; const before = story; for (const [from, to] of it.replace || []) story = story.split(from).join(to);

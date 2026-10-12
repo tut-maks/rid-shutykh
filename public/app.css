@@ -346,7 +346,7 @@ body.noscroll{overflow:hidden}
 .chip:hover{border-color:var(--ink)}
 
 /* Перегляд фото й сканів */
-.pv{position:fixed;inset:0;z-index:60;display:grid;grid-template-rows:auto 1fr auto;background:#0E0C0A;color:#EDE8DF;animation:pvIn .18s ease;-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
+.pv{position:fixed;inset:0;z-index:60;display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr);background:#0E0C0A;color:#EDE8DF;animation:pvIn .18s ease;-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
 @keyframes pvIn{from{opacity:0}to{opacity:1}}
 .pv-top{display:flex;align-items:center;gap:4px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px 18px;background:linear-gradient(rgba(14,12,10,.85),rgba(14,12,10,0));position:relative;z-index:3}
 .pv-t{flex:1;min-width:0;display:flex;align-items:baseline;gap:12px}
@@ -358,9 +358,10 @@ body.noscroll{overflow:hidden}
 .pv-mi{background:none;border:0;color:#EDE8DF;text-align:left;padding:11px 12px;border-radius:6px;cursor:pointer;font-size:15px}
 .pv-mi:hover{background:rgba(255,255,255,.08)}
 .pv-mi.danger{color:#F0A08E}
-.pv-stage{position:relative;overflow:hidden;display:grid;place-items:center;touch-action:none;cursor:zoom-out;min-height:0}
+.pv-stage{position:relative;overflow:hidden;display:grid;place-items:center;touch-action:none;cursor:default;min-height:0}
+.pv-img{cursor:zoom-in}
 .pv-img{position:absolute;inset:0;margin:auto;max-width:calc(100% - 32px);max-height:calc(100% - 16px);object-fit:contain;transform-origin:center center;box-shadow:0 10px 50px rgba(0,0,0,.5);will-change:transform;-webkit-user-drag:none}
-.pv.zoomed .pv-stage{cursor:grab}
+.pv.zoomed .pv-stage,.pv.zoomed .pv-img{cursor:grab}
 .pv.zoomed .pv-stage:active{cursor:grabbing}
 .pv-empty{color:#A39B8E}
 .pv-nav{position:absolute;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:26px;border:0;background:rgba(36,32,27,.75);color:#EDE8DF;display:grid;place-items:center;cursor:pointer;z-index:2}
@@ -454,3 +455,21 @@ main.wrap.wide{max-width:none;padding-inline:20px}
 .hist h3{margin:22px 0 6px}
 .hist ul{padding-left:18px;line-height:1.6}
 @media (max-width:600px){.hist .hr{grid-template-columns:1fr;gap:2px}}
+
+/* рамка «наш запис» на скані */
+.pv-marks{position:absolute;pointer-events:none;transform-origin:center center}
+.pv-mark{position:absolute;border:3px solid #FF5A36;border-radius:4px;box-shadow:0 0 14px rgba(255,90,54,.7),inset 0 0 0 2000px rgba(255,210,63,.10);animation:pvMk 1.6s ease-in-out 2}
+.pv-mark.draft{border-style:dashed;box-shadow:none;animation:none}
+@keyframes pvMk{50%{border-color:#FFD23F}}
+.pv.zoomed .pv-mark{border-width:2px}
+.pv-find{justify-self:start;background:#FF5A36;color:#fff;border:0;border-radius:20px;padding:9px 16px;font-size:15px;font-weight:600;cursor:pointer;min-height:40px}
+.pv-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#24201B;color:#EDE8DF;border:1px solid #3B352C;border-radius:10px;padding:8px 12px;font-size:14px;z-index:4}
+.pv-hint button{margin-left:8px;background:none;border:1px solid #6b6255;color:#EDE8DF;border-radius:6px;padding:4px 10px;cursor:pointer}
+.pv.drawing .pv-stage,.pv.drawing .pv-img{cursor:crosshair}
+
+/* портрет у картці — одразу кнопка «Додати фото» */
+.portrait.addp{position:relative;cursor:pointer;overflow:hidden}
+.addp-l{position:absolute;left:0;right:0;bottom:0;background:rgba(30,27,23,.72);color:#fff;font:600 12px/1 var(--f-body);text-align:center;padding:7px 2px;letter-spacing:.02em}
+.portrait.addp:has(img) .addp-l{opacity:0;transition:opacity .15s}
+.portrait.addp:hover .addp-l,.portrait.addp:focus-within .addp-l{opacity:1}
+@media (hover:none){.portrait.addp:has(img) .addp-l{opacity:.85;font-size:11px;padding:4px 2px}}

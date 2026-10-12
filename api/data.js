@@ -136,6 +136,16 @@ export default handler(async (req, res, ctx) => {
     await revision('document', id, 'create', null, data, me.id);
     return send(res, 200, { ok: true, id });
   }
+  if (op === 'doc.marks') { // рамки «наш запис» на сканах: частки ширини/висоти зображення
+    if (!editor) return fail(res, 403, 'forbidden');
+    const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc) return fail(res, 404, 'not_found');
+    const n = Number(doc.data.pages) || (doc.data.pages?.length) || 0, f = v => Math.round(Math.min(1, Math.max(0, Number(v) || 0)) * 10000) / 10000;
+    const marks = (Array.isArray(body.marks) ? body.marks : []).slice(0, 8).map(m => ({ p: Math.max(0, Math.min(n - 1, parseInt(m.p) || 0)), x: f(m.x), y: f(m.y), w: f(m.w), h: f(m.h) })).filter(m => m.w > 0.005 && m.h > 0.003);
+    const data = { ...doc.data, marks };
+    await db.update('documents', { eq: { id: doc.id } }, { data, updated_by: me.id, updated_at: new Date().toISOString() });
+    await revision('document', doc.id, 'update', { marks: doc.data.marks || [] }, { marks }, me.id);
+    return done({ ok: true, marks }, 'doc:' + doc.id);
+  }
   if (op === 'doc.geoshift') { // підігнати стару карту на сучасній: зсув у «світових» пікселях (зум 0)
     if (!editor) return fail(res, 403, 'forbidden');
     const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc || doc.data.type !== 'map') return fail(res, 404, 'not_found');

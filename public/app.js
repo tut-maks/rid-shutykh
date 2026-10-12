@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610120606';
+const BUILD = '202610120633';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -75,6 +75,8 @@ const noAdd = '<p class="small muted">Доповнювати можна свою
 const who = id => S.data?.names?.[id] || 'Родич';
 const when = t => t ? new Date(t).toLocaleString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 const rootId = () => (Object.values(P).find(p => p.root) || {}).id;
+// З кого починати дерево: людина, яка увійшла (якщо прив'язана до картки), інакше — наймолодший у корені
+const startId = () => { const me = S.me?.person_id; if (me && P[me]) return me; const r0 = rootId(); return (KIDS[r0] || []).slice().sort(byBirth).reverse()[0] || r0; };
 const href = (v, a) => '#/' + v + (a ? '/' + encodeURIComponent(a) : '');
 const mini = id => { const p = P[id]; if (!p) return ''; return `<a class="mini${p.hyp ? ' hyp' : ''}" href="${href('p', id)}">${ph(p)}<span><b>${esc(short(p))}</b><em>${esc(life(p))}</em></span></a>`; };
 
@@ -112,7 +114,7 @@ function vTree() {
 }
 function vPedigree(tabs) {
   const r0 = rootId(); const kidsR = (KIDS[r0] || []).slice().sort(byBirth).reverse();
-  const r = S.arg && P[S.arg] ? S.arg : (kidsR[0] || r0);
+  const r = S.arg && P[S.arg] ? S.arg : startId();
   depthMax = 0; const t = branchHtml(r, 0, new Set());
   const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди', '9-ті прадіди'];
   const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
@@ -126,7 +128,7 @@ const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збіль
 const T2 = { W: 160, H: 58, GX: 12, GY: 84, PAD: 50 };
 const tname = p => [String(p.n || '').replace(/\s*\([^)]*\)/g, ''), p.s].filter(Boolean).join(' ') || '(без імені)'; // у дереві — без «(Настя)», повне ім'я в підказці
 const P2 = T2.W + T2.GX;
-function treeCenter() { const f = S.ui.tf || {}; if (f.center && P[f.center]) return f.center; const r0 = rootId(); const k = (KIDS[r0] || []).slice().sort(byBirth).reverse(); return k[0] || r0; }
+function treeCenter() { const f = S.ui.tf || {}; if (f.center && P[f.center]) return f.center; return startId(); }
 function layoutTD(center) {
   const f = S.ui.tf || {}; const sortS = f.sort === 'name' ? ((a, b) => short(P[a]).localeCompare(short(P[b]), 'uk')) : byBirth;
   const mk = () => ({ n: [], c: {} }); // n: [{id,x,r}], c: row -> [min,max]
@@ -253,7 +255,7 @@ function vPerson() {
   const L = (t, ids) => ids.length ? `<div class="bl"><span>${t}</span><div class="row">${ids.map(mini).join('')}</div></div>` : '';
   return `<div class="person">
   <div class="sec" style="align-content:start">
-    <div class="phead"><div class="portrait">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}</div>
+    <div class="phead">${canAdd(p.id) ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}</div>`}
       <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1>${p.m && p.m !== p.s ? `<div class="maiden">з дому ${esc(p.m)}</div>` : ''}</div></div>
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
@@ -280,9 +282,9 @@ function vPerson() {
     <div class="sec"><h3>Документи ${canEdit() ? `<button class="btn line small" data-act="docform">+ Архівний документ</button>` : ''}</h3>
       ${canEdit() && S.ui.docform ? `<div class="docform"><input class="in" id="dtitle" placeholder="Назва: напр. «Народження Микити Максимовича»"><input class="in" id="ddate" placeholder="Дата, напр. 27.05.1818"><input class="in" id="dsrc" placeholder="Джерело: архів, книга, запис №"><label class="btn line small" style="cursor:pointer">Вибрати скани<input type="file" accept="image/*" multiple data-docup="${p.id}" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
       ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}</div>
-    <div class="sec"><h3>Фото ${canAdd(p.id) ? `<label class="btn line small" style="cursor:pointer">Додати фото<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
+    <div class="sec"><h3>Фото ${canAdd(p.id) ? `<label class="btn line small" style="cursor:pointer" title="Портрет, родинне фото або скан документа (свідоцтво, лист, довідка)">Додати фото чи документ<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>
-      ${photos.length ? `<div class="thumbs">${photos.map(x => `<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}</span></button>`).join('')}</div>` : `<p class="muted">Фото ще немає. Додайте портрет, родинне фото чи документ з домашнього архіву.</p>`}
+      ${photos.length ? `<div class="thumbs">${photos.map(x => `<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}</span></button>`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
     </div>
     <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
   </div></div>`;
@@ -824,31 +826,41 @@ function vDocs() {
    Клік по мініатюрі — відкрито; клік по фото чи темному тлу — закрито (✕ і Esc теж).
    Збільшити: подвійний клік / подвійний дотик, кнопка 🔍, колесо, два пальці; збільшене тягнеться пальцем чи мишею.
    Кілька сторінок: стрілки ‹ ›, клавіші ← →, свайп убік. Свайп униз — закрити. */
-function viewer({ title, pages, line, text, src, people, photoId, docId }) {
-  let i = 0, sc = 1, tx = 0, ty = 0;
+function viewer({ title, pages, line, text, src, people, photoId, docId, marks, items, startAt }) {
+  const canPhoto = !!(items ? items.some(x => x.photoId) : photoId); let i = startAt || 0, sc = 1, tx = 0, ty = 0, mk = (marks || []).slice(), draw = null;
   const L = $('#layer');
   document.body.classList.add('noscroll');
   const who_ = (people || []).filter(x => P[x]);
   L.innerHTML = `<div class="pv" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <div class="pv-top"><div class="pv-t"><b>${esc(title)}</b>${pages.length > 1 ? `<span class="mono pv-n"></span>` : ''}</div>
       <button class="pv-ic" data-pv="zoom" title="Збільшити (або двічі клацніть по фото)" aria-label="Збільшити">${ICO.zoom}</button>
-      ${(photoId && canEdit()) || photoId || (docId && canEdit()) ? `<button class="pv-ic" data-pv="more" title="Ще" aria-label="Ще дії">${ICO.more}</button>` : ''}
+      ${canPhoto || (docId && canEdit()) ? `<button class="pv-ic" data-pv="more" title="Ще" aria-label="Ще дії">${ICO.more}</button>` : ''}
       <button class="pv-ic" data-pv="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
     <div class="pv-menu" hidden>
-      ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label>` : ''}
-      ${photoId && canEdit() ? `<button class="pv-mi" data-portrait="${photoId}">Зробити головним фото</button>` : ''}
-      ${photoId ? `<button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId}">Видалити фото</button>` : ''}
+      ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label><button class="pv-mi" data-pv="mkdraw">Обвести наш запис рамкою</button><button class="pv-mi" data-pv="mkclear">Прибрати рамки з цієї сторінки</button>` : ''}
+      ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button>` : ''}
+      ${canPhoto ? `<button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}
     </div>
-    <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false">` : '<p class="pv-empty">Скан ще не додано.</p>'}
+    <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false"><div class="pv-marks" aria-hidden="true"></div><div class="pv-hint" hidden>Проведіть по скану, щоб обвести запис. <button data-pv="mkcancel">Скасувати</button></div>` : '<p class="pv-empty">Скан ще не додано.</p>'}
       ${pages.length > 1 ? `<button class="pv-nav prev" data-pv="prev" aria-label="Попередня">${ICO.l}</button><button class="pv-nav next" data-pv="next" aria-label="Наступна">${ICO.r}</button>` : ''}
       <div class="pv-load"></div></div>
     <div class="pv-cap">
-      ${line || text ? glossify((line ? `<div class="pv-line">${esc(line)}</div>` : '') + (text ? `<div>${esc(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
+      <button class="pv-find" data-pv="tomark" hidden>⌕ Показати наш запис</button>
+      ${line || text ? glossify((line ? `<div class="pv-line">${esc(line)}</div>` : '') + (text ? `<div class="pv-text">${esc(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
       ${who_.length ? `<div class="pv-people">${who_.map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('')}</div>` : ''}
-      ${photoId ? `<div class="pv-capedit" hidden><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Хто на фото, рік, звідки"><button class="btn small" data-pv="capsave">Зберегти</button></div>` : ''}
+      ${canPhoto ? `<div class="pv-capedit" hidden><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Хто на фото, рік, звідки"><button class="btn small" data-pv="capsave">Зберегти</button></div>` : ''}
     </div></div>`;
-  const root = L.querySelector('.pv'), stage = root.querySelector('.pv-stage'), im = root.querySelector('.pv-img'), menu = root.querySelector('.pv-menu');
-  const apply = (anim) => { if (!im) return; im.style.transition = anim ? 'transform .22s ease' : 'none'; im.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; root.classList.toggle('zoomed', sc > 1.01); const zb = root.querySelector('[data-pv=zoom]'); zb.innerHTML = sc > 1.01 ? ICO.unzoom : ICO.zoom; zb.title = sc > 1.01 ? 'Зменшити' : 'Збільшити (або двічі клацніть по фото)'; };
+  const root = L.querySelector('.pv'), stage = root.querySelector('.pv-stage'), im = root.querySelector('.pv-img'), menu = root.querySelector('.pv-menu'), mkEl = root.querySelector('.pv-marks');
+  const setT = (tr, anim) => { for (const el of [im, mkEl]) { if (!el) continue; el.style.transition = anim ? 'transform .22s ease' : 'none'; el.style.transform = tr; } };
+  // Рамки «наш запис»: шар точно над зображенням, з тим самим масштабом і зсувом
+  const pageMarks = () => mk.filter(m => (m.p || 0) === i);
+  const placeMarks = () => { if (!im || !mkEl) return; Object.assign(mkEl.style, { left: im.offsetLeft + 'px', top: im.offsetTop + 'px', width: im.offsetWidth + 'px', height: im.offsetHeight + 'px' });
+    mkEl.innerHTML = pageMarks().map(m => `<div class="pv-mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></div>`).join('') + (draw?.box ? `<div class="pv-mark draft" style="left:${draw.box.x * 100}%;top:${draw.box.y * 100}%;width:${draw.box.w * 100}%;height:${draw.box.h * 100}%"></div>` : '');
+    const fb = root.querySelector('.pv-find'); if (fb) fb.hidden = !pageMarks().length; };
+  const toMark = () => { const m = pageMarks()[0]; if (!m || !im) return; const W = im.offsetWidth, H = im.offsetHeight, r = stage.getBoundingClientRect();
+    sc = Math.min(6, Math.max(1.6, Math.min(r.width * 0.9 / (m.w * W), r.height * 0.6 / (m.h * H)))); tx = -((m.x + m.w / 2) - 0.5) * W * sc; ty = -((m.y + m.h / 2) - 0.5) * H * sc; clamp(); apply(true); };
+  const saveMarks = async () => { try { const r = await api('/api/data', { body: { op: 'doc.marks', id: docId, marks: mk } }); mk = r.marks; const d = S.data.documents.find(x => x.id === docId); if (d) d.marks = mk; placeMarks(); toast(mk.length ? 'Рамку збережено' : 'Рамки прибрано'); } catch (err) { toast(errText(err)); } };
+  const apply = (anim) => { if (!im) return; setT(`translate(${tx}px,${ty}px) scale(${sc})`, anim); root.classList.toggle('zoomed', sc > 1.01); const zb = root.querySelector('[data-pv=zoom]'); zb.innerHTML = sc > 1.01 ? ICO.unzoom : ICO.zoom; zb.title = sc > 1.01 ? 'Зменшити' : 'Збільшити (або двічі клацніть по фото)'; };
   const clamp = () => { if (!im) return; const r = stage.getBoundingClientRect(), w = im.offsetWidth * sc, h = im.offsetHeight * sc; const mx = Math.max(0, (w - r.width) / 2), my = Math.max(0, (h - r.height) / 2); tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty)); };
   const zoomTo = (ns, cx, cy, anim = true) => { // cx, cy — точка відносно центру сцени, яка лишається під пальцем
     ns = Math.min(6, Math.max(1, ns)); const k = ns / sc; tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k; sc = ns; if (sc <= 1.01) { sc = 1; tx = ty = 0; } clamp(); apply(anim);
@@ -857,11 +869,16 @@ function viewer({ title, pages, line, text, src, people, photoId, docId }) {
   const show = () => {
     if (!im) return; sc = 1; tx = ty = 0; apply(false);
     root.classList.add('loading'); im.onload = () => root.classList.remove('loading'); im.onerror = () => root.classList.remove('loading');
+    im.onload = () => { root.classList.remove('loading'); placeMarks(); }; placeMarks();
+    if (items) { const it = items[i] || {}; photoId = it.photoId || null; title = it.title || ''; root.querySelector('.pv-t b').textContent = title; const tEl = root.querySelector('.pv-text'); if (tEl) tEl.textContent = it.text || '';
+      root.querySelectorAll('[data-portrait],[data-delphoto]').forEach(b => { if ('portrait' in b.dataset) b.dataset.portrait = photoId || ''; else b.dataset.delphoto = photoId || ''; b.hidden = !photoId; }); const cb = root.querySelector('[data-pv=cap]'); if (cb) cb.hidden = !photoId;
+      const ci = root.querySelector('#cap-in'); if (ci) ci.value = it.caption || ''; const ce = root.querySelector('.pv-capedit'); if (ce) ce.hidden = true; }
     im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `${i + 1} / ${pages.length}`;
     if (pages.length > 1) new Image().src = pages[(i + 1) % pages.length]; // наступна вантажиться заздалегідь
   };
   const go = d => { if (pages.length < 2) return; i = (i + d + pages.length) % pages.length; show(); };
-  const close = () => { document.body.classList.remove('noscroll'); document.removeEventListener('keydown', key, true); closeLayer(); };
+  const onRs = () => placeMarks(); window.addEventListener('resize', onRs);
+  const close = () => { document.body.classList.remove('noscroll'); document.removeEventListener('keydown', key, true); window.removeEventListener('resize', onRs); closeLayer(); };
   const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.target.tagName === 'INPUT') return; if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); if (e.key === '+' || e.key === '=') zoomTo(sc * 1.5, 0, 0); if (e.key === '-') zoomTo(sc / 1.5, 0, 0); };
   document.addEventListener('keydown', key, true);
 
@@ -873,30 +890,38 @@ function viewer({ title, pages, line, text, src, people, photoId, docId }) {
     if (a === 'go') { e.preventDefault(); const h = b.getAttribute('href'); close(); location.hash = h; return; }
     if (a === 'prev') return go(-1);
     if (a === 'next') return go(1);
-    if (a === 'zoom') return sc > 1.01 ? zoomTo(1, 0, 0) : zoomTo(2.5, 0, 0);
+    if (a === 'zoom') return sc > 1.01 ? zoomTo(1, 0, 0) : (pageMarks().length ? toMark() : zoomTo(2.5, 0, 0));
+    if (a === 'tomark') return toMark();
+    if (a === 'mkdraw') { menu.hidden = true; zoomTo(1, 0, 0, false); draw = { box: null }; root.classList.add('drawing'); root.querySelector('.pv-hint').hidden = false; return; }
+    if (a === 'mkcancel') { draw = null; root.classList.remove('drawing'); root.querySelector('.pv-hint').hidden = true; placeMarks(); return; }
+    if (a === 'mkclear') { menu.hidden = true; mk = mk.filter(m => (m.p || 0) !== i); return saveMarks(); }
     if (a === 'more') { menu.hidden = !menu.hidden; return; }
     if (a === 'cap') { menu.hidden = true; const c = root.querySelector('.pv-capedit'); c.hidden = false; c.querySelector('input').focus(); return; }
-    if (a === 'capsave') { try { const v = $('#cap-in').value; await api('/api/data', { body: { op: 'photo.caption', id: photoId, caption: v } }); const x = S.data.photos.find(y => y.id === photoId); if (x) x.caption = v; root.querySelector('.pv-t b').textContent = v || title; root.querySelector('.pv-capedit').hidden = true; toast('Підпис збережено'); } catch (err) { toast(errText(err)); } }
+    if (a === 'capsave') { try { const v = $('#cap-in').value; await api('/api/data', { body: { op: 'photo.caption', id: photoId, caption: v } }); const x = S.data.photos.find(y => y.id === photoId); if (x) x.caption = v; if (items?.[i]) items[i].caption = v; root.querySelector('.pv-t b').textContent = v || title; root.querySelector('.pv-capedit').hidden = true; toast('Підпис збережено'); } catch (err) { toast(errText(err)); } }
   });
 
   // Жести: один дотик/клік — закрити (якщо не збільшено), подвійний — збільшити, тягнути — пан/свайп, два пальці — масштаб
   if (!pages.length) { stage.addEventListener('click', e => { if (e.target === stage) close(); }); return; }
-  const pts = new Map(); let start = null, moved = false, lastTap = 0, tapTimer = null, pinch = null;
+  const pts = new Map(); let start = null, moved = false, pinch = null;
+  const frac = e => { const r = im.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
   stage.addEventListener('pointerdown', e => {
     if (e.target.closest('button')) return;
+    if (draw) { e.preventDefault(); stage.setPointerCapture?.(e.pointerId); draw.a = frac(e); draw.box = null; return; }
     pts.set(e.pointerId, [e.clientX, e.clientY]); stage.setPointerCapture?.(e.pointerId);
     if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, tx, ty, t: Date.now() }; moved = false; }
     if (pts.size === 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; pinch = { d: Math.hypot(x2 - x1, y2 - y1), sc, c: rel((x1 + x2) / 2, (y1 + y2) / 2), tx, ty }; moved = true; }
   });
   stage.addEventListener('pointermove', e => {
+    if (draw) { if (!draw.a) return; const [x, y] = frac(e), [x0, y0] = draw.a; draw.box = { x: Math.min(x, x0), y: Math.min(y, y0), w: Math.abs(x - x0), h: Math.abs(y - y0) }; placeMarks(); return; }
     if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && pts.size >= 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; const ns = Math.min(6, Math.max(1, pinch.sc * Math.hypot(x2 - x1, y2 - y1) / pinch.d)); const k = ns / pinch.sc; const c = rel((x1 + x2) / 2, (y1 + y2) / 2); tx = c[0] - (pinch.c[0] - pinch.tx) * k; ty = c[1] - (pinch.c[1] - pinch.ty) * k; sc = ns; clamp(); apply(false); return; }
     if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y;
     if (!moved && Math.hypot(dx, dy) < 8) return; moved = true;
     if (sc > 1.01) { tx = start.tx + dx; ty = start.ty + dy; clamp(); apply(false); }
-    else { im.style.transition = 'none'; im.style.transform = Math.abs(dy) > Math.abs(dx) ? `translateY(${Math.max(0, dy)}px)` : `translateX(${pages.length > 1 ? dx : dx / 4}px)`; root.style.backgroundColor = `rgba(14,12,10,${Math.abs(dy) > Math.abs(dx) ? Math.max(.35, 1 - Math.max(0, dy) / 500) : 1})`; }
+    else { setT(Math.abs(dy) > Math.abs(dx) ? `translateY(${Math.max(0, dy)}px)` : `translateX(${pages.length > 1 ? dx : dx / 4}px)`, false); root.style.backgroundColor = `rgba(14,12,10,${Math.abs(dy) > Math.abs(dx) ? Math.max(.35, 1 - Math.max(0, dy) / 500) : 1})`; }
   });
   const up = e => {
+    if (draw) { if (!draw.a) return; const b = draw.box; draw.a = null; if (b && b.w > 0.01 && b.h > 0.005) { mk.push({ p: i, ...b }); draw = null; root.classList.remove('drawing'); root.querySelector('.pv-hint').hidden = true; saveMarks(); } return; }
     if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
     if (pinch) { if (pts.size < 2) { pinch = null; if (sc <= 1.01) zoomTo(1, 0, 0); start = null; } return; }
     if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y, st = start; start = null;
@@ -907,11 +932,12 @@ function viewer({ title, pages, line, text, src, people, photoId, docId }) {
       if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) && pages.length > 1) return go(dx < 0 ? 1 : -1);
       apply(true); return;
     }
-    // дотик без руху: подвійний — масштаб, одинарний — закрити (або зменшити, якщо збільшено)
-    const now = Date.now();
-    if (now - lastTap < 300) { clearTimeout(tapTimer); lastTap = 0; const [cx, cy] = rel(e.clientX, e.clientY); return sc > 1.01 ? zoomTo(1, 0, 0) : zoomTo(2.5, cx, cy); }
-    lastTap = now;
-    tapTimer = setTimeout(() => { if (!menu.hidden) { menu.hidden = true; return; } if (sc > 1.01) zoomTo(1, 0, 0); else close(); }, 280);
+    // дотик без руху: по скану — збільшити в цьому місці (вдруге — зменшити); по темному фону — закрити
+    const onImg = !!(im && (e.target === im || e.target.closest?.('.pv-mark'))), [cx, cy] = rel(e.clientX, e.clientY);
+    if (!menu.hidden) { menu.hidden = true; return; }
+    if (sc > 1.01) return zoomTo(1, 0, 0);
+    if (onImg) return zoomTo(2.5, cx, cy);
+    close();
   };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; start = null; apply(true); });
   stage.addEventListener('wheel', e => { e.preventDefault(); const [cx, cy] = rel(e.clientX, e.clientY); zoomTo(sc * (e.deltaY < 0 ? 1.2 : 1 / 1.2), cx, cy, false); }, { passive: false });
@@ -925,8 +951,11 @@ const ICO = {
   l: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   r: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
 };
-function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
-function openPhoto(id) { const x = S.data.photos.find(y => y.id === id); if (!x) return; if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; } viewer({ title: x.caption || short(P[x.person] || {}), pages: [img('photo=' + id)], text: `Додав(ла): ${who(x.by)}, ${when(x.at)}`, people: [x.person], photoId: (canEdit() || x.by === S.me.id) ? id : null }); }
+function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, marks: d.marks, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
+function openPhoto(id) { const x = S.data.photos.find(y => y.id === id); if (!x) return; if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; }
+  const list = S.data.photos.filter(y => y.person === x.person && y.mime !== 'application/pdf'), k = Math.max(0, list.findIndex(y => y.id === id));
+  const items = list.map(y => ({ photoId: (canEdit() || y.by === S.me.id) ? y.id : null, title: y.caption || short(P[y.person] || {}), caption: y.caption || '', text: `Додав(ла): ${who(y.by)}, ${when(y.at)}` }));
+  viewer({ title: items[k].title, pages: list.map(y => img('photo=' + y.id)), text: items[k].text, people: [x.person], photoId: items[k].photoId, items, startAt: k }); }
 
 /* ───── Власнику: аналітика, доступи, історія ───── */
 const fmtT = ms => { const m = Math.round((ms || 0) / 60000); return m < 60 ? `${m} хв` : `${Math.floor(m / 60)} год ${m % 60} хв`; };
