@@ -114,9 +114,10 @@ export default handler(async (req, res, _c, url) => {
         out.push(key + ': ok');
       } else if (it.kind === 'familypatch') {
         const f = await db.get('families', { eq: { id: String(it.family) } }); if (!f) { out.push(key + ': no family'); continue; }
-        let story = f.data.story || ''; const before = story; for (const [from, to] of it.replace || []) story = story.split(from).join(to);
-        if (story === before) { out.push(key + ': без змін'); continue; }
-        const data = { ...f.data, story }; await db.update('families', { eq: { id: f.id } }, { data, updated_by: by, updated_at: new Date().toISOString() }); await revision('family', f.id, 'update', f.data, data, by);
+        let story = f.data.story || '', title = f.data.title || ''; const before = story + '\n' + title;
+        for (const [from, to] of it.replace || []) { story = story.split(from).join(to); title = title.split(from).join(to); }
+        if (story + '\n' + title === before) { out.push(key + ': без змін'); continue; }
+        const data = { ...f.data, story, ...(title ? { title } : {}) }; await db.update('families', { eq: { id: f.id } }, { data, updated_by: by, updated_at: new Date().toISOString() }); await revision('family', f.id, 'update', f.data, data, by);
         out.push(key + ': ok');
       } else if (it.kind === 'map' || it.kind === 'doc') { // стара карта (type='map', geo) або архівний документ зі сканами
         const id = String(it.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 60); if (!id) continue;
