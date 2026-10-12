@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610121158';
+const BUILD = '202610122248';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -89,7 +89,7 @@ addEventListener('hashchange', () => { parse(); render(); window.scrollTo(0, 0);
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['tree', 'Дерево'], ['families', 'Родини'], ['people', 'Люди'], ['docs', 'Документи'], ['maps', 'Карти й історія'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
+  const nav = [['tree', 'Дерево'], ['families', 'Історія роду'], ['people', 'Люди'], ['docs', 'Документи'], ['maps', 'Карти й історія'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
   if (isOwner()) nav.push(['admin', 'Власнику' + (S.data?.joinPending ? ` <b class="nb" title="Нові заявки на реєстрацію">${S.data.joinPending}</b>` : '')]);
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   return `<header class="top"><div class="wrap">
