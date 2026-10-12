@@ -29,6 +29,28 @@ function aggregate(events, revs) {
   return Object.fromEntries(Object.entries(per).map(([k, v]) => [k, { ...v, sessions: v.sessions.size, days: v.days.size }]));
 }
 
+
+/* Діти з анкети → картки під людиною (після підтвердження власника). Повтори (те саме ім'я в тієї ж людини) пропускаються. */
+async function addKids(pid, kids, by) {
+  const par = await db.get('persons', { eq: { id: pid, deleted: false } }); if (!par) return [];
+  const all = await db.list('persons', { eq: { deleted: false } });
+  const us = await db.list('unions', { eq: { deleted: false } });
+  const sps = us.filter(u => u.a === pid || u.b === pid).map(u => u.a === pid ? u.b : u.a);
+  const other = sps.length === 1 ? sps[0] : '';
+  const isF = par.data.sex === 'f';
+  const low = t => String(t || '').toLowerCase().replace(/\s*\(.*\)/, '').trim();
+  const made = [];
+  for (const k of (Array.isArray(kids) ? kids : []).slice(0, 12)) {
+    const n = S(k.n, 60); if (!n) continue;
+    if (all.some(p => (p.data.f === pid || p.data.mo === pid) && low(p.data.n) === low(n))) continue;
+    const sex = k.sex === 'f' ? 'f' : k.sex === 'm' ? 'm' : /[ая]$/i.test(n.split(' ')[0]) ? 'f' : 'm';
+    const data = cleanPerson({ n, s: S(k.s, 60) || par.data.s || '', pt: S(k.pt, 60), b: S(k.b, 40), sex, f: isF ? other : pid, mo: isF ? pid : other, fam: par.data.fam || [], note: 'Додано з анкети реєстрації (підтвердив власник).' });
+    const id = slugId(); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by);
+    made.push(id); all.push({ id, data });
+  }
+  return made;
+}
+
 export default handler(async (req, res, ctx, url) => {
   const a = url.searchParams.get('a');
   const me = ctx.member;
@@ -77,7 +99,15 @@ export default handler(async (req, res, ctx, url) => {
     const [m] = await db.insert('members', { email: r.email, name: r.name, role, person_id: pid || null, pass_hash: r.pass_hash, created_by: me.id });
     await revision('member', m.id, 'create', null, { email: m.email, role: m.role, name: m.name, from: 'join' }, me.id);
     await db.update('join_requests', { eq: { id: r.id } }, { status: 'approved', decided_by: me.id, decided_at: now, member_id: m.id, person_id: pid || null });
-    return send(res, 200, { ok: true, person_id: pid || null });
+    const kids = pid ? await addKids(pid, b.kids, me.id) : [];
+    return send(res, 200, { ok: true, person_id: pid || null, kids: kids.length });
+  }
+  if (a === 'kids' && req.method === 'POST') { // діти з уже прийнятої заявки
+    const b = await readJSON(req, 20_000);
+    const r = await db.get('join_requests', { eq: { id: S(b.id, 60) } });
+    if (!r || r.status !== 'approved' || !r.person_id) return fail(res, 404, 'not_found');
+    const kids = await addKids(r.person_id, b.kids, me.id);
+    return send(res, 200, { ok: true, kids: kids.length });
   }
 
   if (a === 'members') {

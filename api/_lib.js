@@ -178,5 +178,6 @@ export function cleanJoin(d = {}) {
   const o = {};
   for (const k of JOIN_FIELDS) { const v = STR(d[k], ['kids', 'sibs', 'link', 'note', 'gpf', 'gpm'].includes(k) ? 2000 : 300); if (v) o[k] = v; }
   if (o.sex && !['m', 'f'].includes(o.sex)) delete o.sex;
+  if (Array.isArray(d.kidsL)) { const L = d.kidsL.slice(0, 12).map(k => ({ n: STR(k?.n, 60), b: STR(k?.b, 20), sex: ['m', 'f'].includes(k?.sex) ? k.sex : '' })).filter(k => k.n); if (L.length) o.kidsL = L; }
   return o;
 }

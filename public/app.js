@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122248';
+const BUILD = '202610122255';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -385,7 +385,10 @@ function openEdit(p) {
   modal(`<h2>${esc(full(p))}</h2>${personForm(p)}
     <div class="sec"><h3>Подружжя</h3><div class="row">${sp.map(s => `<span class="mini">${esc(short(P[s.id]))} <button class="btn line small" data-unlink="${s.u}" title="Прибрати зв'язок">×</button></span>`).join('') || '<span class="muted small">немає</span>'}</div>
       <div class="btns"><select class="in" id="e-sp" style="max-width:320px"><option value="">Додати наявну людину…</option>${Object.values(P).filter(x => x.id !== p.id && !sp.some(s => s.id === x.id)).sort((a, b) => short(a).localeCompare(short(b), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}</option>`).join('')}</select><input class="in" id="e-spd" placeholder="дата шлюбу" style="max-width:160px"><button class="btn line small" data-act="link-spouse">Додати</button></div></div>
-    <div class="btns"><button class="btn" data-act="save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button>${isOwner() && !p.root ? `<button class="btn danger" data-act="delete" style="margin-left:auto">Видалити картку</button>` : ''}<span class="msg" id="emsg"></span></div>`);
+    <div class="btns"><button class="btn" data-act="save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button>${isOwner() && !p.root ? `<button class="btn danger" data-act="delete" style="margin-left:auto">Видалити картку</button>` : ''}<span class="msg" id="emsg"></span></div>
+    ${isOwner() && p.id ? `<details class="mergebox"><summary>Ця людина є в дереві двічі? Об'єднати картки</summary>
+      <p class="small muted">Оберіть другу картку цієї ж людини. Усе з неї — діти, чоловік/дружина, фото, спогади, документи, акаунт — перейде сюди, порожні поля доповняться, а дубль зникне.</p>
+      <div class="btns">${peopleList('mgpeople')}<input class="in" id="mg-p" list="mgpeople" placeholder="Друга картка…" autocomplete="off" style="flex:1;min-width:220px"><button class="btn line" data-act="merge">Об'єднати</button></div></details>` : ''}`);
   S.ui.editing = p.id;
 }
 function openAdd(kind, base) {
@@ -549,6 +552,8 @@ async function qHandle(act, t, d) {
 
 /* ───── Реєстрація за посиланням ?join=<код> ─────
    Людина розповідає про себе й рідних → заявка → Максим прив'язує до картки в дереві й відкриває доступ. */
+const kidRow = (k = {}) => `<div class="kidr"><input class="in" data-kf="n" placeholder="Ім'я (і по батькові)" value="${esc(k.n || '')}" maxlength="60"><input class="in" data-kf="b" placeholder="Рік" inputmode="numeric" value="${esc(k.b || '')}" maxlength="20"><select class="in" data-kf="sex"><option value="">син / донька</option><option value="m"${k.sex === 'm' ? ' selected' : ''}>син</option><option value="f"${k.sex === 'f' ? ' selected' : ''}>донька</option></select></div>`;
+const readKids = box => [...(box?.querySelectorAll('.kidr') || [])].map(r => Object.fromEntries([...r.querySelectorAll('[data-kf]')].map(i => [i.dataset.kf, i.value.trim()]))).filter(k => k.n);
 const RF = (id, label, ph, o = {}) => `<label class="f${o.wide ? ' wide' : ''}">${label}${o.area ? `<textarea class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="2000"></textarea>` : `<input class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="300"${o.type ? ` type="${o.type}"` : ''}${o.im ? ` inputmode="${o.im}"` : ''}${o.ac ? ` autocomplete="${o.ac}"` : ''}${o.req ? ' required' : ''}>`}</label>`;
 function vRegister() {
   return `<div class="gate reg"><div class="card"><h1>Рід Шутих</h1><div class="sub">Реєстрація в родинному архіві</div><div class="orn">◆ ◆ ◆</div>
@@ -569,7 +574,7 @@ function vRegister() {
       ${RF('gpf', 'Дідусь і бабуся по батькові', 'Шутий Іван Петрович (1930–1995), Ганна Федорівна', { area: 1 })}
       ${RF('gpm', 'Дідусь і бабуся по матері', 'Галай Іван…, …', { area: 1 })}
       ${RF('spouse', 'Чоловік / дружина', "прізвище, ім'я, рік")}${RF('sibs', 'Брати й сестри', 'імена й роки', { area: 1 })}
-      ${RF('kids', 'Діти', 'імена й роки народження', { area: 1, wide: 1 })}
+      <div class="f wide"><span>Діти — кожна дитина окремим рядком (з'явиться в дереві під вами після підтвердження)</span><div id="rg-kids" class="kidl">${kidRow()}</div><button type="button" class="btn line small" data-act="jr-kidadd" style="justify-self:start">+ ще дитина</button></div>
       ${RF('link', 'Як ви пов\'язані з родом Шутих (через кого)', 'напр.: моя бабуся — рідна сестра Василя Шутого з Вороньків', { area: 1, wide: 1 })}
     </div>
     <p class="small muted" style="margin:0">* Обов'язково: прізвище, ім'я і хоча б один із батьків.</p>
@@ -604,24 +609,46 @@ const plabel = p => full(p) + (life(p) ? ' (' + life(p) + ')' : '');
 const peopleList = id => `<datalist id="${id}">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(plabel(p))}"></option>`).join('')}</datalist>`;
 const JRF = [['s', 'Прізвище'], ['n', "Ім'я"], ['pt', 'По батькові'], ['m', 'Дівоче'], ['sex', 'Стать'], ['b', 'Народження'], ['bp', 'Де народ.'], ['live', 'Живе'], ['phone', 'Телефон'], ['father', 'Батько'], ['mother', 'Мати'], ['gpf', 'Діди по батькові'], ['gpm', 'Діди по матері'], ['spouse', 'Подружжя'], ['sibs', 'Брати й сестри'], ['kids', 'Діти'], ['link', "Зв'язок з родом"]];
 function jrText(r) { const d = r.data || {}; return `Заявка на реєстрацію: ${r.name} <${r.email}>, ${when(r.at)}\n` + JRF.filter(([k]) => d[k]).map(([k, t]) => `${t}: ${k === 'sex' ? (d[k] === 'f' ? 'жінка' : 'чоловік') : d[k]}`).join('\n') + '\nХто це в нашому дереві?'; }
+// діти з анкети: структуровані (нова форма) або розібрані зі старого тексту «Іван 2001, Марія 2005»
+function jrKids(d) {
+  if (Array.isArray(d.kidsL) && d.kidsL.length) return d.kidsL;
+  return String(d.kids || '').split(/[;\n]+|,(?!\s*\d)/).map(x => x.trim()).filter(Boolean).map(x => {
+    const b = (x.match(/\b(19|20)\d\d\b/) || [''])[0];
+    const n = x.replace(/\b(19|20)\d\d\b/, '').replace(/\b(син|донька|дочка|р\.?\s*н\.?|року|р\.)\b/gi, '').replace(/[(),.–—-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const sex = /\b(донька|дочка)\b/i.test(x) ? 'f' : /\b(син)\b/i.test(x) ? 'm' : /[ая]$/i.test(n.split(' ')[0] || '') ? 'f' : 'm';
+    return { n, b, sex };
+  }).filter(k => k.n && k.n.length < 60);
+}
+const kidHas = (pid, n) => Object.values(P).some(p => (p.f === pid || p.mo === pid) && String(p.n || '').toLowerCase().replace(/\s*\(.*\)/, '').trim() === String(n).toLowerCase().split(' ')[0]);
+function jrKidsBlock(r, pid) {
+  const ks = jrKids(r.data || {}); if (!ks.length) return '';
+  const rows = ks.map((k, i) => { const has = pid && kidHas(pid, k.n); return `<label class="kidc${has ? ' has' : ''}"><input type="checkbox" data-kid="${i}"${has ? ' disabled' : ' checked'}><span>${kidRow(k)}</span>${has ? '<em class="small muted">вже є в дереві</em>' : ''}</label>`; }).join('');
+  return `<div class="kidbox" id="jk-${r.id}"><b class="small">Діти з анкети — додати в дерево під цією людиною:</b>${rows}</div>`;
+}
+const jrKidsRead = id => [...document.querySelectorAll(`#jk-${id} .kidc`)].filter(l => l.querySelector('[data-kid]')?.checked).map(l => Object.fromEntries([...l.querySelectorAll('[data-kf]')].map(i => [i.dataset.kf, i.value.trim()]))).filter(k => k.n);
 function jrCard(r) {
   const d = r.data || {}, id = r.id;
   const self = guessPeople([d.s, d.n, d.pt, d.m, d.b].join(' '));
   const fG = guessPeople(d.father, 1)[0], mG = guessPeople(d.mother, 1)[0], sG = guessPeople(d.spouse, 1)[0];
   const dl = `<dl class="jrd">${JRF.filter(([k]) => d[k] && !['s', 'n', 'pt'].includes(k)).map(([k, t]) => `<dt>${t}</dt><dd>${esc(k === 'sex' ? (d[k] === 'f' ? 'жінка' : 'чоловік') : d[k]).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>`;
-  if (r.status !== 'pending') return `<div class="jr done"><b>${esc(r.name)}</b> · <span class="small muted">${esc(r.email)} · ${r.status === 'approved' ? 'прийнято' : 'відхилено'} ${esc(when(r.decided_at))}${r.person_id && P[r.person_id] ? ` · <a href="${href('p', r.person_id)}">${esc(short(P[r.person_id]))}</a>` : ''}</span></div>`;
+  if (r.status !== 'pending') {
+    const pid = r.person_id && P[r.person_id] ? r.person_id : '', miss = pid ? jrKids(d).filter(k => !kidHas(pid, k.n)) : [];
+    return `<div class="jr done"><b>${esc(r.name)}</b> · <span class="small muted">${esc(r.email)} · ${r.status === 'approved' ? 'прийнято' : 'відхилено'} ${esc(when(r.decided_at))}${pid ? ` · <a href="${href('p', pid)}">${esc(short(P[pid]))}</a>` : ''}</span>
+      ${miss.length ? `${jrKidsBlock(r, pid)}<div class="btns"><button class="btn small" data-act="jr-kids" data-id="${id}">Додати вибраних дітей у дерево</button><span class="msg" id="jr-m-${id}"></span></div>` : ''}</div>`;
+  }
   return `<article class="jr" data-jr="${id}">
     <div class="qh"><span class="pill st-new">Нова заявка</span><b style="font-family:var(--f-display);font-size:19px">${esc([d.s, d.n, d.pt].filter(Boolean).join(' '))}</b><span class="small muted">${esc(r.email)} · ${esc(when(r.at))}</span></div>
     ${dl}
     <div class="jact">
       <div class="small"><b>Хто це в дереві?</b> ${self.length ? 'Схоже на: ' + self.map(p => `<button type="button" class="chip" data-act="jr-pick" data-id="${id}" data-v="${esc(plabel(p))}">${esc(plabel(p))}</button>`).join(' ') : '<span class="muted">збігів за іменем не знайдено — мабуть, людини ще немає в дереві</span>'}</div>
-      <label class="f">Вже є в дереві — оберіть картку<input class="in" id="jp-${id}" list="jpeople" placeholder="Почніть вводити ім'я…" autocomplete="off"></label>
+      <label class="f">Вже є в дереві — оберіть картку (щоб не було двох однакових)<input class="in" id="jp-${id}" list="jpeople" placeholder="Почніть вводити ім'я…" autocomplete="off" value="${self[0] ? esc(plabel(self[0])) : ''}"></label>
       <details${self.length ? '' : ' open'}><summary class="small">Або створити нову картку з даних заявки й прив'язати до рідних</summary>
         <div class="grid2" style="margin-top:8px">
           <label class="f">Батько<input class="in" id="jf-${id}" list="jpeople" value="${fG ? esc(plabel(fG)) : ''}" placeholder="з дерева" autocomplete="off"></label>
           <label class="f">Мати<input class="in" id="jm-${id}" list="jpeople" value="${mG ? esc(plabel(mG)) : ''}" placeholder="з дерева" autocomplete="off"></label>
           <label class="f">Чоловік / дружина<input class="in" id="js-${id}" list="jpeople" value="${sG ? esc(plabel(sG)) : ''}" placeholder="з дерева" autocomplete="off"></label>
         </div><p class="small muted" style="margin:4px 0 0">Підставлено найсхожіших — перевірте. Порожнє поле = не прив'язувати.</p></details>
+      ${jrKidsBlock(r, self[0]?.id || '')}
       <div class="btns"><label class="f" style="margin:0">Права<select class="in" id="jr-role-${id}" style="width:auto"><option value="viewer">глядач — дивиться, доповнює свою гілку</option><option value="editor">редактор — змінює картки</option></select></label></div>
       <div class="btns"><button class="btn" data-act="jr-ok" data-id="${id}">Прийняти й відкрити доступ</button><button class="btn line" data-act="jr-no" data-id="${id}">Відхилити</button><button class="btn line small" data-act="copy" data-v="${esc(jrText(r))}">Скопіювати для Claude</button><span class="msg" id="jr-m-${id}"></span></div>
     </div>
@@ -651,13 +678,18 @@ async function joinHandle(act, t, d) {
     S.admin.join = await api('/api/admin?a=join_link', { body: { do: act.slice(3) } }); S.ui.keepScroll = true; render(); toast(act === 'jl-rotate' ? 'Нове посилання готове' : act === 'jl-off' ? 'Реєстрацію вимкнено' : 'Реєстрацію увімкнено'); return true;
   }
   if (act === 'jr-pick') { $('#jp-' + d.id).value = d.v; return true; }
+  if (act === 'jr-kidadd') { $('#rg-kids').insertAdjacentHTML('beforeend', kidRow()); $('#rg-kids .kidr:last-child input')?.focus(); return true; }
+  if (act === 'jr-kids') {
+    const kids = jrKidsRead(d.id); if (!kids.length) return true; if (t.disabled) return true; t.disabled = true;
+    const r = await api('/api/admin?a=kids', { body: { id: d.id, kids } }); await load(); S.ui.keepScroll = true; await loadAdmin(); toast(r.kids ? `Додано в дерево дітей: ${r.kids}` : 'Ці діти вже є в дереві'); return true;
+  }
   if (act === 'jr-ok' || act === 'jr-no') {
     const m = $('#jr-m-' + d.id);
     if (act === 'jr-no') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відхилити?'; return true; } await api('/api/admin?a=reject', { body: { id: d.id } }); }
     else {
       const pick = $('#jp-' + d.id).value.trim(), person_id = personByLabel(pick);
       if (pick && !person_id) { m.className = 'msg err'; m.textContent = 'Оберіть людину зі списку-підказки (або очистіть поле, щоб створити нову картку).'; return true; }
-      const body = { id: d.id, role: $('#jr-role-' + d.id).value };
+      const body = { id: d.id, role: $('#jr-role-' + d.id).value, kids: jrKidsRead(d.id) };
       if (person_id) body.person_id = person_id;
       else {
         const g = k => { const v = $(`#j${k}-${d.id}`).value.trim(); return v ? personByLabel(v) : ''; };
@@ -666,7 +698,7 @@ async function joinHandle(act, t, d) {
       }
       if (t.disabled) return true; t.disabled = true;
       const r = await api('/api/admin?a=approve', { body });
-      if (body.create) await load();
+      if (body.create || r.kids) await load();
     }
     S.admin.reqs = (await api('/api/admin?a=requests')).requests; S.admin.members = null; S.data.joinPending = S.admin.reqs.filter(r => r.status === 'pending').length;
     S.ui.keepScroll = true; await loadAdmin(); toast(act === 'jr-ok' ? 'Доступ відкрито. Людина вже може увійти зі своєю поштою й паролем.' : 'Заявку відхилено'); return true;
@@ -1402,7 +1434,8 @@ document.addEventListener('submit', async e => {
     if (f.id === 'login') { $('#lg-m').textContent = 'Перевіряю…'; const r = await api('/api/auth?a=login', { body: { email: $('#lg-e').value, password: $('#lg-p').value }, noRedirect: true }); S.me = r.member; introMark(); await load(); render(); window.scrollTo(0, 0); autoImport(); }
     if (f.id === 'register') {
       const m = $('#rg-m'), v = k => ($('#rg-' + k)?.value || '').trim();
-      const data = Object.fromEntries(['s', 'n', 'pt', 'm', 'sex', 'b', 'bp', 'live', 'phone', 'father', 'mother', 'gpf', 'gpm', 'spouse', 'sibs', 'kids', 'link'].map(k => [k, v(k)]));
+      const data = Object.fromEntries(['s', 'n', 'pt', 'm', 'sex', 'b', 'bp', 'live', 'phone', 'father', 'mother', 'gpf', 'gpm', 'spouse', 'sibs', 'link'].map(k => [k, v(k)]));
+      data.kidsL = readKids($('#rg-kids')); data.kids = data.kidsL.map(k => k.n + (k.b ? ', ' + k.b : '')).join('; ');
       if (!data.father && !data.mother) { m.className = 'msg err'; m.textContent = ERR.parents; return; }
       const btn = f.querySelector('button[type=submit]'); if (btn.disabled) return; btn.disabled = true; m.className = 'msg'; m.textContent = 'Надсилаю…';
       try { await api('/api/auth?a=register', { body: { c: S.join, email: v('email'), password: $('#rg-pass').value, data }, noRedirect: true }); S.gate = regDone; render(); window.scrollTo(0, 0); }
@@ -1492,6 +1525,13 @@ document.addEventListener('click', async e => {
       location.hash = href('p', r.person.id); render(); return;
     }
     if (act === 'link-spouse') { const b = $('#e-sp').value; if (!b) return; const r = await api('/api/data', { body: { op: 'union.add', a: S.ui.editing, b, date: $('#e-spd').value } }); S.data.unions.push(r.union); index(); openEdit(P[S.ui.editing]); return; }
+    if (act === 'merge') {
+      const lv = $('#mg-p').value.trim(), m = $('#emsg'); // однакові підписи у двох карток — беремо ту, що НЕ відкрита
+      const other = (Object.values(P).find(p => p.id !== S.ui.editing && plabel(p) === lv) || Object.values(P).find(p => p.id !== S.ui.editing && full(p) === lv))?.id;
+      if (!other || other === S.ui.editing) { m.className = 'msg err'; m.textContent = 'Оберіть другу картку зі списку-підказки.'; return; }
+      if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = `Так, «${short(P[other])}» — це та сама людина`; return; }
+      t.disabled = true; await api('/api/data', { body: { op: 'person.merge', keep: S.ui.editing, drop: other } }); const keep = S.ui.editing; closeLayer(); await load(); location.hash = href('p', keep); render(); toast('Картки об\'єднано'); return;
+    }
     if (act === 'delete') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити? Натисніть ще раз'; return; } await api('/api/data', { body: { op: 'person.delete', id: S.ui.editing } }); closeLayer(); await load(); location.hash = '#/people'; return; }
     if (act === 'famsave') { const story = textToHtml($('#fe').value); await api('/api/data', { body: { op: 'family.story', id: S.ui.famEditing, story } }); FAM[S.ui.famEditing].story = story; closeLayer(); S.ui.keepScroll = true; render(); toast('Збережено'); return; }
     if (act === 'invite') { const m = $('#ivmsg'); const r = await api('/api/admin?a=invite', { body: { name: $('#iv-name').value, email: $('#iv-email').value, role: $('#iv-role').value, person_id: $('#iv-person').value } }); m.textContent = 'Готово'; m.className = 'msg ok'; $('#ivlink').innerHTML = `<div class="btns" style="margin-top:8px"><input class="in mono" value="${esc(r.link)}" readonly style="max-width:520px"><button class="btn line small" data-act="copy" data-v="${esc(r.link)}">Скопіювати</button></div>`; return; }
