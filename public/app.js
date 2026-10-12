@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610121011';
+const BUILD = '202610121059';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -96,7 +96,33 @@ function top() {
     <a class="brand" href="#/tree">Рід Шутих<small>Вороньки · з 1767</small></a>
     <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${cur === k ? ' aria-current="page"' : ''}>${t}</a>`).join('')}</nav>
     <div class="who"><span>${esc(S.me.name || S.me.email || '')}</span><button data-act="logout">Вийти</button></div>
-  </div></header>`;
+  </div></header>${mNav(cur)}`;
+}
+/* ───── Телефон: нижнє меню й шторка «Ще» (як у KRental CRM: 4 розділи + «Ще», кнопки ≥44 px, під великим пальцем) ───── */
+const MI = {
+  tree: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5.5" cy="18.5" r="2.2"/><circle cx="18.5" cy="18.5" r="2.2"/><path d="M12 7.2v5.3M5.5 16.3v-1.8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1.8"/></svg>',
+  families: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
+  people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/></svg>',
+  docs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4M9.5 12h5M9.5 15.5h5"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  maps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 6.5 9 4l6 2.5L20.5 4v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>',
+  q: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path d="M10.3 8.6a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M12 13.3v.1"/></svg>',
+  admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/></svg>',
+  out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.5h4.5v15H14M10 8l-4 4 4 4M6 12h9.5"/></svg>',
+};
+function mNav(cur) {
+  const more = ['maps', 'q', 'admin', 'p'].includes(cur) && cur !== 'p' ? 'more' : cur;
+  const B = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Документи']];
+  const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) : 0);
+  return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
+}
+function mSheet() {
+  const L = [['maps', 'Карти й історія сіл', ''], ['q', 'Запитання', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', S.data?.joinPending || '']] : [])];
+  $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
+    ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
+    <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
+    <button class="msh-row out" data-act="logout">${MI.out}<span>Вийти</span></button></div></div>`;
+  document.documentElement.classList.add('msh-open');
 }
 
 /* ───── Дерево предків ───── */
@@ -715,6 +741,9 @@ const SND = {
   toggle() { this.on = !this.on; try { localStorage.setItem('rs_snd', this.on ? '1' : '0'); } catch {} if (this.on) this.startMusic(); else this.stopMusic(); },
 };
 const BOOK = { key: '', pages: [], chapters: [], spread: true, busy: false };
+const bkFs = () => { let v = 0; try { v = +localStorage.getItem('rs_bkfs') || 0; } catch {} return Math.max(-2, Math.min(4, v)); };
+const bkFsPx = (d, single) => (single ? 16 : 16.5) + d.fs * 1.5;
+const bkAnchor = () => { const p = BOOK.pages[S.ui.bkPos || 0] || BOOK.pages[(S.ui.bkPos || 0) + 1]; return p?.html ? p.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) : null; };
 function bookShell() {
   return `<div class="bk" id="bk">
     <div class="bk-bar">
@@ -722,8 +751,9 @@ function bookShell() {
       <button class="bk-b" data-bk="prev" title="Попередня сторінка (←)" aria-label="Попередня">‹</button>
       <span class="bk-n mono" id="bk-n"></span>
       <button class="bk-b" data-bk="next" title="Наступна сторінка (→)" aria-label="Наступна">›</button>
+      <button class="bk-b bk-dk" data-bk="fs-" title="Менший шрифт" aria-label="Менший шрифт">A−</button><button class="bk-b bk-dk" data-bk="fs+" title="Більший шрифт" aria-label="Більший шрифт">A+</button>
       <button class="bk-b" data-bk="snd" id="bk-snd" title="${SND.on ? 'Вимкнути звук' : 'Увімкнути звук'}" aria-label="Звук">${SND.on ? '🔊' : '🔇'}</button>
-      <button class="bk-b txt" data-bk="plain" title="Читати звичайним текстом">Текстом</button>
+      <button class="bk-b txt bk-dk" data-bk="plain" title="Читати звичайним текстом">Текстом</button>
     </div>
     <div class="bk-toc" id="bk-toc" hidden></div>
     <div class="bk-stage" id="bk-stage"><div class="bk-book" id="bk-book"></div></div>
@@ -731,16 +761,16 @@ function bookShell() {
   </div>`;
 }
 function bookDims() {
-  const st = document.getElementById('bk-stage'); const W = st.clientWidth, vh = window.innerHeight;
+  const st = document.getElementById('bk-stage'); const W = st.clientWidth, vh = document.documentElement.clientHeight;
   const spread = W >= 860;
   let pw, ph;
   if (spread) { pw = Math.min((W - 48) / 2, 520, (vh - 210) / 1.42); ph = pw * 1.42; }
-  else { pw = Math.min(W - 16, 460, (vh - 190) / 1.5); ph = pw * 1.5; }
-  return { spread, pw: Math.floor(pw), ph: Math.floor(ph) };
+  else { const mob = innerWidth <= 820; pw = Math.min(W - 16, 460, (vh - (mob ? 214 : 190)) / 1.5); ph = pw * 1.5; } // телефон: шапка 52 + панель книги 56 + нижнє меню 64
+  return { spread, pw: Math.floor(pw), ph: Math.floor(ph), fs: bkFs() };
 }
 function bookPaginate(html, d) {
   // розкладаємо текст по сторінках: міряємо в прихованій сторінці такого самого розміру
-  const meas = document.createElement('div'); meas.className = 'bk-page bk-meas'; meas.style.width = d.pw + 'px'; meas.style.height = d.ph + 'px'; meas.style.setProperty('--pw', d.pw + 'px');
+  const meas = document.createElement('div'); meas.className = 'bk-page bk-meas'; meas.style.width = d.pw + 'px'; meas.style.height = d.ph + 'px'; meas.style.setProperty('--pw', d.pw + 'px'); meas.style.fontSize = bkFsPx(d, !d.spread) + 'px';
   meas.innerHTML = '<div class="bk-body"></div>'; document.body.appendChild(meas);
   const body = meas.firstChild, src = document.createElement('div'); src.innerHTML = html;
   const pages = [], chapters = []; let cur = [], chapter = '';
@@ -781,7 +811,7 @@ function bookPaginate(html, d) {
 }
 function bookBuild(d) {
   const t = TXT.history; if (!t) return false;
-  const key = [d.pw, d.ph, d.spread, (t.md || '').length, t.updated].join('|');
+  const key = [d.pw, d.ph, d.spread, d.fs, (t.md || '').length, t.updated].join('|');
   if (BOOK.key === key) return true;
   const html = glossify(md(t.md || t)).replace(/<div class="gnotes">([\s\S]*?)<\/div>\s*$/, (m, inner) => '<h3>Пояснення старих слів</h3>' + inner.replace(/<p>/g, '<p class="gl-n">'));
   const { pages, chapters } = bookPaginate(html, d);
@@ -808,15 +838,19 @@ function bookRender() {
   const book = document.getElementById('bk-book'); if (!book) return;
   const d = BOOK.d, open = S.ui.bkOpen; let i = Math.max(0, Math.min(S.ui.bkPos || 0, BOOK.pages.length - 1));
   if (BOOK.spread && i % 2) i--; S.ui.bkPos = i;
-  book.style.setProperty('--pw', d.pw + 'px'); book.style.setProperty('--ph', d.ph + 'px');
+  book.style.setProperty('--pw', d.pw + 'px'); book.style.setProperty('--ph', d.ph + 'px'); book.style.setProperty('--bkfs', bkFsPx(d, !BOOK.spread) + 'px');
   book.className = 'bk-book ' + (BOOK.spread ? 'spread' : 'single') + (open ? ' open' : ' closed');
   if (!open) book.innerHTML = `<div class="bk-side r">${bookCoverHtml()}</div>`;
   else if (BOOK.spread) book.innerHTML = `<div class="bk-side l" data-bk="prev">${bookPageHtml(i)}</div><div class="bk-side r" data-bk="next">${bookPageHtml(i + 1)}</div><div class="bk-spine"></div>`;
   else book.innerHTML = `<div class="bk-side r" data-bk="next">${bookPageHtml(i)}</div>`;
   const n = document.getElementById('bk-n'), N = BOOK.pages.length;
-  if (n) n.textContent = !open ? 'обкладинка' : BOOK.spread ? `${i}–${i + 1} з ${N - 1}` : `${i + 1} з ${N}`;
+  bookCounter();
   const toc = document.getElementById('bk-toc');
-  if (toc) toc.innerHTML = BOOK.chapters.map(c => `<a href="#" data-bkgo="${c.page}">${esc(c.title)} <span class="mono">${BOOK.spread ? c.page : c.page + 1}</span></a>`).join('');
+  if (toc) toc.innerHTML = `<div class="bk-tset"><span>Шрифт</span><button class="bk-b" data-bk="fs-" aria-label="Менший шрифт">A−</button><button class="bk-b" data-bk="fs+" aria-label="Більший шрифт">A+</button><button class="bk-b txt" data-bk="plain">Читати текстом</button></div>` + BOOK.chapters.map(c => `<a href="#" data-bkgo="${c.page}">${esc(c.title)} <span class="mono">${BOOK.spread ? c.page : c.page + 1}</span></a>`).join('');
+}
+function bookCounter() {
+  const n = document.getElementById('bk-n'), N = BOOK.pages.length, i = S.ui.bkPos || 0;
+  if (n) n.textContent = !S.ui.bkOpen ? 'обкладинка' : BOOK.spread ? `${i}–${i + 1} з ${N - 1}` : `${i + 1} з ${N}`;
 }
 function bookFlip(dir, target) {
   if (BOOK.busy) return; const book = document.getElementById('bk-book'); if (!book) return;
@@ -826,7 +860,7 @@ function bookFlip(dir, target) {
   if (j === i) return;
   if (j < 0) { bookClose(); return; }
   if (j >= N) return;
-  dir = j > i ? 1 : -1; BOOK.busy = true; SND.page();
+  dir = j > i ? 1 : -1; BOOK.busy = true; SND.page(); const fid = BOOK.fid = (BOOK.fid || 0) + 1;
   const leaf = document.createElement('div'); leaf.className = 'bk-leaf ' + (dir > 0 ? 'fwd' : 'back') + (BOOK.spread ? '' : ' one');
   if (BOOK.spread) {
     if (dir > 0) { leaf.innerHTML = `<div class="bk-face front">${bookPageHtml(i + 1)}</div><div class="bk-face backf">${bookPageHtml(j)}</div>`; book.querySelector('.bk-side.r').innerHTML = bookPageHtml(j + 1); }
@@ -837,13 +871,21 @@ function bookFlip(dir, target) {
   }
   book.appendChild(leaf);
   requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
-  const done = () => { S.ui.bkPos = j; BOOK.busy = false; bookRender(); };
-  leaf.addEventListener('transitionend', done, { once: true }); setTimeout(() => { if (BOOK.busy) done(); }, 1200);
+  const done = () => { if (BOOK.fid !== fid || !leaf.isConnected) return; BOOK.fid++; S.ui.bkPos = j;
+    const l = book.querySelector('.bk-side.l'), r = book.querySelector('.bk-side.r');
+    if (BOOK.spread) { if (dir > 0) l.innerHTML = bookPageHtml(j); else r.innerHTML = bookPageHtml(j + 1); }
+    else if (dir < 0) r.innerHTML = bookPageHtml(j);
+    leaf.remove(); BOOK.busy = false; bookCounter(); };
+  leaf.addEventListener('transitionend', e => { if (e.target === leaf) done(); }); setTimeout(done, 1300);
 }
 function bookOpen() {
   if (BOOK.busy) return; const book = document.getElementById('bk-book'); if (!book) return;
   BOOK.busy = true; SND.play('creak', 0.5); SND.startMusic();
-  const stg = document.getElementById('bk-stage'); if (stg && stg.getBoundingClientRect().top > window.innerHeight * 0.35) stg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const stg = document.getElementById('bk-stage');
+  if (stg) { // телефон: книга одразу під шапкою, щоб сторінка вміщалась між шапкою і панеллю гортання
+    const hh = innerWidth <= 820 ? (document.querySelector('.top')?.offsetHeight || 52) : 0, t = stg.getBoundingClientRect().top;
+    if (hh ? Math.abs(t - hh) > 6 : t > window.innerHeight * 0.35) window.scrollTo({ top: scrollY + t - hh, behavior: 'smooth' });
+  }
   const i = 0; S.ui.bkPos = 0;
   if (BOOK.spread) {
     book.className = book.className.replace('closed', 'open');
@@ -857,6 +899,7 @@ function bookOpen() {
 function bookClose() { SND.play('thud', 0.5); S.ui.bkOpen = false; S.ui.bkPos = 0; bookRender(); }
 function bookMount() {
   const st = document.getElementById('bk-stage'); if (!st) return;
+  if (document.fonts && document.fonts.status !== 'loaded' && !BOOK.fontWait) { BOOK.fontWait = true; document.fonts.ready.then(() => { BOOK.key = ''; bookMount(); }); }
   if (TXT.history === undefined) return; // ще вантажиться — render() викличе знову
   const d = bookDims(); if (!bookBuild(d)) { st.innerHTML = '<p class="muted">Історію роду ще не написано.</p>'; return; }
   BOOK.d = d; bookRender();
@@ -865,12 +908,17 @@ function bookMount() {
 // події книги
 document.addEventListener('click', e => {
   const g = e.target.closest('[data-bkgo]'); if (g) { e.preventDefault(); const t = +g.dataset.bkgo; const tc = document.getElementById('bk-toc'); if (tc) tc.hidden = true; if (!S.ui.bkOpen) { S.ui.bkOpen = true; SND.startMusic(); S.ui.bkPos = t; bookRender(); } else bookFlip(0, t); return; }
+  const tcO = document.getElementById('bk-toc'); // відкритий зміст закривається дотиком поза ним
+  if (tcO && !tcO.hidden && !e.target.closest('#bk-toc,[data-bk="toc"]')) { tcO.hidden = true; if (e.target.closest('#bk-stage')) return; }
   const b = e.target.closest('[data-bk]'); if (!b || !document.getElementById('bk')) return;
   if (e.target.closest('a') && !e.target.closest('[data-bk="toc"]')) return; // посилання всередині сторінки працюють як звичайно
   const a = b.dataset.bk;
+  if (Date.now() - (BOOK.swiped || 0) < 400) return; // клік одразу після свайпу не рахуємо
+  if (a === 'next' && !BOOK.spread && b.classList.contains('bk-side') && e.clientX < b.getBoundingClientRect().left + b.offsetWidth * 0.33) return bookFlip(-1);
   if (a === 'next') return bookFlip(1);
   if (a === 'prev') return bookFlip(-1);
   if (a === 'open') return bookOpen();
+  if (a === 'fs-' || a === 'fs+') { const v = Math.max(-2, Math.min(4, bkFs() + (a === 'fs+' ? 1 : -1))); try { localStorage.setItem('rs_bkfs', String(v)); } catch {} bookReflow(true); return; }
   if (a === 'toc') { const tc = document.getElementById('bk-toc'); tc.hidden = !tc.hidden; return; }
   if (a === 'snd') { SND.toggle(); b.textContent = SND.on ? '🔊' : '🔇'; b.title = SND.on ? 'Вимкнути звук' : 'Увімкнути звук'; return; }
   if (a === 'plain') { S.ui.ridPlain = true; SND.stopMusic(); render(); return; }
@@ -879,9 +927,17 @@ document.addEventListener('keydown', e => {
   if (!document.getElementById('bk') || document.querySelector('.pv, .modal') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (e.key === 'ArrowRight') { e.preventDefault(); bookFlip(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); bookFlip(-1); }
 });
-(() => { let sx = null, sy = 0; document.addEventListener('pointerdown', e => { if (e.target.closest('#bk-stage') && !e.target.closest('a,button')) { sx = e.clientX; sy = e.clientY; } else sx = null; });
-  document.addEventListener('pointerup', e => { if (sx == null) return; const dx = e.clientX - sx, dy = e.clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { BOOK.swiped = Date.now(); bookFlip(dx < 0 ? 1 : -1); } }); })();
-let bkRs; window.addEventListener('resize', () => { clearTimeout(bkRs); bkRs = setTimeout(() => { if (!document.getElementById('bk')) return; const d = bookDims(); if (d.pw !== BOOK.d?.pw || d.spread !== BOOK.spread) { const frac = (S.ui.bkPos || 0) / Math.max(1, BOOK.pages.length); BOOK.key = ''; bookBuild(d); S.ui.bkPos = Math.round(frac * BOOK.pages.length); bookRender(); } }, 250); });
+(() => { let sx = null, sy = 0; const act = new Set(); const zoomed = () => (window.visualViewport?.scale || 1) > 1.05;
+  document.addEventListener('pointerdown', e => { if (e.isPrimary) act.clear(); act.add(e.pointerId); if (act.size > 1) { sx = null; return; } if (e.target.closest('#bk-stage') && !e.target.closest('button')) { sx = e.clientX; sy = e.clientY; } else sx = null; });
+  document.addEventListener('pointerup', e => { act.delete(e.pointerId); if (sx == null) return; const dx = e.clientX - sx, dy = e.clientY - sy; sx = null; if (zoomed()) return; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { BOOK.swiped = Date.now(); bookFlip(dx < 0 ? 1 : -1); } });
+  document.addEventListener('pointercancel', e => { act.delete(e.pointerId); sx = null; }); })();
+function bookReflow(force) { if (!document.getElementById('bk') || BOOK.busy) return; const d = bookDims(); if (!force && d.pw === BOOK.d?.pw && d.ph === BOOK.d?.ph && d.spread === BOOK.spread) return;
+  const a = bkAnchor(), frac = (S.ui.bkPos || 0) / Math.max(1, BOOK.pages.length); BOOK.key = ''; if (!bookBuild(d)) return; BOOK.d = d;
+  const tx = p => p.html ? p.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') : ''; let k = -1;
+  for (const L of [40, 24, 14]) { if (!a || k >= 0) break; const q = a.slice(0, L); k = BOOK.pages.findIndex(p => tx(p).includes(q)); }
+  if (k < 0) k = Math.round(frac * BOOK.pages.length);
+  S.ui.bkPos = k; bookRender(); }
+let bkRs; window.addEventListener('resize', () => { clearTimeout(bkRs); bkRs = setTimeout(() => bookReflow(false), 300); });
 
 function vRid() {
   const t = loadText('history');
@@ -1033,8 +1089,8 @@ function vPeople() {
   const famT = p => (p.fam || []).map(x => FAM[x]?.title).filter(Boolean).join(', ');
   const list = Object.values(P).filter(p => !q || [full(p), p.m, p.bp, famT(p)].join(' ').toLowerCase().includes(q)).sort((a, b) => (a.s || 'я').localeCompare(b.s || 'я', 'uk') || byBirth(a.id, b.id));
   return `<div class="lede"><div class="eyebrow">Покажчик</div><h1>Усі родичі</h1><p class="small muted">${Object.keys(P).length} людей у дереві</p></div>
-  <div class="btns" style="margin-bottom:6px"><input class="in search" id="q" type="search" value="${esc(S.ui.q || '')}" placeholder="Пошук: ім'я, прізвище, село" aria-label="Пошук">${canEdit() ? `<button class="btn line" data-add="new" style="margin-bottom:18px">+ Нова людина</button>` : ''}</div>
-  <div class="tablebox"><table class="t"><thead><tr><th>Ім'я</th><th>Роки</th><th>Місце</th><th>Гілка</th></tr></thead><tbody>
+  <div class="btns plbar" style="margin-bottom:6px"><input class="in search" id="q" type="search" value="${esc(S.ui.q || '')}" placeholder="Пошук: ім'я, прізвище, село" aria-label="Пошук">${canEdit() ? `<button class="btn line" data-add="new" style="margin-bottom:18px">+ Нова<span class="hm"> людина</span></button>` : ''}</div>
+  <div class="tablebox"><table class="t plist"><thead><tr><th>Ім'я</th><th>Роки</th><th>Місце</th><th>Гілка</th></tr></thead><tbody>
   ${list.map(p => `<tr class="click" data-go="${p.id}"><td><b style="font-family:var(--f-display);font-size:15.5px">${esc(full(p))}</b>${p.m && p.m !== p.s ? ` <span class="muted small">з дому ${esc(p.m)}</span>` : ''}${p.hyp ? '<span class="badge">гіпотеза</span>' : ''}</td><td class="mono small">${esc(life(p))}</td><td class="small">${esc(p.bp || '')}</td><td class="small">${esc(famT(p))}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">Нікого не знайдено.</td></tr>`}
   </tbody></table></div>`;
 }
@@ -1314,11 +1370,14 @@ function render() {
   curTarget = null;
   const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps }[S.view] || vTree;
   const sy = window.scrollY;
+  const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>`;
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
-  if (document.getElementById('bk')) requestAnimationFrame(bookMount); else if (SND.music && !SND.music.paused) SND.stopMusic();
+  const bkNew = document.getElementById('bk');
+  if (bkNew && bkKeep && BOOK.key && bkKeep.querySelector('.bk-book')?.children.length) bkNew.replaceWith(bkKeep);
+  else if (bkNew) requestAnimationFrame(bookMount); else if (SND.music && !SND.music.paused) SND.stopMusic();
   if (S.view === 'fam' && S.arg) {} // окрема сторінка родини
   const key = S.view + ':' + (S.arg || '');
   if (S.ui.lastView !== key) { S.ui.lastView = key; ev('view', S.view, curTarget); if (curTarget) ev('open', S.view, curTarget); }
@@ -1406,7 +1465,9 @@ document.addEventListener('click', async e => {
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; let r = { result: [] }; for (let k = 0; k < 6; k++) { const x = await api('/api/setup?a=import', { body: {} }); r.result.push(...(x.result || [])); if (!x.more) break; } const ok = (r.result || []).filter(x => / ok/.test(x)).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
-    if (act === 'logout') { await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
+    if (act === 'msheet') { mSheet(); return; }
+    if (act === 'mshclose') { if (e.target.closest('.msh') && !e.target.closest('a')) return; $('#layer').innerHTML = ''; document.documentElement.classList.remove('msh-open'); return; }
+    if (act === 'logout') { $('#layer').innerHTML = ''; document.documentElement.classList.remove('msh-open'); await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
     if (act === 'docform') { S.ui.docform = !S.ui.docform; S.ui.keepScroll = true; render(); setTimeout(() => $('#dtitle')?.focus(), 30); return; }
     if (act === 'edit') return openEdit(P[S.arg]);
     if (act === 'history') { e.preventDefault(); const r = await api(`/api/admin?a=revisions&entity=person&id=${encodeURIComponent(S.arg)}`); modal(`<h2>Історія змін</h2>${revList(r.revisions)}<div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
