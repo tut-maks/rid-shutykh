@@ -116,7 +116,8 @@ export default handler(async (req, res, ctx, url) => {
       db.list('invites', { order: 'created_at', desc: true, limit: 200 }),
       db.list('sessions', { eq: { revoked: false }, gte: { expires_at: iso(Date.now()) } }),
     ]);
-    const act = {}; for (const s of sessions) { const x = (act[s.member_id] ||= { n: 0, last: null, devices: [] }); x.n++; if (!x.last || s.last_seen > x.last) x.last = s.last_seen; x.devices.push({ ua: s.ua, ip: s.ip, last: s.last_seen, created: s.created_at }); }
+    const act = {}; for (const s of sessions) { const x = (act[s.member_id] ||= { n: 0, last: null, devices: [] }); x.n++; if (!x.last || s.last_seen > x.last) x.last = s.last_seen; x.devices.push({ k: String(s.token_hash).slice(0, 16), cur: s.token_hash === ctx.sid, ua: s.ua, ip: s.ip, last: s.last_seen, created: s.created_at }); }
+    for (const x of Object.values(act)) x.devices.sort((a, b) => String(b.last).localeCompare(String(a.last)));
     return send(res, 200, {
       members: members.filter(m => !String(m.email).endsWith('@deleted.local')).map(m => ({ id: m.id, email: m.email, name: m.name, role: m.role, person_id: m.person_id, active: m.active, created_at: m.created_at, hasPass: !!m.pass_hash, sessions: act[m.id] || { n: 0, last: null, devices: [] } })),
       deleted: members.filter(m => String(m.email).endsWith('@deleted.local')).length,
@@ -172,8 +173,18 @@ export default handler(async (req, res, ctx, url) => {
   }
 
   if (a === 'revoke' && req.method === 'POST') {
-    const b = await readJSON(req, 10_000);
-    await db.update('sessions', { eq: { member_id: S(b.member_id, 60) } }, { revoked: true });
+    const b = await readJSON(req, 10_000); const mid = S(b.member_id, 60);
+    if (b.k || b.others) { // один пристрій, або всі, крім цього (свій акаунт)
+      const ss = await db.list('sessions', { eq: { member_id: mid, revoked: false } }); let n = 0;
+      for (const x of ss) {
+        if (x.token_hash === ctx.sid) continue; // поточний сеанс власника не закриваємо
+        if (b.k && !String(x.token_hash).startsWith(S(b.k, 16))) continue;
+        await db.update('sessions', { eq: { token_hash: x.token_hash } }, { revoked: true }); n++;
+      }
+      await revision('member', mid, 'update', null, { sessionsClosed: n }, me.id);
+      return send(res, 200, { ok: true, n });
+    }
+    await db.update('sessions', { eq: { member_id: mid } }, { revoked: true });
     return send(res, 200, { ok: true });
   }
 

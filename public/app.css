@@ -656,3 +656,9 @@ main.wrap.wide{max-width:none;padding-inline:20px}
 .mergebox{margin-top:16px;border-top:1px solid var(--rule);padding-top:10px}
 .mergebox summary{cursor:pointer;font-size:14px;color:var(--ink2)}
 @media (max-width:600px){.kidr{grid-template-columns:minmax(0,1fr) 80px}.kidr select{grid-column:1/-1}.kidr .in{font-size:16px}}
+.devrow td{background:var(--paper)}
+.devs{display:grid;gap:8px;padding:6px 0}
+.dev{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid var(--rule);border-radius:var(--r);background:var(--sheet)}
+.dev.cur{border-color:var(--ok)}
+.dev .btn{margin-left:auto}
+.tg.kid{min-width:34px;background:#EEF2EA}

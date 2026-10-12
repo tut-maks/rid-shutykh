@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122255';
+const BUILD = '202610122314';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -98,6 +98,20 @@ function top() {
     <div class="who"><span>${esc(S.me.name || S.me.email || '')}</span><button data-act="logout">Вийти</button></div>
   </div></header>${mNav(cur)}`;
 }
+/* ───── Пристрої учасника: що за телефон/комп'ютер, звідки, коли; вийти з окремого ───── */
+function uaName(ua) {
+  ua = String(ua || ''); if (!ua) return 'Невідомий пристрій';
+  const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? ((ua.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build|\))/) || [])[1] || 'Android') : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Пристрій';
+  const br = /Telegram/.test(ua) ? 'Telegram' : /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /YaBrowser/.test(ua) ? 'Яндекс' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : /Claude|Electron/.test(ua) ? 'програма' : 'браузер';
+  return os + ' · ' + br;
+}
+function devRows(x) {
+  const own = x.id === S.me.id, L = x.sessions.devices || [];
+  return `<tr class="devrow"><td colspan="5"><div class="devs">${L.map(d => `<div class="dev${d.cur ? ' cur' : ''}"><b>${esc(uaName(d.ua))}</b>${d.cur ? ' <span class="badge">цей пристрій</span>' : ''}<span class="small muted">IP ${esc(d.ip || '—')} · увійшов ${esc(when(d.created))} · востаннє ${esc(when(d.last))}</span>${d.cur ? '' : `<button class="btn line small" data-act="devout" data-id="${x.id}" data-dk="${esc(d.k)}">Вийти на цьому пристрої</button>`}</div>`).join('') || '<span class="muted small">Активних входів немає.</span>'}
+    ${own && L.length > 1 ? `<button class="btn danger small" data-act="devothers" data-id="${x.id}">Вийти на всіх, крім цього пристрою</button>` : ''}
+    <p class="small muted" style="margin:0">Пристрій — це кожен браузер, де виконано вхід. IP показує, звідки (мережа/місто). Якщо пристрій не ваш — «Вийти»; щоб туди не зайшли знову, змініть пароль.</p></div></td></tr>`;
+}
+
 /* ───── Телефон: нижнє меню й шторка «Ще» (як у KRental CRM: 4 розділи + «Ще», кнопки ≥44 px, під великим пальцем) ───── */
 const MI = {
   tree: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5.5" cy="18.5" r="2.2"/><circle cx="18.5" cy="18.5" r="2.2"/><path d="M12 7.2v5.3M5.5 16.3v-1.8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1.8"/></svg>',
@@ -188,8 +202,29 @@ function layoutTD(center) {
     if (X) merge(B, X); return B;
   }
   seen.add(center);
-  const A = up(center, 0, 'C'); const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
+  const A = up(center, 0, (SPOUSES[center] || []).some(x => P[x.id]) ? 'L' : 'C'); /* є подружжя праворуч — брати й сестри ліворуч, щоб не накладались */ const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
   D.n.forEach(o => add(A, o.id, o.x, o.r));
+  // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
+  const KX = S.ui.kidx ||= {};
+  const hasHidden = id => (KIDS[id] || []).some(k => !seen.has(k));
+  const KL = f.allOpen ? null : Object.keys(KX);
+  for (let i = 0; i < (KL ? KL.length : A.n.length); i++) {
+    const id = KL ? KL[i] : A.n[i].id; if (!KL && id === center) continue;
+    const o = A.n.find(x => x.id === id); if (!o || !hasHidden(id)) continue;
+    const Sb = mk(); add(Sb, id, 0, o.r);
+    (SPOUSES[id] || []).forEach(sp => { if (!seen.has(sp.id) && P[sp.id]) { seen.add(sp.id); add(Sb, sp.id, Sb.n.filter(n => n.r === o.r).length * P2, o.r); } });
+    let X = null; (KIDS[id] || []).filter(k => !seen.has(k)).sort(sortS).forEach(k => { seen.add(k); const K = down(k, o.r - 1); if (!X) X = K; else { shift(K, sep(X, K)); merge(X, K); } });
+    if (X) { shift(X, -Math.min(...X.n.map(n => n.x))); merge(Sb, X); }
+    Sb.n = Sb.n.filter(n => n.id !== id);
+    const rowsS = [...new Set(Sb.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
+    const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
+    let off = o.x; for (const r of rowsS) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Sb.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
+    shift(Sb, off);
+    let d = 0; for (const r of rowsS) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Sb.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
+    if (d > 0) right.forEach(n => n.x += d);
+    Sb.n.forEach(n => add(A, n.id, n.x, n.r));
+  }
+  if (!f.allOpen) A.n.forEach(o => { if (o.id !== center && !KX[o.id] && hasHidden(o.id) && !(KIDS[o.id] || []).some(k => seen.has(k))) /* хтось із дітей уже в дереві — решту відкриває «+N» біля нього */ (hid[o.id] ||= {}).kids = (KIDS[o.id] || []).filter(k => !seen.has(k)).length; });
   const rows = [...new Set(A.n.map(o => o.r))].sort((a, b) => b - a); const ri = Object.fromEntries(rows.map((r, i) => [r, i]));
   const minX = Math.min(...A.n.map(o => o.x)), maxX = Math.max(...A.n.map(o => o.x));
   const N = {}; A.n.forEach(o => { N[o.id] = { x: o.x - minX + T2.PAD, y: ri[o.r] * (T2.H + T2.GY) + T2.PAD, r: o.r }; });
@@ -211,8 +246,9 @@ function vAll(tabs) {
     return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${ph(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(life(p))}</span></span></a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
+    if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 18}px;top:${n.y + T2.H - 9}px" title="Показати дітей">▾${h.kids}</button>`;
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 22}px;top:${n.y + T2.H - 9}px" title="Показати братів і сестер">+${h.sib}</button>`;
-    return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
+    return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `<h1 class="sr">${esc(short(P[center]))}: предки й родина</h1>
@@ -251,9 +287,9 @@ function vpMount() {
   vp.onpointerup = vp.onpointercancel = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (pts.size === 1) { const [p] = [...pts.values()]; drag = { x: p.x, y: p.y, vx: V.x, vy: V.y }; } if (!pts.size) drag = null; };
   vp.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
   const fb = vp.querySelector('[data-full]'); if (fb) fb.onclick = () => { S.ui.full = !S.ui.full; vp.classList.toggle('full', S.ui.full); document.body.classList.toggle('noscroll', S.ui.full); requestAnimationFrame(() => apply()); };
-  vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.coll; const el = st.querySelector(`[data-id="${id}"]`);
+  vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.kidx || b.dataset.coll; const el = st.querySelector(`[data-id="${id}"]`);
     S.ui.anchor = el ? { id, sx: V.x + el.offsetLeft * V.s, sy: V.y + el.offsetTop * V.s } : null;
-    if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else { delete S.ui.exp[id]; delete S.ui.sibx[id]; }
+    if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { delete S.ui.exp[id]; delete S.ui.sibx[id]; delete (S.ui.kidx || {})[id]; }
     render(); });
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
   vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
@@ -1353,8 +1389,8 @@ function vAdmin() {
       <div class="sec" style="margin-top:26px"><h3>Учасники</h3><div class="tablebox"><table class="t"><thead><tr><th>Хто</th><th>Права</th><th>Пристроїв</th><th>Востаннє</th><th></th></tr></thead><tbody>
       ${m.members.map(x => `<tr><td><b>${esc(x.name || '—')}</b><br><span class="small muted">${esc(x.email)}</span>${!x.active ? ' <span class="badge">вимкнено</span>' : ''}</td>
         <td>${x.id === S.me.id ? 'власник' : `<select class="in" data-role="${x.id}" style="width:auto;font-size:14px"><option value="editor"${x.role === 'editor' ? ' selected' : ''}>редактор</option><option value="viewer"${x.role === 'viewer' ? ' selected' : ''}>глядач</option><option value="owner"${x.role === 'owner' ? ' selected' : ''}>власник</option></select>`}</td>
-        <td class="num" title="${esc(x.sessions.devices.map(d => d.ua).join('\n'))}">${x.sessions.n}</td><td class="num small">${esc(when(x.sessions.last))}</td>
-        <td>${x.id === S.me.id ? '' : `<div class="btns"><button class="btn line small" data-reset="${x.id}">Новий пароль</button><button class="btn line small" data-revoke="${x.id}">Вийти з усіх пристроїв</button><button class="btn ${x.active ? 'danger' : 'line'} small" data-active="${x.id}" data-v="${!x.active}">${x.active ? 'Вимкнути доступ' : 'Увімкнути'}</button>${x.role !== 'owner' ? `<button class="btn danger small" data-act="mdel" data-id="${x.id}">Видалити акаунт</button>` : ''}</div>`}</td></tr>`).join('')}
+        <td class="num"><button class="btn line small" data-act="devs" data-id="${x.id}" title="Показати пристрої">${x.sessions.n} ${S.ui.devs === x.id ? '▴' : '▾'}</button></td><td class="num small">${esc(when(x.sessions.last))}</td>
+        <td>${x.id === S.me.id ? '' : `<div class="btns"><button class="btn line small" data-reset="${x.id}">Новий пароль</button><button class="btn line small" data-revoke="${x.id}">Вийти з усіх пристроїв</button><button class="btn ${x.active ? 'danger' : 'line'} small" data-active="${x.id}" data-v="${!x.active}">${x.active ? 'Вимкнути доступ' : 'Увімкнути'}</button>${x.role !== 'owner' ? `<button class="btn danger small" data-act="mdel" data-id="${x.id}">Видалити акаунт</button>` : ''}</div>`}</td></tr>${S.ui.devs === x.id ? devRows(x) : ''}`).join('')}
       </tbody></table></div>
       <p class="small muted">«Вимкнути доступ» — тимчасово: людина не зможе зайти, доки не ввімкнете знову. «Видалити акаунт» — назавжди: вхід стерто, з усіх пристроїв вийде одразу; її спогади й запитання лишаться в архіві з позначкою «видалено».${m.deleted ? ` Видалених акаунтів: ${m.deleted}.` : ''}</p></div>
       ${m.invites.length ? `<div class="sec" style="margin-top:26px"><h3>Очікують</h3>${m.invites.map(i => `<div class="small">${esc(i.name || i.email)} · ${esc(i.email)} · ${i.purpose === 'reset' ? 'новий пароль' : 'запрошення'} · діє до ${esc(when(i.expires_at))}</div>`).join('')}</div>` : ''}`;
@@ -1495,6 +1531,12 @@ document.addEventListener('click', async e => {
     const act = d.act; if (!act) return;
     if (act === 'close') { closeLayer(); return; }
     if (act === 'upd-reload') { t.disabled = true; t.textContent = 'Оновлюю…'; try { const ks = await caches?.keys?.(); for (const k of ks || []) await caches.delete(k); } catch {} location.reload(); return; }
+    if (act === 'devs') { S.ui.devs = S.ui.devs === d.id ? null : d.id; S.ui.keepScroll = true; render(); return; }
+    if (act === 'devout' || act === 'devothers') {
+      if (act === 'devothers' && t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Так, вийти на всіх інших'; return; }
+      const r = await api('/api/admin?a=revoke', { body: act === 'devout' ? { member_id: d.id, k: d.dk } : { member_id: d.id, others: true } });
+      toast(r.n ? `Вихід виконано: ${r.n}` : 'Готово'); S.admin.members = null; S.ui.keepScroll = true; return loadAdmin();
+    }
     if (act === 'mdel') { const x = S.admin.members.members.find(y => y.id === t.dataset.id); if (!x) return;
       if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити назавжди?'; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ''; t.textContent = 'Видалити акаунт'; } }, 5000); return; }
       t.disabled = true; await api('/api/admin?a=delete', { body: { id: x.id } }); toast(`Акаунт «${x.name || x.email}» видалено`); S.admin.members = null; return loadAdmin(); }
@@ -1506,7 +1548,7 @@ document.addEventListener('click', async e => {
     if (act === 'map-over') return openOverlay(d.id);
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
-    if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; } delete S.ui.vp?.all; render(); return; }
+    if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; S.ui.kidx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; let r = { result: [] }; for (let k = 0; k < 25; k++) { const x = await api('/api/setup?a=import', { body: {} }); r.result.push(...(x.result || [])); if (!x.more) break; } const ok = (r.result || []).filter(x => / ok/.test(x)).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; delete TXT.history; delete TXT.villages; BOOK.key = ''; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
     if (act === 'msheet') { mSheet(); return; }
