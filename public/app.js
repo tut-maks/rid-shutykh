@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122352';
+const BUILD = '202610122353';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -268,10 +268,10 @@ function layoutTD(center) {
   const sep = (A, B) => { let d = -Infinity; for (const r in A.c) if (B.c[r]) d = Math.max(d, A.c[r][1] - B.c[r][0] + P2); return d === -Infinity ? 0 : d; };
   const seen = new Set();
   const sibs = c => { const p = P[c]; const ps = [p.f, p.mo].filter(x => x && P[x]); if (!ps.length) return [c]; return [...new Set(ps.flatMap(x => KIDS[x] || []))].filter(x => x === c || !seen.has(x)).sort(sortS); };
-  const EXP = S.ui.exp ||= {}; const SIBX = S.ui.sibx ||= {}; const DEF = innerWidth < 820 ? 2 : 3; const hid = S.ui.hid = {};
+  const EXP = S.ui.exp ||= {}; const SIBX = S.ui.sibx ||= {}; const DS = S.ui.dsib = {}; const DEF = innerWidth < 820 ? 3 : 4; const hid = S.ui.hid = {};
   function up(c, r, side) { // блок предків людини c (c у x=0, ряд r)
     const B = mk(); const all = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
-    const g = SIBX[c] || f.allOpen ? all : [c]; if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
+    const dflt = !SIBX[c] && !f.allOpen && SIBX[c] !== 0 && r >= 0 && r <= 2; const g = (SIBX[c] || f.allOpen || dflt) ? all : [c]; if (dflt && all.length > 1) DS[c] = 1; // брати й сестри до дідів включно — відкриті одразу if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
     let order = g.filter(x => x !== c); order = side === 'L' ? [...order, c] : side === 'R' ? [c, ...order] : g;
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
     const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
@@ -349,7 +349,7 @@ function vAll(tabs) {
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 18}px;top:${n.y + T2.H - 9}px" title="Показати дітей">▾${h.kids}</button>`;
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 22}px;top:${n.y + T2.H - 9}px" title="Показати братів і сестер">+${h.sib}</button>`;
-    return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
+    return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}).filter(k => S.ui.sibx[k]), Object.keys(S.ui.dsib || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
@@ -371,7 +371,7 @@ function vpMount() {
     Object.values(L.N).forEach(n => g.fillRect(n.x * k, n.y * k, Math.max(1.5, T2.W * k), Math.max(1.5, T2.H * k)));
     g.strokeStyle = '#2C4A6E'; g.lineWidth = 1.5; g.strokeRect(-V.x / V.s * k, -V.y / V.s * k, vp.clientWidth / V.s * k, vp.clientHeight / V.s * k); c._k = k; }
   if (S.ui.anchor && mode === 'all') { const an = S.ui.anchor; S.ui.anchor = null; const el = st.querySelector(`[data-id="${an.id}"]`); if (el) { V.x = an.sx - el.offsetLeft * V.s; V.y = an.sy - el.offsetTop * V.s; } apply(); }
-  else if (fresh) { if (mode === 'all') { V.s = innerWidth < 820 ? 0.45 : 0.55; center(vp.dataset.center); } else fit(); } else apply();
+  else if (fresh) { if (mode === 'all') { { const L = S.ui.tl; V.s = L ? Math.max(innerWidth < 820 ? 0.3 : 0.32, Math.min(0.6, vp.clientWidth / L.w * 0.98)) : 0.5; center(vp.dataset.center); if (L && L.w * V.s <= vp.clientWidth) { V.x = (vp.clientWidth - L.w * V.s) / 2; apply(); } } } else fit(); } else apply();
   vp.classList.toggle('full', !!S.ui.full); document.body.classList.toggle('noscroll', !!S.ui.full);
   let drag = null, moved = false, pinch = null; const pts = new Map();
   const pinchStart = () => { const [p1, p2] = [...pts.values()]; const r = vp.getBoundingClientRect(); pinch = { d: Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1, s: V.s, mx: (p1.x + p2.x) / 2 - r.left, my: (p1.y + p2.y) / 2 - r.top, vx: V.x, vy: V.y }; };
@@ -387,7 +387,7 @@ function vpMount() {
   const fb = vp.querySelector('[data-full]'); if (fb) fb.onclick = () => { S.ui.full = !S.ui.full; vp.classList.toggle('full', S.ui.full); document.body.classList.toggle('noscroll', S.ui.full); requestAnimationFrame(() => apply()); };
   vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.kidx || b.dataset.coll; const el = st.querySelector(`[data-id="${id}"]`);
     S.ui.anchor = el ? { id, sx: V.x + el.offsetLeft * V.s, sy: V.y + el.offsetTop * V.s } : null;
-    if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { delete S.ui.exp[id]; delete S.ui.sibx[id]; delete (S.ui.kidx || {})[id]; }
+    if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { delete S.ui.exp[id]; S.ui.sibx[id] = 0; delete (S.ui.kidx || {})[id]; }
     render(); });
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
   vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
