@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122340';
+const BUILD = '202610122341';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -119,6 +119,20 @@ function devRows(x) {
 }
 
 
+
+/* «Про людину» не лише з дат: що кажуть документи (їхні описи) і що про людину написано в «Історії роду» */
+function ridMentions(id) {
+  const t = loadText('history'); if (!t || !t.md) return [];
+  return t.md.split(/\n\s*\n/).filter(par => par.includes(`[[p:${id}|`) && !/^#/.test(par.trim()) && !/^\s*-\s/.test(par)).slice(0, 4);
+}
+function aboutMore(p, docs) {
+  const plain = t => esc(String(t || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2'));
+  const ds = docs.filter(d => d.text || d.line).slice(0, 8);
+  const rid = ridMentions(p.id);
+  return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date ? ` <span class="muted small mono">${esc(d.date)}</span>` : ''}<p>${glossify(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' ')))}</p></div>`).join('')}</div>` : ''}
+    ${rid.length ? `<div class="abt-g"><h4>З «Історії роду»</h4>${rid.map(x => `<p>${glossify(plain(x))}</p>`).join('')}<a class="small" href="#/families">Читати всю історію →</a></div>` : ''}`;
+}
+
 /* ───── Новий вигляд: аватари з ініціалами, шапка дерева, бічна панель людини ───── */
 const IC = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
@@ -157,7 +171,7 @@ function ppHtml(id) {
   const grp = (t, ids) => ids.length ? `<div class="pp-g"><h4>${t}</h4>${ids.map(row).join('')}</div>` : '';
   const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
-    ${p.note ? `<div class="pp-note">${esc(p.note.length > 420 ? p.note.slice(0, 420).replace(/\s\S*$/, '') + '…' : p.note)}</div>` : ''}
+    ${(() => { const t = p.note || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
     ${docs[0] ? `<div class="pp-g"><h4>Джерело</h4>${docRow(docs[0])}</div>` : ''}`;
   const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.map(x => x.id).filter(x => P[x])) + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
   const src = docs.length ? docs.map(docRow).join('') : '<p class="muted">Документів поки немає.</p>';
@@ -415,7 +429,9 @@ function vPerson() {
   </div>
   <div class="sec" style="align-content:start;gap:30px">
     <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Уточнити / запитати</button></span></h3>
-      ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>`}
+      ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : ''}
+      ${aboutMore(p, docs)}
+      ${!p.note && !docs.length && !ridMentions(p.id).length ? `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>` : ''}
       ${qAboutHtml(p.id)}
       ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
