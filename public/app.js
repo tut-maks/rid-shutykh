@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122349';
+const BUILD = '202610122350';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -361,12 +361,12 @@ function vpMount() {
   const size = () => mode === 'all' && S.ui.tl ? { w: S.ui.tl.w, h: S.ui.tl.h } : { w: st.scrollWidth || st.offsetWidth, h: st.scrollHeight || st.offsetHeight };
   const fit = () => { const { w, h } = size(); V.s = Math.min(1, Math.max(0.15, Math.min(vp.clientWidth / w, vp.clientHeight / h) * 0.96)); V.x = (vp.clientWidth - w * V.s) / 2; V.y = Math.max(8, (vp.clientHeight - h * V.s) / 2); apply(); };
   const zoomAt = (k, cx, cy) => { const s2 = Math.min(2.5, Math.max(0.12, V.s * k)); V.x = cx - (cx - V.x) * s2 / V.s; V.y = cy - (cy - V.y) * s2 / V.s; V.s = s2; apply(); };
-  const center = id => { const el = st.querySelector(`[data-id="${id}"]`) || st.querySelector('.nd.root'); if (!el) return fit(); if (V.s < 0.7) V.s = 0.9; V.x = vp.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2) * V.s; V.y = vp.clientHeight / 2 - (el.offsetTop + el.offsetHeight / 2) * V.s; apply(); };
+  const center = id => { const el = st.querySelector(`[data-id="${id}"]`) || st.querySelector('.nd.root'); if (!el) return fit(); if (V.s < 0.35) V.s = 0.55; V.x = vp.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2) * V.s; V.y = vp.clientHeight / 2 - (el.offsetTop + el.offsetHeight / 2) * V.s; apply(); };
   function mini() { const c = $('#minimap'); if (!c || !S.ui.tl) return; const g = c.getContext('2d'), L = S.ui.tl; const k = Math.min(c.width / L.w, c.height / L.h); g.clearRect(0, 0, c.width, c.height); g.fillStyle = '#B9B2A6';
     Object.values(L.N).forEach(n => g.fillRect(n.x * k, n.y * k, Math.max(1.5, T2.W * k), Math.max(1.5, T2.H * k)));
     g.strokeStyle = '#2C4A6E'; g.lineWidth = 1.5; g.strokeRect(-V.x / V.s * k, -V.y / V.s * k, vp.clientWidth / V.s * k, vp.clientHeight / V.s * k); c._k = k; }
   if (S.ui.anchor && mode === 'all') { const an = S.ui.anchor; S.ui.anchor = null; const el = st.querySelector(`[data-id="${an.id}"]`); if (el) { V.x = an.sx - el.offsetLeft * V.s; V.y = an.sy - el.offsetTop * V.s; } apply(); }
-  else if (fresh) { if (mode === 'all') { V.s = innerWidth < 820 ? 0.6 : 0.85; center(vp.dataset.center); } else fit(); } else apply();
+  else if (fresh) { if (mode === 'all') { V.s = innerWidth < 820 ? 0.45 : 0.55; center(vp.dataset.center); } else fit(); } else apply();
   vp.classList.toggle('full', !!S.ui.full); document.body.classList.toggle('noscroll', !!S.ui.full);
   let drag = null, moved = false, pinch = null; const pts = new Map();
   const pinchStart = () => { const [p1, p2] = [...pts.values()]; const r = vp.getBoundingClientRect(); pinch = { d: Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1, s: V.s, mx: (p1.x + p2.x) / 2 - r.left, my: (p1.y + p2.y) / 2 - r.top, vx: V.x, vy: V.y }; };

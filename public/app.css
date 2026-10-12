@@ -816,3 +816,16 @@ body{background:var(--paper)}
 .abt-d a{font-family:var(--f-display);font-size:17px;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule2)}
 .abt-d a:hover{color:var(--wine);border-color:var(--wine)}
 .nd.t2:focus,.nd.t2:focus-visible{outline:none}
+/* компактні шапки сторінок (утричі нижчі) */
+main{padding-block:14px 60px}
+.lede{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;margin-bottom:14px;max-width:none}
+.lede .eyebrow{display:none}
+.lede h1{font-size:28px;line-height:1.2}
+.lede p{font-size:14px;color:var(--muted);margin:0;max-width:90ch;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.lede p:hover{-webkit-line-clamp:unset}
+.thead{display:flex;align-items:baseline;gap:16px;margin:0 0 12px!important}
+.thead h1{font-size:28px!important}
+.thead p{font-size:15px!important;margin:0!important}
+.qpage{padding-block:8px 60px!important}.qpage h1{font-size:28px}
+@media (max-width:820px){.lede h1,.thead h1{font-size:22px!important}.lede p{display:none}}
+.tbar1.tbar2{margin:0 0 10px!important}
