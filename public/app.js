@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122341';
+const BUILD = '202610122345';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1294,6 +1294,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       <button class="pv-ic" data-pv="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
     <div class="pv-menu" hidden>
       ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label><button class="pv-mi" data-pv="mkdraw">Обвести наш запис рамкою</button><button class="pv-mi" data-pv="mkclear">Прибрати рамки з цієї сторінки</button>` : ''}
+      ${docId && isOwner() ? `<button class="pv-mi danger" data-pv="docdel">Видалити документ з сайту</button>` : ''}
       ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button>` : ''}
       ${canPhoto ? `<button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}
     </div>
@@ -1348,6 +1349,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     if (a === 'next') return go(1);
     if (a === 'zoom') return sc > 1.01 ? zoomTo(1, 0, 0) : (pageMarks().length ? toMark() : zoomTo(2.5, 0, 0));
     if (a === 'tomark') return toMark();
+    if (a === 'docdel') { if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Точно видалити? Натисніть ще раз'; return; } await api('/api/data', { body: { op: 'doc.delete', id: docId } }); close(); await load(); render(); toast('Документ прибрано з сайту'); return; }
     if (a === 'mkdraw') { menu.hidden = true; zoomTo(1, 0, 0, false); draw = { box: null }; root.classList.add('drawing'); root.querySelector('.pv-hint').hidden = false; return; }
     if (a === 'mkcancel') { draw = null; root.classList.remove('drawing'); root.querySelector('.pv-hint').hidden = true; placeMarks(); return; }
     if (a === 'mkclear') { menu.hidden = true; mk = mk.filter(m => (m.p || 0) !== i); return saveMarks(); }

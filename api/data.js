@@ -186,6 +186,12 @@ export default handler(async (req, res, ctx, url) => {
     await revision('document', id, 'create', null, data, me.id);
     return send(res, 200, { ok: true, id });
   }
+  if (op === 'doc.delete') { // лише власник; скани у сховищі лишаються, повернути можна з «Історії змін»
+    if (!owner) return fail(res, 403, 'forbidden');
+    const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc) return fail(res, 404, 'not_found');
+    await db.remove('documents', { eq: { id: doc.id } }); await revision('document', doc.id, 'delete', doc.data, null, me.id);
+    return done({ ok: true }, doc.id);
+  }
   if (op === 'doc.marks') { // рамки «наш запис» на сканах: частки ширини/висоти зображення
     if (!editor) return fail(res, 403, 'forbidden');
     const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc) return fail(res, 404, 'not_found');
