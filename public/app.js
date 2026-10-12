@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610120633';
+const BUILD = '202610120705';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -933,7 +933,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       apply(true); return;
     }
     // дотик без руху: по скану — збільшити в цьому місці (вдруге — зменшити); по темному фону — закрити
-    const onImg = !!(im && (e.target === im || e.target.closest?.('.pv-mark'))), [cx, cy] = rel(e.clientX, e.clientY);
+    const ir = im?.getBoundingClientRect(), onImg = !!(ir && e.clientX >= ir.left && e.clientX <= ir.right && e.clientY >= ir.top && e.clientY <= ir.bottom), [cx, cy] = rel(e.clientX, e.clientY); // з захопленням вказівника ціль — сцена, тому перевіряємо координати
     if (!menu.hidden) { menu.hidden = true; return; }
     if (sc > 1.01) return zoomTo(1, 0, 0);
     if (onImg) return zoomTo(2.5, cx, cy);
