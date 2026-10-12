@@ -815,3 +815,4 @@ body{background:var(--paper)}
 .abt-g p{margin:4px 0 12px;max-width:72ch;color:var(--ink2);line-height:1.65}
 .abt-d a{font-family:var(--f-display);font-size:17px;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule2)}
 .abt-d a:hover{color:var(--wine);border-color:var(--wine)}
+.nd.t2:focus,.nd.t2:focus-visible{outline:none}

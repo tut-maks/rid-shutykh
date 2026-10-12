@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122345';
+const BUILD = '202610122349';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1600,7 +1600,9 @@ document.addEventListener('click', e => { // людина → бічна пан�
   const a = e.target.closest('a.nd[data-pp], .pp-p[data-pp], a.mini, tr.click[data-go]');
   if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
   const id = a.dataset.pp || a.dataset.go || decodeURIComponent((a.getAttribute('href') || '').split('/').pop() || '');
-  if (!P[id]) return; e.preventDefault(); e.stopImmediatePropagation(); S.ui.ppTab = S.ui.ppTab || 'life'; ppOpen(id, !!a.closest('#pp'));
+  if (!P[id]) return; e.preventDefault(); e.stopImmediatePropagation();
+  if (S.ui.pp === id && !a.closest('#pp')) { ppClose(); return; } // другий клік по тій самій людині — закрити панель
+  S.ui.ppTab = S.ui.ppTab || 'life'; ppOpen(id, !!a.closest('#pp'));
 }, true);
 document.addEventListener('click', e => { document.querySelectorAll('details.umenu[open], details.tmore[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.ui.pp && !document.querySelector('.pv,.scrim,.msh-scrim')) ppClose(); });
