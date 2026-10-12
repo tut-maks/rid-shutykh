@@ -2,6 +2,7 @@
 // GET /api/setup?a=status · POST ?a=init {token,email,name,password} · POST ?a=seed (власник)
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { db } from './_db.js';
 import { handler, send, fail, readJSON, env, safeEq, hashPass, createSession, who, can, tooMany, attempt, clientIp, revision, cleanPerson } from './_lib.js';
 
@@ -55,8 +56,17 @@ export default handler(async (req, res, _c, url) => {
     if (!fs.existsSync(mf)) return send(res, 200, { ok: true, added: 0 });
     const items = JSON.parse(fs.readFileSync(mf, 'utf8')); const by = ctx.member.id; const out = [];
     const read = f => { const fp = path.join(ROOT, 'seed/import', path.basename(String(f || ''))); return fs.existsSync(fp) ? fs.readFileSync(fp) : null; };
+    // Уже оброблені пункти (за хешем змісту) пропускаємо без звернень до бази; час обмежено, решта — наступним запуском
+    let doneRow = null; try { doneRow = await db.get('settings', { eq: { key: 'import_done' } }); } catch {}
+    const done = { ...(doneRow?.value || {}) }, t0 = Date.now(); let more = false, prev = null;
+    const H = x => crypto.createHash('sha1').update(JSON.stringify(x)).digest('hex').slice(0, 16);
+    const fin = () => { if (prev && /: (ok|вже є|без змін)/.test(out[out.length - 1] || '')) done[prev.key] = prev.h; prev = null; };
     for (const it of items) {
+      fin();
       const key = String(it.key || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 60); if (!key) continue;
+      const h = H(it); if (done[key] === h) continue;
+      if (Date.now() - t0 > 40000) { more = true; break; }
+      prev = { key, h };
       if (it.kind === 'photo') {
         const person = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!person) { out.push(key + ': no person'); continue; }
         const p = `photos/${person.id}/imp-${key}.jpg`;
@@ -128,7 +138,8 @@ export default handler(async (req, res, _c, url) => {
         out.push(key + ': ok');
       }
     }
-    return send(res, 200, { ok: true, result: out });
+    fin(); try { await db.upsert('settings', { key: 'import_done', value: done, updated_by: by, updated_at: new Date().toISOString() }); } catch {}
+    return send(res, 200, { ok: true, result: out, more });
   }
 
   return fail(res, 404, 'unknown');
