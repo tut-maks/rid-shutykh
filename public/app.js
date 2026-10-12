@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122324';
+const BUILD = '202610122340';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -85,17 +85,23 @@ function parse() {
   const h = location.hash.replace(/^#\/?/, ''); const [v, a] = h.split('/');
   S.view = v || 'tree'; S.arg = a ? decodeURIComponent(a) : null;
 }
-addEventListener('hashchange', () => { parse(); render(); window.scrollTo(0, 0); });
+addEventListener('hashchange', () => { parse(); if (S.view === 'p') { S.ui.pp = null; S.ui.ppHist = []; } render(); window.scrollTo(0, 0); });
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['tree', 'Дерево'], ['families', 'Історія роду'], ['people', 'Люди'], ['docs', 'Документи'], ['maps', 'Карти й історія'], ['q', 'Запитання' + (qBadge() ? ` <b class="nb">${qBadge()}</b>` : '')]];
-  if (isOwner()) nav.push(['admin', 'Власнику' + (S.data?.joinPending ? ` <b class="nb" title="Нові заявки на реєстрацію">${S.data.joinPending}</b>` : '')]);
+  const nav = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Місця']];
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
-  return `<header class="top"><div class="wrap">
-    <a class="brand" href="#/tree">Рід Шутих<small>Вороньки · з 1767</small></a>
+  const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) : 0;
+  const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
+  return `<header class="top"><div class="wrap topw">
+    <a class="brand" href="#/tree">Рід Шутих<small>Родинний архів</small></a>
     <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${cur === k ? ' aria-current="page"' : ''}>${t}</a>`).join('')}</nav>
-    <div class="who"><span>${esc(S.me.name || S.me.email || '')}</span><button data-act="logout">Вийти</button></div>
+    <div class="who"><a class="tic" href="#/people" data-act="gsearch" title="Знайти людину" aria-label="Пошук">${IC.search}</a>
+      <details class="umenu"><summary class="uav" title="${esc(S.me.name || S.me.email || '')}"><span class="av sm">${esc(initials(me))}</span>${qb + jb ? `<i class="bn-badge">${qb + jb}</i>` : ''}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="um-b"><div class="um-n">${esc(S.me.name || '')}<span>${esc(S.me.email || '')}</span></div>
+          <a href="${href('q')}"${cur === 'q' ? ' aria-current="page"' : ''}>Запитання${qb ? ` <b class="nb">${qb}</b>` : ''}</a>
+          ${isOwner() ? `<a href="${href('admin')}"${cur === 'admin' ? ' aria-current="page"' : ''}>Власнику${jb ? ` <b class="nb">${jb}</b>` : ''}</a>` : ''}
+          <button type="button" data-act="logout">Вийти</button></div></details></div>
   </div></header>${mNav(cur)}`;
 }
 /* ───── Пристрої учасника: що за телефон/комп'ютер, звідки, коли; вийти з окремого ───── */
@@ -112,6 +118,76 @@ function devRows(x) {
     <p class="small muted" style="margin:0">Пристрій — це кожен браузер, де виконано вхід. IP показує, звідки (мережа/місто). Якщо пристрій не ваш — «Вийти»; щоб туди не зайшли знову, змініть пароль.</p></div></td></tr>`;
 }
 
+
+/* ───── Новий вигляд: аватари з ініціалами, шапка дерева, бічна панель людини ───── */
+const IC = {
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s6.5-6 6.5-11a6.5 6.5 0 0 0-13 0c0 5 6.5 11 6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+  leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg>',
+  tree: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="5" r="2.2"/><circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="18.5" r="2.2"/><path d="M12 7.2v5.3M6 16.3v-1.8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1.8"/></svg>',
+  ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+const initials = p => ((String(p.n || '').replace(/\s*\(.*?\)/g, '')[0] || '') + (String(p.s || '')[0] || '')).toUpperCase() || '?';
+const avatar = (p, cls = '') => { const u = portrait(p); return `<span class="av ${cls}">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(initials(p))}</span>`; };
+const years = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '?'} – ${d}` : b ? (String(p.b).startsWith('~') ? '≈' + b : b) : ''; };
+const treeHead = () => `<div class="thead"><h1>Наше родинне дерево</h1><p>Кожен із нас — продовження когось.</p></div>`;
+function famSelect(f) {
+  return `<select class="in tfam" id="tfam" aria-label="Гілка"><option value="">Усі гілки</option>${Object.values(FAM).map(x => `<option value="${x.id}"${f.fam === x.id ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}</select>`;
+}
+/* бічна панель: клік по людині — не перехід на сторінку, а панель праворуч (на телефоні — шторка знизу) */
+function ppHtml(id) {
+  const p = P[id]; if (!p) return '';
+  const tab = S.ui.ppTab || 'life';
+  const par = [p.f, p.mo].filter(x => P[x]), sp = SPOUSES[p.id] || [], ch = (KIDS[p.id] || []).slice().sort(byBirth);
+  const sib = par.length ? [...new Set(par.flatMap(x => KIDS[x] || []))].filter(x => x !== p.id && P[x]).sort(byBirth) : [];
+  const docs = S.data.documents.filter(d => (d.people || []).includes(p.id) && d.type !== 'map').sort((a, b) => yearOf(a.date).localeCompare(yearOf(b.date)));
+  const fams = (p.fam || []).filter(f => FAM[f]);
+  const ev = [];
+  if (p.b || p.bp) ev.push([yearOf(p.b) || '?', 'Народження', p.b && /\d\d\.\d\d/.test(p.b) ? p.b : '', p.bp]);
+  sp.forEach(s => P[s.id] && ev.push([yearOf(s.date) || '', `Шлюб — ${short(P[s.id])}`, s.date && /\d\d\.\d\d/.test(s.date) ? s.date : '', '']));
+  ch.forEach(c => ev.push([yearOf(P[c].b) || '', `${P[c].sex === 'f' ? 'Народилася донька' : P[c].sex === 'm' ? 'Народився син' : 'Народилася дитина'} ${String(P[c].n || '').replace(/\s*\(.*?\)/g, '')}`, '', '']));
+  if (p.d || p.dp) ev.push([yearOf(p.d) || '?', 'Завершення життєвого шляху', p.d && /\d\d\.\d\d/.test(p.d) ? p.d : '', p.dp]);
+  const yk = e => e[1] === 'Народження' ? '0' : e[1].startsWith('Завершення') ? '9' : e[0] ? '1' + e[0] : '5';
+  ev.sort((a, b) => yk(a).localeCompare(yk(b)));
+  const row = x => `<button type="button" class="pp-p" data-pp="${x}">${avatar(P[x], 'sm')}<span><b>${esc(short(P[x]))}</b><i>${esc(years(P[x]))}</i></span></button>`;
+  const grp = (t, ids) => ids.length ? `<div class="pp-g"><h4>${t}</h4>${ids.map(row).join('')}</div>` : '';
+  const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
+  const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
+    ${p.note ? `<div class="pp-note">${esc(p.note.length > 420 ? p.note.slice(0, 420).replace(/\s\S*$/, '') + '…' : p.note)}</div>` : ''}
+    ${docs[0] ? `<div class="pp-g"><h4>Джерело</h4>${docRow(docs[0])}</div>` : ''}`;
+  const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.map(x => x.id).filter(x => P[x])) + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
+  const src = docs.length ? docs.map(docRow).join('') : '<p class="muted">Документів поки немає.</p>';
+  const back = (S.ui.ppHist || []).length;
+  return `<aside class="pp" id="pp" aria-label="Людина у дереві">
+    <div class="pp-top"><button type="button" class="pp-ic" data-act="pp-back"${back ? '' : ' disabled'} title="Назад">${IC.back}</button><span>Людина у дереві</span><button type="button" class="pp-ic" data-act="pp-close" title="Закрити">${IC.x}</button></div>
+    <div class="pp-sc" id="pp-sc">
+      <div class="pp-head">${avatar(p, 'lg')}<h2>${esc(full(p))}</h2>${p.m && p.m !== p.s ? `<div class="pp-m">з дому ${esc(p.m)}</div>` : ''}<div class="pp-y">${esc(years(p))}</div>
+        <div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div></div>
+      <div class="pp-tabs" role="tablist">${[['life', 'Життя'], ['fam', 'Родина'], ['src', 'Джерела' + (docs.length ? ` <i>${docs.length}</i>` : '')]].map(([k, t]) => `<button type="button" role="tab" data-act="pp-tab" data-v="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+      <div class="pp-body">${tab === 'fam' ? fam : tab === 'src' ? src : life}</div>
+    </div>
+    <div class="pp-act"><a class="btn wine" href="${href('p', p.id)}">${IC.user}Відкрити профіль</a><button type="button" class="btn line" data-act="pp-tree">${IC.tree}Побудувати дерево</button></div>
+  </aside>`;
+}
+function ppOpen(id, push = true) {
+  if (!P[id]) return;
+  if (push && S.ui.pp && S.ui.pp !== id) (S.ui.ppHist ||= []).push(S.ui.pp);
+  S.ui.pp = id; ppPaint();
+}
+function ppPaint() {
+  const old = document.getElementById('pp'), id = S.ui.pp;
+  document.querySelectorAll('.nd.sel').forEach(e => e.classList.remove('sel'));
+  if (!id || !P[id]) { old?.remove(); document.body.classList.remove('pp-on'); return; }
+  const h = ppHtml(id); if (old) old.outerHTML = h; else $('#app').insertAdjacentHTML('beforeend', h);
+  document.body.classList.add('pp-on');
+  document.querySelectorAll(`.nd[data-id="${id}"]`).forEach(e => e.classList.add('sel'));
+}
+function ppClose() { S.ui.pp = null; S.ui.ppHist = []; ppPaint(); }
+
 /* ───── Телефон: нижнє меню й шторка «Ще» (як у KRental CRM: 4 розділи + «Ще», кнопки ≥44 px, під великим пальцем) ───── */
 const MI = {
   tree: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5.5" cy="18.5" r="2.2"/><circle cx="18.5" cy="18.5" r="2.2"/><path d="M12 7.2v5.3M5.5 16.3v-1.8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1.8"/></svg>',
@@ -126,12 +202,12 @@ const MI = {
 };
 function mNav(cur) {
   const more = ['maps', 'q', 'admin', 'p'].includes(cur) && cur !== 'p' ? 'more' : cur;
-  const B = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Документи']];
+  const B = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Архів']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
 function mSheet() {
-  const L = [['maps', 'Карти й історія сіл', ''], ['q', 'Запитання', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', S.data?.joinPending || '']] : [])];
+  const L = [['maps', 'Місця: карти й історія сіл', ''], ['q', 'Запитання', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', S.data?.joinPending || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -149,7 +225,7 @@ function branchHtml(id, d, seen) {
 }
 function vTree() {
   const mode = S.ui.tmode || 'all';
-  const tabs = `<div class="tmodes"><button data-tmode="all" class="${mode === 'all' ? 'on' : ''}" title="Усе дерево згори вниз">Згори вниз</button><button data-tmode="ped" class="${mode === 'ped' ? 'on' : ''}" title="Лише предки, зліва направо">Предки →</button></div>`;
+  const tabs = `<div class="tmodes seg3">${[['all', 'Родина', 'Предки, брати й сестри, діти'], ['ped', 'Предки', 'Лише предки, зліва направо'], ['desc', 'Нащадки', 'Діти, онуки й правнуки']].map(([k, t, h]) => `<button data-tmode="${k}" class="${mode === k ? 'on' : ''}" title="${h}">${t}</button>`).join('')}</div>`;
   return mode === 'ped' ? vPedigree(tabs) : vAll(tabs);
 }
 function vPedigree(tabs) {
@@ -158,14 +234,14 @@ function vPedigree(tabs) {
   depthMax = 0; const t = branchHtml(r, 0, new Set());
   const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди', '9-ті прадіди'];
   const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
-  return `<h1 class="sr">${S.arg ? 'Предки: ' + esc(short(P[r])) : 'Рід Шутих'}</h1>
-    <div class="tbar tbar1">${tabs}<div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div></div>
+  return `${treeHead()}
+    <div class="tbar tbar1 tbar2">${tabs}<button class="btn line tme" data-act="t-me" title="Від мене">${IC.target}<span>До мене</span></button><div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div></div>
     <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
 }
 const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
 
 /* ── Дерево згори вниз: людина в центрі, над нею батьки, діди…; біля кожного предка — брати й сестри ── */
-const T2 = { W: 160, H: 58, GX: 12, GY: 84, PAD: 50 };
+const T2 = { W: 216, H: 76, GX: 22, GY: 92, PAD: 60 };
 const tname = p => [String(p.n || '').replace(/\s*\([^)]*\)/g, ''), p.s].filter(Boolean).join(' ') || '(без імені)'; // у дереві — без «(Настя)», повне ім'я в підказці
 const P2 = T2.W + T2.GX;
 function treeCenter() { const f = S.ui.tf || {}; if (f.center && P[f.center]) return f.center; return startId(); }
@@ -202,7 +278,7 @@ function layoutTD(center) {
     if (X) merge(B, X); return B;
   }
   seen.add(center);
-  const A = up(center, 0, (SPOUSES[center] || []).some(x => P[x.id]) ? 'L' : 'C'); /* є подружжя праворуч — брати й сестри ліворуч, щоб не накладались */ const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
+  const A = S.ui.tmode === 'desc' ? (() => { const B = mk(); add(B, center, 0, 0); return B; })() : up(center, 0, (SPOUSES[center] || []).some(x => P[x.id]) ? 'L' : 'C'); /* є подружжя праворуч — брати й сестри ліворуч, щоб не накладались */ const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
   D.n.forEach(o => add(A, o.id, o.x, o.r));
   // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
   const KX = S.ui.kidx ||= {};
@@ -233,9 +309,9 @@ function layoutTD(center) {
 function vAll(tabs) {
   const center = treeCenter(); const L = layoutTD(center); S.ui.tl = L; const f = S.ui.tf || {}; const V = new Set(Object.keys(L.N));
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
-  let lines = ''; const done = new Set();
+  let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
-    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp"/>`; }));
+    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp"/>`; const rx = (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); rings += `<g class="ring" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
   const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
   Object.entries(fam).forEach(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
     const px = two ? (cx(ps[0]) + cx(ps[1])) / 2 : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]);
@@ -243,7 +319,8 @@ function vAll(tabs) {
     lines += `<path d="M${px} ${py}V${by}M${x1} ${by}H${x2}${xs.map(x => `M${x} ${by}V${top(kids[0])}`).join('')}" class="ln"/>`; });
   const q = (f.q || '').trim().toLowerCase();
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q);
-    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${ph(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(life(p))}</span></span></a>`; }).join('');
+    const dim = f.fam && !(p.fam || []).includes(f.fam);
+    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span></a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 18}px;top:${n.y + T2.H - 9}px" title="Показати дітей">▾${h.kids}</button>`;
@@ -251,13 +328,15 @@ function vAll(tabs) {
     return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x - 9}px;top:${n.y - 9}px" title="Згорнути">−</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 18}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
-  return `<h1 class="sr">${esc(short(P[center]))}: предки й родина</h1>
-    <div class="tbar tbar1">${tabs}<select class="in" id="tcenter" title="Від кого будувати дерево" aria-label="Від кого будувати дерево">${opts}</select>
-      <input class="in" id="tq" type="search" placeholder="Знайти в дереві…" value="${esc(f.q || '')}" aria-label="Пошук у дереві">
-      <select class="in" id="tsort" aria-label="Порядок братів і сестер"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>За роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>За ім'ям</option></select>
-      <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button><span class="small muted tcount">${V.size} осіб</span></div>
-    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
-    <p class="small muted thint">Тягніть мишкою або пальцем; коліщатко або два пальці — масштаб. Натисніть на людину — відкриється картка. Гілку іншої людини (наприклад, родину Олени) — виберіть у першому списку.</p>`;
+  return `${treeHead()}
+    <div class="tbar tbar1 tbar2"><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
+      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button>
+      <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
+        <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
+        <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
+        <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button><span class="small muted">${V.size} осіб у дереві</span></div></details></div>
+    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
+    `;
 }
 
 /* ── Масштаб і переміщення (спільне для обох видів) ── */
@@ -1454,6 +1533,7 @@ function render() {
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
+  if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');
   const bkNew = document.getElementById('bk');
   if (bkNew && bkKeep && BOOK.key && bkKeep.querySelector('.bk-book')?.children.length) bkNew.replaceWith(bkKeep);
   else if (bkNew) requestAnimationFrame(bookMount); else if (SND.music && !SND.music.paused) SND.stopMusic();
@@ -1487,6 +1567,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', async e => {
   const t = e.target;
+  if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; render(); return; }
   if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
   if (t.id === 'tq') { S.ui.tf ||= {}; S.ui.tf.q = t.value; const q = t.value.trim().toLowerCase(); const hit = q && Object.keys(S.ui.tl?.N || P).find(id => full(P[id]).toLowerCase().includes(q)); if (hit) S.ui.findId = hit; render(); setTimeout(() => $('#tq')?.focus(), 0); return; }
   if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
@@ -1497,13 +1578,21 @@ document.addEventListener('change', async e => {
   if (t.dataset.role) { try { await api('/api/admin?a=member', { body: { id: t.dataset.role, role: t.value } }); toast('Права змінено'); } catch (err) { toast(errText(err)); } }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#layer').innerHTML) closeLayer(); });
+document.addEventListener('click', e => { // людина → бічна панель (не перехід на сторінку)
+  const a = e.target.closest('a.nd[data-pp], .pp-p[data-pp], a.mini, tr.click[data-go]');
+  if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+  const id = a.dataset.pp || a.dataset.go || decodeURIComponent((a.getAttribute('href') || '').split('/').pop() || '');
+  if (!P[id]) return; e.preventDefault(); e.stopImmediatePropagation(); S.ui.ppTab = S.ui.ppTab || 'life'; ppOpen(id, !!a.closest('#pp'));
+}, true);
+document.addEventListener('click', e => { document.querySelectorAll('details.umenu[open], details.tmore[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.ui.pp && !document.querySelector('.pv,.scrim,.msh-scrim')) ppClose(); });
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-toh],[data-tmode],[data-act],[data-add],[data-doc],[data-photo],[data-story],[data-delstory],[data-unlink],[data-portrait],[data-delphoto],[data-famedit],[data-go],[data-atab],[data-per],[data-member],[data-k],[data-revert],[data-reset],[data-revoke],[data-active],[data-close-scrim],[data-pg],[data-zoom]');
   if (!t) return;
   if (t.hasAttribute('data-close-scrim')) { if (e.target === t) closeLayer(); return; }
   const d = t.dataset;
   try {
-    if (d.tmode) { S.ui.tmode = d.tmode; delete S.ui.vp?.[d.tmode]; render(); return; }
+    if (d.tmode) { S.ui.tmode = d.tmode; delete S.ui.vp?.[d.tmode]; delete S.ui.vp?.all; render(); return; }
     if (d.go) { location.hash = href('p', d.go); return; }
     if (d.toh) { e.preventDefault(); document.getElementById(d.toh)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (d.doc) { e.preventDefault(); return openDoc(d.doc); }
@@ -1529,6 +1618,12 @@ document.addEventListener('click', async e => {
     if (d.revoke) { await api('/api/admin?a=revoke', { body: { member_id: d.revoke } }); toast('Сеанси завершено'); S.admin.members = null; return loadAdmin(); }
     if (d.active) { if (t.dataset.armed !== '1' && d.v === 'false') { t.dataset.armed = '1'; t.textContent = 'Точно вимкнути?'; return; } await api('/api/admin?a=member', { body: { id: d.active, active: d.v === 'true' } }); S.admin.members = null; return loadAdmin(); }
     const act = d.act; if (!act) return;
+    if (act === 'gsearch') { e.preventDefault(); if (S.view !== 'people') location.hash = '#/people'; setTimeout(() => $('#q')?.focus(), 80); return; }
+    if (act === 'pp-close') { ppClose(); return; }
+    if (act === 'pp-back') { const h = S.ui.ppHist || []; if (h.length) { S.ui.pp = h.pop(); ppPaint(); } return; }
+    if (act === 'pp-tab') { S.ui.ppTab = d.v; ppPaint(); return; }
+    if (act === 'pp-tree') { const id = S.ui.pp; S.ui.tf ||= {}; S.ui.tf.center = id; if (S.ui.tmode === 'ped') S.ui.tmode = 'all'; delete S.ui.vp?.all; if (S.view !== 'tree') location.hash = '#/tree'; else render(); return; }
+    if (act === 't-me') { S.ui.tf ||= {}; S.ui.tf.center = startId(); S.ui.findId = startId(); delete S.ui.vp?.all; delete S.ui.vp?.ped; if (S.view === 'tree' && S.arg) location.hash = '#/tree'; else render(); return; }
     if (act === 'close') { closeLayer(); return; }
     if (act === 'upd-reload') { t.disabled = true; t.textContent = 'Оновлюю…'; try { const ks = await caches?.keys?.(); for (const k of ks || []) await caches.delete(k); } catch {} location.reload(); return; }
     if (act === 'devs') { S.ui.devs = S.ui.devs === d.id ? null : d.id; S.ui.keepScroll = true; render(); return; }
