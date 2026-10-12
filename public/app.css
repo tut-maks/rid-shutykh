@@ -831,3 +831,10 @@ main{padding-block:14px 60px}
 .tbar1.tbar2{margin:0 0 10px!important}
 .tabnote{margin:10px 0 16px;font-size:14px;color:var(--muted);max-width:90ch}
 .mtabs,.tabs2{margin-bottom:0}
+/* панель людини не зсуває шапку й панель інструментів — звужується лише полотно дерева */
+@media (min-width:821px){
+  body.pp-on main.wrap.wide{padding-right:20px!important}
+  body.pp-on main.wrap.wide .vp{margin-right:420px}
+  .tbar2 .tsearch{flex:0 0 340px!important;max-width:none!important}
+  .tbar2 .tfam{flex:0 0 200px!important}
+}
