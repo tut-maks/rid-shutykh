@@ -126,6 +126,10 @@ export default handler(async (req, res, _c, url) => {
         const data = { ...d.data, ...patch }; await db.update('documents', { eq: { id: d.id } }, { data, updated_by: by, updated_at: new Date().toISOString() });
         await revision('document', d.id, 'update', Object.fromEntries(Object.keys(patch).map(k => [k, d.data[k] ?? null])), patch, by);
         out.push(key + ': ok');
+      } else if (it.kind === 'unionpatch') { // підпис зв'язку двох людей (напр. «шлюб не підтверджено»)
+        const us = await db.list('unions', { eq: { deleted: false } }); const u = us.find(x => (x.a === it.a && x.b === it.b) || (x.a === it.b && x.b === it.a)); if (!u) { out.push(key + ': no union'); continue; }
+        const date = String(it.date ?? u.date ?? '').slice(0, 60); if (u.date === date) { out.push(key + ': вже є'); continue; }
+        await db.update('unions', { eq: { id: u.id } }, { date }); await revision('union', u.id, 'update', { date: u.date }, { date }, by); out.push(key + ': ok');
       } else if (it.kind === 'familypatch') {
         const f = await db.get('families', { eq: { id: String(it.family) } }); if (!f) { out.push(key + ': no family'); continue; }
         let story = f.data.story || '', title = f.data.title || ''; const before = story + '\n' + title;

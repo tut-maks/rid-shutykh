@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130917';
+const BUILD = '202610130919';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -58,6 +58,10 @@ const life = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '
 const full = p => [p.n, p.pt, p.s].filter(Boolean).join(' ');
 const short = p => [p.n, p.s].filter(Boolean).join(' ') || '(без імені)';
 const byBirth = (a, b) => (yearOf(P[a]?.b).replace('≈', '') || '9999').localeCompare(yearOf(P[b]?.b).replace('≈', '') || '9999');
+const genN = n => /ія$/.test(n) ? n.slice(0, -1) + 'ї' : /я$/.test(n) ? n.slice(0, -1) + 'і' : /[гкхжчшщ]а$/.test(n) ? n.slice(0, -1) + 'и' : /а$/.test(n) ? n.slice(0, -1) + 'и' : /й$/.test(n) ? n.slice(0, -1) + 'я' : /о$/.test(n) ? n.slice(0, -1) + 'а' : /ь$/.test(n) ? n.slice(0, -1) + 'я' : n + 'а'; // родовий відмінок імені
+const ucU = s => /не підтвердж/i.test(s?.date || ''); // зв'язок без підтвердженого шлюбу
+const ucLabel = (pid, s) => { const kids = (KIDS[pid] || []).filter(k => P[k] && [P[k].f, P[k].mo].includes(s.id)); const o = P[s.id]; const role = o?.sex === 'f' ? 'мати' : 'батько';
+  return kids.length ? `${role} ${kids.map(k => (P[k].sex === 'f' ? 'доньки ' : 'сина ') + genN(String(P[k].n || '').replace(/\s*\(.*?\)/, ''))).join(', ')}, шлюб не підтверджено` : 'шлюб не підтверджено'; };
 const srcSite = u => /familysearch\.org/.test(u) ? 'FamilySearch' : /pamyat-naroda\.ru/.test(u) ? '«Память народа» (документи Другої світової)' : /obd-memorial/.test(u) ? 'ОБД «Мемориал»' : (String(u).match(/^https?:\/\/(?:www\.)?([^/]+)/) || [])[1] || '';
 const img = (q, thumb) => `/api/file?${q}${thumb ? '&thumb=1' : ''}`;
 const portrait = p => p.portrait ? img('photo=' + encodeURIComponent(p.portrait), true) : null;
@@ -180,7 +184,7 @@ function ppHtml(id) {
   const fams = (p.fam || []).filter(f => FAM[f]);
   const ev = [];
   if (p.b || p.bp) ev.push([yearOf(p.b) || '?', 'Народження', p.b && /\d\d\.\d\d/.test(p.b) ? p.b : '', p.bp]);
-  sp.forEach(s => P[s.id] && ev.push([yearOf(s.date) || '', `Шлюб — ${short(P[s.id])}`, s.date && /\d\d\.\d\d/.test(s.date) ? s.date : '', '']));
+  sp.forEach(s => P[s.id] && !ucU(s) && ev.push([yearOf(s.date) || '', `Шлюб — ${short(P[s.id])}`, s.date && /\d\d\.\d\d/.test(s.date) ? s.date : '', '']));
   ch.forEach(c => ev.push([yearOf(P[c].b) || '', `${P[c].sex === 'f' ? 'Народилася донька' : P[c].sex === 'm' ? 'Народився син' : 'Народилася дитина'} ${String(P[c].n || '').replace(/\s*\(.*?\)/g, '')}`, '', '']));
   if (p.d || p.dp) ev.push([yearOf(p.d) || '?', 'Завершення життєвого шляху', p.d && /\d\d\.\d\d/.test(p.d) ? p.d : '', p.dp]);
   const yk = e => e[1] === 'Народження' ? '0' : e[1].startsWith('Завершення') ? '9' : e[0] ? '1' + e[0] : '5';
@@ -191,7 +195,7 @@ function ppHtml(id) {
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
     ${(() => { const t = p.note || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
     ${docs[0] ? `<div class="pp-g"><h4>Джерело</h4>${docRow(docs[0])}</div>` : ''}`;
-  const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.map(x => x.id).filter(x => P[x])) + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
+  const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.filter(x => !ucU(x)).map(x => x.id).filter(x => P[x])) + sp.filter(x => ucU(x) && P[x.id]).map(x => grp(esc(ucLabel(p.id, x).replace(/^./, c => c.toUpperCase())), [x.id])).join('') + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
   const src = docs.length ? docs.map(docRow).join('') : '<p class="muted">Документів поки немає.</p>';
   const back = (S.ui.ppHist || []).length;
   return `<aside class="pp" id="pp" aria-label="Людина у дереві">
@@ -373,7 +377,7 @@ function vAll(tabs) {
     return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}).filter(k => S.ui.sibx[k]), Object.keys(S.ui.dsib || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Згорнути">◂−</button>`; }).join('');
   // інші шлюби людей у дереві (чоловік/дружина, яких немає на дереві): значок «⚭ +N» → бічна панель
   const spx = [...V].map(id => { const o = (SPOUSES[id] || []).filter(x => P[x.id] && !V.has(x.id)); if (!o.length) return ''; const n = L.N[id];
-    return `<button type="button" class="tg sp" data-pp="${o.length > 1 ? id : o[0].id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="${esc('Ще шлюб: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '')).join('; ') + '' + (o.length > 1 ? ' — натисніть: відкриється картка з усіма шлюбами' : ' — натисніть, щоб відкрити'))}">⚭ +${o.length}</button>`; }).join('');
+    return `<button type="button" class="tg sp" data-pp="${o.length > 1 ? id : o[0].id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="${esc('Ще шлюб: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '') + (ucU(x) ? ' — ' + ucLabel(id, x) : '')).join('; ') + '' + (o.length > 1 ? ' — натисніть: відкриється картка з усіма шлюбами' : ' — натисніть, щоб відкрити'))}">⚭ +${o.length}</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 50}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
@@ -495,7 +499,7 @@ function vPerson() {
     <div class="sec" style="margin-top:18px"><h3>Гілка <span class="small muted" style="text-transform:none;letter-spacing:0">натисніть на людину нижче — відкриється її картка</span></h3>
       <div class="branch">
         ${L('Діди й баби', gp)}${L('Батьки', par)}
-        <div class="bl"><span>${esc(p.sex === 'f' ? 'Вона' : p.sex === 'm' ? 'Він' : 'Ця людина')}${sp.length ? ' і подружжя' : ''}</span><div class="row"><span class="focus">${ph(p)}<span><b style="font-family:var(--f-display);font-size:16px">${esc(short(p))}</b><br><em class="mono small muted">${esc(life(p))}</em></span></span>${sp.map(s => mini(s.id) + (s.date ? `<span class="small muted mono" style="align-self:center">⚭ ${esc(s.date)}</span>` : '')).join('')}</div></div>
+        <div class="bl"><span>${esc(p.sex === 'f' ? 'Вона' : p.sex === 'm' ? 'Він' : 'Ця людина')}${sp.length ? ' і подружжя' : ''}</span><div class="row"><span class="focus">${ph(p)}<span><b style="font-family:var(--f-display);font-size:16px">${esc(short(p))}</b><br><em class="mono small muted">${esc(life(p))}</em></span></span>${sp.map(s => mini(s.id) + (ucU(s) ? `<span class="small muted" style="align-self:center">${esc(ucLabel(p.id, s))}</span>` : s.date ? `<span class="small muted mono" style="align-self:center">⚭ ${esc(s.date)}</span>` : '')).join('')}</div></div>
         ${L('Брати й сестри', sib)}${L('Діти', ch)}${L('Онуки', gch)}
         ${canEdit() ? `<div class="addrel"><button class="btn line small" data-add="father">+ батько</button><button class="btn line small" data-add="mother">+ мати</button><button class="btn line small" data-add="spouse">+ чоловік / дружина</button><button class="btn line small" data-add="child">+ дитина</button>${par.length ? `<button class="btn line small" data-add="sibling">+ брат / сестра</button>` : ''}</div>` : ''}
         <div class="btns"><a class="btn line small" href="${href('tree', p.id)}">Дерево предків цієї людини</a></div>

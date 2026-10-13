@@ -5404,6 +5404,13 @@
   ]
  },
  {
+  "key": "union-yanok-unc",
+  "kind": "unionpatch",
+  "a": "hryhorii_ya",
+  "b": "yevdokia_h",
+  "date": "шлюб не підтверджено"
+ },
+ {
   "key": "text-villages",
   "kind": "text",
   "id": "villages",
