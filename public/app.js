@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131429';
+const BUILD = '202610131436';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1118,6 +1118,7 @@ function bookShell() {
       <button class="bk-b bk-dk" data-bk="fs-" title="Менший шрифт" aria-label="Менший шрифт">A−</button><button class="bk-b bk-dk" data-bk="fs+" title="Більший шрифт" aria-label="Більший шрифт">A+</button>
       <button class="bk-b" data-bk="snd" id="bk-snd" title="${SND.on ? 'Вимкнути звук' : 'Увімкнути звук'}" aria-label="Звук">${SND.on ? '🔊' : '🔇'}</button>
       <button class="bk-b txt bk-dk" data-bk="plain" title="Читати звичайним текстом">Текстом</button>
+      <button class="bk-b bk-fullb" data-bk="full" id="bk-full" title="На весь екран — лише книга" aria-label="На весь екран">⛶</button>
     </div>
     <div class="bk-toc" id="bk-toc" hidden></div>
     <div class="bk-stage" id="bk-stage"><div class="bk-book" id="bk-book"></div></div>
@@ -1128,8 +1129,9 @@ function bookDims() {
   const st = document.getElementById('bk-stage'); const W = st.clientWidth, vh = document.documentElement.clientHeight;
   const spread = W >= 860;
   let pw, ph;
-  if (spread) { pw = Math.min((W - 48) / 2, 520, (vh - 210) / 1.42); ph = pw * 1.42; }
-  else { const mob = innerWidth <= 820; pw = Math.min(W - 16, 460, (vh - (mob ? 214 : 190)) / 1.5); ph = pw * 1.5; } // телефон: шапка 52 + панель книги 56 + нижнє меню 64
+  const full = document.documentElement.classList.contains('bk-full'); // режим «лише книга»: без шапок і меню
+  if (spread) { pw = Math.min((W - 48) / 2, full ? 640 : 520, (vh - (full ? 90 : 210)) / 1.42); ph = pw * 1.42; }
+  else { const mob = innerWidth <= 820; pw = Math.min(W - 16, full ? Math.min(560, innerWidth - 20) : 460, (vh - (full ? 84 : mob ? 214 : 190)) / 1.5); ph = pw * 1.5; } // телефон: шапка 52 + панель книги 56 + нижнє меню 64
   return { spread, pw: Math.floor(pw), ph: Math.floor(ph), fs: bkFs() };
 }
 function bookPaginate(html, d) {
@@ -1296,8 +1298,20 @@ document.addEventListener('click', e => {
   if (a === 'fs-' || a === 'fs+') { const v = Math.max(-2, Math.min(4, bkFs() + (a === 'fs+' ? 1 : -1))); try { localStorage.setItem('rs_bkfs', String(v)); } catch {} bookReflow(true); return; }
   if (a === 'toc') { const tc = document.getElementById('bk-toc'); tc.hidden = !tc.hidden; return; }
   if (a === 'snd') { SND.toggle(); b.textContent = SND.on ? '🔊' : '🔇'; b.title = SND.on ? 'Вимкнути звук' : 'Увімкнути звук'; return; }
-  if (a === 'plain') { S.ui.ridPlain = true; SND.stopMusic(); render(); return; }
+  if (a === 'plain') { bkFull(false); S.ui.ridPlain = true; SND.stopMusic(); render(); return; }
+  if (a === 'full') { bkFull(!document.documentElement.classList.contains('bk-full')); return; }
 });
+// «На весь екран»: ховаємо шапки, меню й підказки — лишається тільки книга (+ справжній повноекранний режим, де браузер дозволяє)
+function bkFull(on) {
+  const r = document.documentElement; if (r.classList.contains('bk-full') === on) return;
+  r.classList.toggle('bk-full', on); const b = document.getElementById('bk-full');
+  if (b) { b.textContent = on ? '✕' : '⛶'; b.title = on ? 'Вийти з повноекранного читання' : 'На весь екран — лише книга'; }
+  try { if (on && r.requestFullscreen && !document.fullscreenElement) r.requestFullscreen().catch(() => {}); if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch {}
+  setTimeout(() => bookReflow(true), 60);
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.documentElement.classList.contains('bk-full')) bkFull(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.documentElement.classList.contains('bk-full')) bkFull(false); });
+addEventListener('hashchange', () => bkFull(false));
 document.addEventListener('keydown', e => {
   if (!document.getElementById('bk') || document.querySelector('.pv, .modal') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (e.key === 'ArrowRight') { e.preventDefault(); bookFlip(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); bookFlip(-1); }
@@ -2201,14 +2215,14 @@ function vHome() {
   <div class="hgrid">
     <div class="hcol">
       ${tgCard()}
-      ${todayCard()}
+      <div class="h-today">${todayCard()}</div>
       <div class="hcard"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
       <div class="hcard"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
     </div>
     <div class="hcol">
       <div class="hcard"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const H = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin').sort((a, b) => b.p - a.p).slice(0, 3); return H.length ? `<ul class="wantl">${H.map(x => `<li><button class="wantc" data-act="hyp-open" data-id="${esc(x.id)}"><b>${esc(x.title)}</b><span class="small muted">${hypAns(x.id).length ? hypAns(x.id).length + ' відповід.' : 'ще без відповіді'}</span></button></li>`).join('')}</ul>` : ''; })()}</div>
       <div class="hcard"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
-      <div class="hcard"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}</div>
+      <div class="hcard h-ask"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}</div>
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
       <div class="hcard links3">
         <a href="#/geo"><b>🗺 Карта роду</b><span>Де жили наші — з 1780-х до сьогодні</span></a>
@@ -2371,7 +2385,8 @@ function stickBars() {
   const hdr = document.querySelector('header.top'), h0 = hdr && getComputedStyle(hdr).position !== 'static' ? hdr.offsetHeight : 0;
   document.documentElement.style.setProperty('--toph', h0 + 'px');
   let top = h0;
-  document.querySelectorAll(STICKY_SEL).forEach(el => { if (el.closest('.modal')) return; el.classList.add('stk'); el.style.top = top + 'px'; top += el.offsetHeight; });
+  const book = !!document.querySelector('main .bk-book, main .bk-bar'); // у книзі шапка не прилипає — інакше накриває сторінку книги
+  document.querySelectorAll(STICKY_SEL).forEach(el => { if (el.closest('.modal')) return; if (book) { el.classList.remove('stk'); el.style.top = ''; return; } el.classList.add('stk'); el.style.top = top + 'px'; top += el.offsetHeight; });
   document.documentElement.style.setProperty('--stkh', top + 'px'); // для прокрутки до якорів
 }
 addEventListener('resize', () => { clearTimeout(window.__stkT); window.__stkT = setTimeout(stickBars, 150); });

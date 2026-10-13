@@ -1157,3 +1157,20 @@ th[data-act=dna-sort]{cursor:pointer}th[data-act=dna-sort].on{color:var(--wine)}
 .pp-av{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;border-radius:50%!important;overflow:hidden;width:max-content;height:max-content;line-height:0}
 .pp-av .av{border-radius:50%}
 @media(max-width:820px){.pp-head .pp-av{grid-row:span 3;align-self:center}}
+/* Книга «на весь екран» */
+html.bk-full,html.bk-full body{overflow:hidden}
+html.bk-full header.top,html.bk-full .pghead,html.bk-full .bnav,html.bk-full .credit,html.bk-full .bk-hint,html.bk-full footer,html.bk-full #kr-upd{display:none!important}
+html.bk-full .bk{position:fixed;inset:0;z-index:60;margin:0;padding:0 0 calc(60px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center;background:radial-gradient(ellipse at center,#3a2417 0%,#1c120c 100%);min-height:0}
+html.bk-full .bk-stage{flex:1;display:flex;align-items:center;justify-content:center;padding-top:env(safe-area-inset-top)}
+html.bk-full .bk-bar{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:61;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:rgba(28,18,12,.86);border:0;backdrop-filter:blur(6px)}
+html.bk-full .bk-bar .bk-b,html.bk-full .bk-bar .bk-n{background:rgba(255,255,255,.08);color:#f2e6cc;border-color:rgba(242,230,204,.25)}
+html.bk-full .bk-toc{position:fixed;bottom:calc(60px + env(safe-area-inset-bottom));left:8px;right:8px;max-height:70vh;overflow:auto;z-index:62}
+.bk-fullb{font-size:18px}
+/* Головна на телефоні: одна колонка, «Хто на фото?» одразу після «Цей день в історії роду» */
+@media(max-width:900px){
+  .hgrid{display:flex!important;flex-direction:column;gap:18px}
+  .hgrid>.hcol{display:contents}
+  .hgrid .hcol>*{order:10}
+  .hgrid .tgc{order:1}.hgrid .h-today{order:2}.hgrid .h-ask{order:3}
+}
+.h-today{display:grid}
