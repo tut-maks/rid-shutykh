@@ -3,7 +3,7 @@
 // Спершу надсилається повний файл (відповідь: {id}), потім мініатюра з &photo=<id>&kind=thumb.
 import crypto from 'node:crypto';
 import { db } from './_db.js';
-import { handler, send, fail, readRaw, revision, track, can, canAddTo } from './_lib.js';
+import { handler, send, fail, readRaw, revision, track, can, canAddTo, pendGet, pendSet } from './_lib.js';
 
 const OK = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
 function sniff(b) {
@@ -68,19 +68,20 @@ export default handler(async (req, res, ctx, url) => {
   const personId = String(url.searchParams.get('person') || '').slice(0, 60);
   const person = await db.get('persons', { eq: { id: personId, deleted: false } });
   if (!person) return fail(res, 404, 'not_found');
-  if (!(await canAddTo(me, personId))) return fail(res, 403, 'branch');
+  const pending = !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
   const id = crypto.randomUUID();
   const path = `photos/${personId}/${id}.${OK[mime]}`;
   await db.put(path, buf, mime);
   const caption = String(url.searchParams.get('caption') || '').slice(0, 500);
   await db.insert('photos', { id, person_id: personId, path, caption, mime, size: buf.length, created_by: me.id });
   await revision('photo', id, 'create', null, { person_id: personId, caption, path }, me.id);
-  // перше фото стає головним
-  if (!person.data.portrait && mime !== 'application/pdf') {
+  if (pending) { const pd = await pendGet(); pd[id] = { by: me.id, at: new Date().toISOString(), person: personId }; await pendSet(pd, me.id); }
+  // перше фото стає головним (крім тих, що чекають підтвердження)
+  if (!pending && !person.data.portrait && mime !== 'application/pdf') {
     await db.update('persons', { eq: { id: personId } }, { data: { ...person.data, portrait: id }, version: person.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
   }
   track(me.id, ctx.sid, 'edit', 'upload', personId);
-  return send(res, 200, { id, mime });
+  return send(res, 200, { id, mime, pending });
 });
 
 export const config = { api: { bodyParser: false } };

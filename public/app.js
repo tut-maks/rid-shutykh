@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130908';
+const BUILD = '202610130914';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -92,7 +92,7 @@ addEventListener('hashchange', () => { parse(); if (S.view === 'p') { S.ui.pp = 
 function top() {
   const nav = [['tree', 'Дерево'], ['families', 'Історія роду'], ['villages', 'Історія сіл'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Карти'], ['q', 'Запитання й уточнення']];
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
-  const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) : 0;
+  const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0;
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
   return `<header class="top"><div class="wrap topw">
     <a class="brand" href="#/tree">Рід Шутих<small>Родинний архів</small></a>
@@ -236,11 +236,11 @@ const MI = {
 function mNav(cur) {
   const more = ['maps', 'villages', 'q', 'admin', 'p'].includes(cur) && cur !== 'p' ? 'more' : cur;
   const B = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Архів']];
-  const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) : 0);
+  const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
 function mSheet() {
-  const L = [['q', 'Запитання й уточнення', qBadge() || ''], ['villages', 'Історія сіл', ''], ['maps', 'Старі карти', ''], ...(isOwner() ? [['admin', 'Власнику', S.data?.joinPending || '']] : [])];
+  const L = [['q', 'Запитання й уточнення', qBadge() || ''], ['villages', 'Історія сіл', ''], ['maps', 'Старі карти', ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -485,7 +485,7 @@ function vPerson() {
   const L = (t, ids) => ids.length ? `<div class="bl"><span>${t}</span><div class="row">${ids.map(mini).join('')}</div></div>` : '';
   return `<div class="person">
   <div class="sec" style="align-content:start">
-    <div class="phead">${canAdd(p.id) ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}</div>`}
+    <div class="phead">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}</div>`}
       <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1>${p.m && p.m !== p.s ? `<div class="maiden">з дому ${esc(p.m)}</div>` : ''}</div></div>
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
@@ -516,9 +516,9 @@ function vPerson() {
       ${canEdit() && S.ui.docform ? `<div class="docform"><input class="in" id="dtitle" placeholder="Назва: напр. «Народження Микити Максимовича»"><input class="in" id="ddate" placeholder="Дата, напр. 27.05.1818"><input class="in" id="dsrc" placeholder="Джерело: архів, книга, запис №"><label class="btn line small" style="cursor:pointer">Вибрати скани<input type="file" accept="image/*" multiple data-docup="${p.id}" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
       ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}
       ${parDocs(p, docs)}</div>
-    <div class="sec"><h3>Фото ${canAdd(p.id) ? `<label class="btn line small" style="cursor:pointer" title="Портрет, родинне фото або скан документа (свідоцтво, лист, довідка)">Додати фото чи документ<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
+    <div class="sec"><h3>Фото ${S.me ? `<label class="btn line small" style="cursor:pointer" title="Портрет, родинне фото або скан документа (свідоцтво, лист, довідка)${canAdd(p.id) ? '' : '. Фото з\'явиться на сайті після підтвердження Максимом.'}">Додати фото чи документ<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>
-      ${photos.length ? `<div class="thumbs">${photos.map(x => `<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}</span></button>`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
+      ${photos.length ? `<div class="thumbs">${photos.map(x => `${x.pending ? '<div class="phpend">' : ''}<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${x.pending ? '<b class="pend-l">Чекає підтвердження</b><br>' : ''}${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}${x.pending && x.by ? `<br><small class="muted">додав(ла): ${esc(who(x.by))}</small>` : ''}</span></button>${x.pending ? `${isOwner() ? `<div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button></div>` : ''}</div>` : ''}`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
     </div>
     <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
   </div></div>`;
@@ -1524,10 +1524,10 @@ const delta = (a, b) => { if (!b) return a ? '<em class="up">нове</em>' : '<
 const PERIODS = [['7', '7 днів'], ['30', '30 днів'], ['90', '3 місяці'], ['365', 'Рік'], ['all', 'Весь час']];
 function periodRange() { const a = S.admin; if (a.period === 'custom' && a.from) return { from: a.from, to: a.to || new Date().toISOString().slice(0, 10) }; const n = a.period === 'all' ? 3650 : Number(a.period || 30); const to = new Date(); const from = new Date(to - n * 864e5); return { from: from.toISOString(), to: new Date(to.getTime() + 60000).toISOString() }; }
 async function loadAdmin() {
-  const a = S.admin; a.tab ||= (S.data?.joinPending ? 'access' : 'stats'); a.period ||= '30';
+  const a = S.admin; a.tab ||= (S.data?.joinPending || S.data?.photoPending ? 'access' : 'stats'); a.period ||= '30';
   try {
     if (a.tab === 'stats') { const { from, to } = periodRange(); a.stats = await api(`/api/admin?a=stats&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); if (a.member) a.log = await api(`/api/admin?a=log&id=${a.member}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); }
-    if (a.tab === 'access') { a.members = await api('/api/admin?a=members'); try { a.join = await api('/api/admin?a=join_link'); a.reqs = (await api('/api/admin?a=requests')).requests; a.joinErr = false; } catch { a.joinErr = true; } }
+    if (a.tab === 'access') { a.pph = (await api('/api/admin?a=photos_pending').catch(() => ({ photos: [] }))).photos; a.members = await api('/api/admin?a=members'); try { a.join = await api('/api/admin?a=join_link'); a.reqs = (await api('/api/admin?a=requests')).requests; a.joinErr = false; } catch { a.joinErr = true; } }
     if (a.tab === 'history') a.revs = await api('/api/admin?a=revisions');
   } catch (e) { a.err = errText(e); }
   render();
@@ -1545,6 +1545,10 @@ function chartDaily(daily, from, to) {
   </svg>`;
 }
 function sortRows(rows, key) { const k = S.admin.sort || key; const dir = S.admin.dir || -1; return rows.sort((a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * dir); }
+function phPendBlock(list) {
+  if (!list?.length) return '';
+  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : ''}</b><br>${esc(x.caption || '')}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
+}
 function vAdmin() {
   if (!isOwner()) return '<p>Немає доступу.</p>';
   const a = S.admin;
@@ -1579,7 +1583,7 @@ function vAdmin() {
       </div>`;
   } else if (a.tab === 'access' && a.members) {
     const m = a.members;
-    body = joinBlock() + `<div class="sec" style="margin-top:26px"><h3>Запросити родича особисто</h3>
+    body = phPendBlock(a.pph) + joinBlock() + `<div class="sec" style="margin-top:26px"><h3>Запросити родича особисто</h3>
       <div class="grid2"><label class="f">Ім'я<input class="in" id="iv-name" placeholder="напр. Тетяна Іванівна"></label><label class="f" title="Якщо пошти немає — придумайте короткий логін, можна українськими літерами, напр. василь">Пошта або логін<input class="in" id="iv-email" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="пошта або логін, напр. василь"></label>
       <label class="f">Права<select class="in" id="iv-role"><option value="editor">Редактор — додає й змінює картки</option><option value="viewer">Глядач — лише дивиться і пише спогади</option></select></label>
       <label class="f">Хто це в дереві<select class="in" id="iv-person"><option value="">—</option>${Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}</option>`).join('')}</select></label></div>
@@ -1767,6 +1771,7 @@ document.addEventListener('click', async e => {
     if (act === 'map-over') return openOverlay(d.id);
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
+    if (act === 'ph-ok' || act === 'ph-no') { if (act === 'ph-no' && t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відхилити?'; return; } t.disabled = true; try { await api('/api/admin?a=photo_ok', { body: { id: t.dataset.id, ok: act === 'ph-ok' } }); toast(act === 'ph-ok' ? 'Фото тепер бачать усі' : 'Фото відхилено'); } catch (err) { toast(errText(err)); } await load(); if (S.admin) S.admin.pph = null; if (S.view === 'admin') await loadAdmin(); S.ui.keepScroll = true; render(); return; }
     if (act === 'hs-all') { const ds = [...document.querySelectorAll('details.hsec[data-hs]')].filter(x => /^\d+$/.test(x.dataset.hs)); const open = !ds.every(x => x.open); ds.forEach(x => { x.open = open; }); return; }
     if (act === 't-png') { if (t.disabled) return; t.disabled = true; const o = t.textContent; t.textContent = 'Готую картинку…'; try { await treePng(); } catch (err) { console.error(err); toast('Не вдалося зробити картинку'); } t.disabled = false; t.textContent = o; return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; S.ui.kidx = {}; } delete S.ui.vp?.all; render(); return; }
@@ -1840,7 +1845,7 @@ function toJpeg(file, max, q) {
   });
 }
 async function upload(personId, files) {
-  const m = $('#upmsg'); let n = 0;
+  const m = $('#upmsg'); let n = 0, pend = false;
   for (const f of files) {
     try {
       m.className = 'msg'; m.textContent = `Завантажую ${n + 1} з ${files.length}…`;
@@ -1849,10 +1854,10 @@ async function upload(personId, files) {
       else { full = await toJpeg(f, 2200, 0.86); if (full.size > 4e6) full = await toJpeg(f, 1600, 0.8); thumb = await toJpeg(f, 420, 0.78); }
       const r = await api(`/api/upload?person=${encodeURIComponent(personId)}&caption=${encodeURIComponent(prompt2())}`, { raw: full });
       if (thumb) await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
-      n++;
+      if (r.pending) pend = true; n++;
     } catch (err) { console.warn("[upload]", err); m.className = "msg err"; m.textContent = `«${f.name}»: ${errText(err)}`; }
   }
-  if (n) { await load(); S.ui.keepScroll = true; render(); toast(`Додано фото: ${n}`); }
+  if (n) { await load(); S.ui.keepScroll = true; render(); toast(pend ? `Надіслано фото: ${n}. Вони з'являться для всіх після підтвердження Максимом.` : `Додано фото: ${n}`); }
 }
 async function uploadPages(id, files) {
   let n = 0; files.sort((x, y) => x.name.localeCompare(y.name));

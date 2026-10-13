@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugId, canAddTo } from './_lib.js';
+import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugId, canAddTo, pendGet, pendSet } from './_lib.js';
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
@@ -27,6 +27,8 @@ async function bootstrap(ctx) {
     if (!can(ctx.member, 'editor')) f.eq.created_by = ctx.member.id;
     questions = (await db.list('questions', f)).map(qOut);
   } catch { qReady = false; }
+  const pend = await pendGet(), isOwn = can(ctx.member, 'owner');
+  const photosV = photos.filter(p => !pend[p.id] || isOwn || p.created_by === ctx.member.id); // чужі непідтверджені фото не показуємо
   let joinPending = 0;
   if (can(ctx.member, 'owner')) { try { joinPending = (await db.list('join_requests', { eq: { status: 'pending' }, select: 'id' })).length; } catch {} }
   const last = {};
@@ -37,7 +39,8 @@ async function bootstrap(ctx) {
     unions: unions.map(u => ({ id: u.id, a: u.a, b: u.b, date: u.date || '' })),
     families: families.map(f => ({ id: f.id, ...f.data })),
     documents: documents.map(d => ({ id: d.id, ...d.data, pages: (d.data.pages || []).length })),
-    photos: photos.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at })),
+    photos: photosV.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at, ...(pend[p.id] ? { pending: true } : {}) })),
+    photoPending: isOwn ? photosV.filter(p => pend[p.id]).length : 0,
     stories: stories.map(s => ({ id: s.id, target: s.target, text: s.text, by: s.created_by, at: s.created_at })),
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
     questions, qReady, joinPending,
@@ -247,7 +250,7 @@ export default handler(async (req, res, ctx, url) => {
   if (op === 'photo.delete') {
     const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');
     if (!owner && p.created_by !== me.id) return fail(res, 403, 'forbidden');
-    await db.update('photos', { eq: { id: p.id } }, { deleted: true }); await revision('photo', p.id, 'delete', p, null, me.id);
+    await db.update('photos', { eq: { id: p.id } }, { deleted: true }); await revision('photo', p.id, 'delete', p, null, me.id); { const pd = await pendGet(); if (pd[p.id]) { delete pd[p.id]; await pendSet(pd, me.id); } }
     return done({ ok: true }, p.person_id);
   }
 

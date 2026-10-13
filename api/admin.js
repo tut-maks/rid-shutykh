@@ -1,7 +1,7 @@
 // Панель власника: доступи, аналітика, історія змін і відкат. Лише роль owner.
 // /api/admin?a=members|invite|reset|member|revoke|stats|log|revisions|revert
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId, hashPass } from './_lib.js';
+import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId, hashPass, pendGet, pendSet } from './_lib.js';
 
 const day = 864e5;
 const iso = d => new Date(d).toISOString();
@@ -56,6 +56,25 @@ export default handler(async (req, res, ctx, url) => {
   const me = ctx.member;
 
   /* ── Посилання для реєстрації й заявки ── */
+  // Фото від родичів, що чекають підтвердження: GET ?a=photos_pending · POST ?a=photo_ok {id, ok}
+  if (a === 'photos_pending') {
+    const pd = await pendGet(); const ids = Object.keys(pd); if (!ids.length) return send(res, 200, { photos: [] });
+    const rows = await db.list('photos', { in: { id: ids }, eq: { deleted: false } });
+    const mem = await db.list('members', { select: 'id,name' }); const nm = Object.fromEntries(mem.map(m => [m.id, m.name || 'Родич']));
+    return send(res, 200, { photos: rows.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: nm[p.created_by] || 'Родич', at: p.created_at })) });
+  }
+  if (a === 'photo_ok') {
+    const body = await readJSON(req, 2000); const id = String(body.id || '').slice(0, 60);
+    const pd = await pendGet(); if (!pd[id]) return fail(res, 404, 'not_found');
+    const p = await db.get('photos', { eq: { id } }); delete pd[id]; await pendSet(pd, ctx.member.id);
+    if (!p) return send(res, 200, { ok: true });
+    if (body.ok) {
+      await revision('photo', id, 'approve', null, { person_id: p.person_id }, ctx.member.id);
+      const person = await db.get('persons', { eq: { id: p.person_id, deleted: false } });
+      if (person && !person.data.portrait && p.mime !== 'application/pdf') await db.update('persons', { eq: { id: person.id } }, { data: { ...person.data, portrait: id }, version: person.version + 1, updated_by: ctx.member.id, updated_at: new Date().toISOString() });
+    } else { await db.update('photos', { eq: { id } }, { deleted: true }); await revision('photo', id, 'delete', p, null, ctx.member.id); }
+    return send(res, 200, { ok: true });
+  }
   if (a === 'join_link') {
     if (req.method === 'POST') {
       const b = await readJSON(req, 2_000); const cur = (await joinCfg(true, me.id));

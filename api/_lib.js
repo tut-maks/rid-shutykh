@@ -181,3 +181,7 @@ export function cleanJoin(d = {}) {
   if (Array.isArray(d.kidsL)) { const L = d.kidsL.slice(0, 12).map(k => ({ n: STR(k?.n, 60), b: STR(k?.b, 20), sex: ['m', 'f'].includes(k?.sex) ? k.sex : '' })).filter(k => k.n); if (L.length) o.kidsL = L; }
   return o;
 }
+
+/* Фото, які родич додав не до своєї гілки, чекають підтвердження власника: settings 'photo_pending' = {photoId: {by, at, person}} */
+export async function pendGet() { try { const r = await db.get('settings', { eq: { key: 'photo_pending' } }); return r?.value || {}; } catch { return {}; } }
+export async function pendSet(v, by) { await db.upsert('settings', { key: 'photo_pending', value: v, updated_by: by ?? null, updated_at: new Date().toISOString() }); }
