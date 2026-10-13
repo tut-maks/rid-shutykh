@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130855';
+const BUILD = '202610130901';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -361,9 +361,11 @@ function vAll(tabs) {
     const by = top(kids[0]) - T2.GY / 2; const xs = kids.map(cx); const x1 = Math.min(px, ...xs), x2 = Math.max(px, ...xs);
     lines += `<path d="M${px} ${py}V${by}M${x1} ${by}H${x2}${xs.map(x => `M${x} ${by}V${top(kids[0])}`).join('')}" class="ln"/>`; });
   const q = (f.q || '').trim().toLowerCase();
-  const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q);
+  const anc = new Set(); (function up(id) { if (!id || anc.has(id) || !P[id]) return; anc.add(id); up(P[id].f); up(P[id].mo); })(center);
+  const desc = new Set(); (function dn(id) { (KIDS[id] || []).forEach(k => { if (!desc.has(k)) { desc.add(k); dn(k); } }); })(center);
+  const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q); const br = !anc.has(id) && !desc.has(id) && (KIDS[id] || []).some(k => !anc.has(k) && !desc.has(k)); /* бічна гілка, що має продовження */
     const dim = f.fam && !(p.fam || []).includes(f.fam);
-    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}</a>`; }).join('');
+    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}</a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 18}px;top:${n.y + T2.H - 9}px" title="Показати дітей">▾${h.kids}</button>`;
@@ -372,7 +374,7 @@ function vAll(tabs) {
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 50}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
-    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}`)}
+    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span><span class="small muted"><i class="sw brc" style="display:inline-block;width:18px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px"></i>товста рамка — у брата чи сестри є нащадки в дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}`)}
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
     `;
 }
