@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131106';
+const BUILD = '202610131112';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -713,7 +713,7 @@ function vFamilies() {
   const ft = S.ui.ftab || 'rid', tabs = `<div class="seg mtabs"><button type="button" class="${ft === 'rid' ? 'on' : ''}" data-act="fam-tab" data-v="rid">Історія роду</button><button type="button" class="${ft === 'br' ? 'on' : ''}" data-act="fam-tab" data-v="br">Гілки</button></div>`;
   if (ft === 'rid') return `<div class="pghead"><h1 title="Розповідь про родину й гілки — за документами.">Історія</h1>${tabs}<p class="tabnote" title="Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.">Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.</p></div>${vRid()}`;
   return `<div class="pghead"><h1 title="Розповідь про родину й гілки — за документами.">Історія</h1>${tabs}<p class="tabnote" title="Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.">Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.</p></div>
-  <div class="chips" style="margin-bottom:24px">${S.data.families.map(f => `<a class="btn line small" href="#/fam/${f.id}">${esc(f.title)}</a>`).join('')}</div>
+  <div class="chips stk2 famchips">${S.data.families.map(f => `<a class="btn line small" href="#fam-${f.id}" data-act="fam-jump" data-id="${f.id}">${esc(f.title)}</a>`).join('')}</div>
   <div class="famlist">${S.data.families.map(famBlock).join('')}</div>`;
 }
 function famBlock(f) {
@@ -721,8 +721,9 @@ function famBlock(f) {
     <div><div class="eyebrow">${esc(f.side || '')}</div><h2>${esc(f.title)}</h2><div class="muted small">${esc(f.places || '')}</div></div>
     <div class="famstory">${glossify(f.story || '')}</div>
     ${canEdit() ? `<div><button class="btn line small" data-famedit="${f.id}">Редагувати історію</button></div>` : ''}
+    <div class="sec"><h3>Хто в гілці</h3><div class="fammem">${famMembersHtml(f)}</div></div>
     <div class="sec"><h3>Спогади про родину</h3>${storiesHtml(S.data.stories.filter(s => s.target === 'fam:' + f.id))}${canAdd('fam:' + f.id) ? storyForm('fam:' + f.id) : ''}</div>
-  </div><div>${famMembersHtml(f)}</div></article>`;
+  </div></article>`;
 }
 function vFamily() { const f = FAM[S.arg]; if (!f) return vFamilies(); curTarget = 'fam:' + f.id; return `<p><a href="#/families" class="small">← Усі родини</a></p><div class="famlist">${famBlock(f)}</div>`; }
 
@@ -2300,6 +2301,17 @@ document.addEventListener('click', async e => {
   }
 });
 
+/* «Другі шапки» (вкладки, фільтри, сортування) закріплені під верхньою шапкою й складаються одна під одну */
+const STICKY_SEL = 'main .pghead, main .plbar, main .mapbar, main .famchips, main .geobar, main .stbar, main .hypbar, main .bar1, main .qfilter';
+function stickBars() {
+  const hdr = document.querySelector('header.top'), h0 = hdr && getComputedStyle(hdr).position !== 'static' ? hdr.offsetHeight : 0;
+  document.documentElement.style.setProperty('--toph', h0 + 'px');
+  let top = h0;
+  document.querySelectorAll(STICKY_SEL).forEach(el => { if (el.closest('.modal')) return; el.classList.add('stk'); el.style.top = top + 'px'; top += el.offsetHeight; });
+  document.documentElement.style.setProperty('--stkh', top + 'px'); // для прокрутки до якорів
+}
+addEventListener('resize', () => { clearTimeout(window.__stkT); window.__stkT = setTimeout(stickBars, 150); });
+document.addEventListener('click', e => { const a = e.target.closest('[data-act="fam-jump"]'); if (!a) return; e.preventDefault(); const el = document.getElementById('fam-' + a.dataset.id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--stkh')) || 120) - 8, behavior: 'smooth' }); });
 /* ───── Рендер ───── */
 function render() {
   const app = $('#app');
@@ -2316,6 +2328,7 @@ function render() {
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'geo') requestAnimationFrame(geoMount);
+  stickBars();
   if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');
   const bkNew = document.getElementById('bk');
   if (bkNew && bkKeep && BOOK.key && bkKeep.querySelector('.bk-book')?.children.length) bkNew.replaceWith(bkKeep);
