@@ -10375,5 +10375,16 @@
     "u": "https://uk.wikipedia.org/wiki/%D0%90%D0%B3%D0%B0%D0%BF%D1%96%D1%82_(%D0%93%D1%83%D0%BC%D0%B5%D0%BD%D1%8E%D0%BA)"
    }
   ]
+ },
+ {
+  "key": "leonid-src-book",
+  "kind": "personpatch",
+  "person": "p_8a967c431c",
+  "srcadd": [
+   {
+    "t": "Книга А. Страшука про церкву Великої Мотовилівки, с. 43, 50, 94",
+    "u": "http://www.vm-school.org.ua/docs/Cerkvi%20Motovilivki.pdf"
+   }
+  ]
  }
 ]
