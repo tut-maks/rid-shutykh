@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610132114';
+const BUILD = '202610132121';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1179,7 +1179,11 @@ function bookDims() {
   let pw, ph;
   const full = document.documentElement.classList.contains('bk-full'); // режим «лише книга»: без шапок і меню
   if (spread) { pw = Math.min((W - 48) / 2, full ? 640 : 520, (vh - (full ? 90 : 210)) / 1.42); ph = pw * 1.42; }
-  else { const mob = innerWidth <= 820; pw = Math.min(W - 16, full ? Math.min(560, innerWidth - 20) : 460, (vh - (full ? 84 : mob ? 214 : 190)) / 1.5); ph = pw * 1.5; } // телефон: шапка 52 + панель книги 56 + нижнє меню 64
+  else { const mob = innerWidth <= 820;
+    // телефон: книга вміщається між шапкою сторінки й панеллю гортання + нижнім меню — щоб «Читати далі» на обкладинці було видно одразу
+    const top = mob && !full ? Math.max(0, st.getBoundingClientRect().top + scrollY) : 0, bars = mob ? ((document.querySelector('.bk-bar')?.offsetHeight || 60) + (document.querySelector('.bnav')?.offsetHeight || 64) + 14) : 0;
+    const avail = full ? vh - 84 : mob ? Math.max(380, vh - top - bars) : vh - 190;
+    pw = Math.min(W - 16, full ? Math.min(560, innerWidth - 20) : 460, avail / 1.5); ph = pw * 1.5; } // телефон: шапка 52 + панель книги 56 + нижнє меню 64
   return { spread, pw: Math.floor(pw), ph: Math.floor(ph), fs: bkFs() };
 }
 function bookPaginate(html, d) {
@@ -1246,7 +1250,7 @@ function bookPageHtml(i) {
   return `<div class="bk-page"><div class="bk-head">${esc(p.chapter || '')}</div><div class="bk-body">${p.html}</div><div class="bk-foot">${num}</div></div>`;
 }
 function bookCoverHtml() {
-  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>нашого роду</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><div class="bk-by">Зібрав і записав<br><b>Максим Шутий</b></div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
+  return `<div class="bk-cover" data-bk="open" role="button" aria-label="Відкрити книгу"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>нашого роду</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><div class="bk-by">Зібрав і записав<br><b>Максим Шутий</b></div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
 }
 function bookRender() {
   const book = document.getElementById('bk-book'); if (!book) return;
