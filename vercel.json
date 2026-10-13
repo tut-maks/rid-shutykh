@@ -1,6 +1,9 @@
 {
   "outputDirectory": "public",
   "cleanUrls": true,
+  "regions": [
+    "fra1"
+  ],
   "functions": {
     "api/setup.js": {
       "maxDuration": 60,
