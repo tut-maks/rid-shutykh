@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131008';
+const BUILD = '202610131017';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2294,7 +2294,9 @@ document.addEventListener('click', async e => {
     if (d.famedit) { const f = FAM[d.famedit]; modal(`<h2>${esc(f.title)}</h2><p class="small muted">Абзаци розділяйте порожнім рядком. Жирний текст: **так**.</p><textarea class="in" id="fe" style="min-height:300px">${esc(htmlToText(f.story || ''))}</textarea><div class="btns"><button class="btn" data-act="famsave">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="emsg"></span></div>`); S.ui.famEditing = f.id; return; }
     if (d.atab) { S.admin.tab = d.atab; S.admin.err = null; render(); return loadAdmin(); }
     if (d.per) { S.admin.period = d.per; if (d.per !== 'custom') { render(); return loadAdmin(); } render(); return; }
-    if (d.member !== undefined) { S.admin.member = d.member || null; S.admin.log = null; if (!d.member) { render(); return; } return loadAdmin(); }
+    if (d.member !== undefined) { S.admin.member = d.member && S.admin.member !== d.member ? d.member : null; // другий клік по тому самому рядку — згорнути
+      if (!S.admin.member) { S.admin.log = null; S.ui.keepScroll = true; render(); return; } S.admin.log = null; if (!S.admin.stats) return loadAdmin(); // лише журнал — загальні цифри не перезавантажуємо, щоб не «стрибали»
+      { const { from, to } = periodRange(); try { S.admin.log = await api(`/api/admin?a=log&id=${S.admin.member}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); } catch (err) { toast(errText(err)); } S.ui.keepScroll = true; render(); return; } }
     if (d.k) { S.admin.dir = S.admin.sort === d.k ? -(S.admin.dir || -1) : -1; S.admin.sort = d.k; render(); return; }
     if (d.revert) { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відкотити?'; return; } await api('/api/admin?a=revert', { body: { id: d.revert } }); await load(); S.admin.revs = null; await loadAdmin(); toast('Відкочено'); return; }
     if (d.reset) { const r = await api('/api/admin?a=reset', { body: { member_id: d.reset } }); modal(`<h2>Посилання для нового пароля</h2><p>Надішліть його особисто. Діє 7 днів, одноразове.</p><input class="in mono" value="${esc(r.link)}" readonly><div class="btns"><button class="btn" data-act="copy" data-v="${esc(r.link)}">Скопіювати</button><button class="btn line" data-act="close">Готово</button></div>`); return; }

@@ -233,10 +233,10 @@ export default handler(async (req, res, ctx, url) => {
     const { from, to } = period(url);
     const len = to - from; const pFrom = new Date(from - len);
     const [events, prevEvents, revs, prevRevs, members, persons, docs] = await Promise.all([
-      db.list('events', { gte: { at: iso(from) }, lt: { at: iso(to) }, limit: 200000 }),
-      db.list('events', { gte: { at: iso(pFrom) }, lt: { at: iso(from) }, limit: 200000 }),
-      db.list('revisions', { gte: { at: iso(from) }, lt: { at: iso(to) }, limit: 50000 }),
-      db.list('revisions', { gte: { at: iso(pFrom) }, lt: { at: iso(from) }, limit: 50000 }),
+      db.list('events', { gte: { at: iso(from) }, lt: { at: iso(to) }, order: 'id', limit: 200000 }),
+      db.list('events', { gte: { at: iso(pFrom) }, lt: { at: iso(from) }, order: 'id', limit: 200000 }),
+      db.list('revisions', { gte: { at: iso(from) }, lt: { at: iso(to) }, order: 'id', limit: 50000 }),
+      db.list('revisions', { gte: { at: iso(pFrom) }, lt: { at: iso(from) }, order: 'id', limit: 50000 }),
       db.list('members', { select: 'id,name,role,active' }),
       db.list('persons', { select: 'id,data' }),
       db.list('documents', { select: 'id,data' }),
@@ -265,8 +265,8 @@ export default handler(async (req, res, ctx, url) => {
   if (a === 'log') {
     const id = S(url.searchParams.get('id'), 60); const { from, to } = period(url);
     const [events, revs] = await Promise.all([
-      db.list('events', { eq: { member_id: id }, gte: { at: iso(from) }, lt: { at: iso(to) }, order: 'at', desc: true, limit: 3000 }),
-      db.list('revisions', { eq: { by: id }, gte: { at: iso(from) }, lt: { at: iso(to) }, order: 'at', desc: true, limit: 1000 }),
+      db.list('events', { eq: { member_id: id }, gte: { at: iso(from) }, lt: { at: iso(to) }, order: 'id', desc: true, limit: 3000 }),
+      db.list('revisions', { eq: { by: id }, gte: { at: iso(from) }, lt: { at: iso(to) }, order: 'id', desc: true, limit: 1000 }),
     ]);
     return send(res, 200, { events, revisions: revs });
   }
