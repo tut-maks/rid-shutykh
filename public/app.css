@@ -1267,3 +1267,5 @@ html{touch-action:manipulation}
   .bk-cover .bk-open{margin-top:4px;padding:8px 18px}
   .bk-cover .bk-mk{font-size:11px}
 }
+/* Телефон: свайп по книзі лише гортає сторінки — сайт під ним не їздить угору-вниз (книга вже вміщається в екран) */
+@media (max-width:820px){.bk-stage,.bk-stage *{touch-action:pinch-zoom}.bk-stage button,.bk-stage a{touch-action:manipulation}}
