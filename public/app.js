@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130003';
+const BUILD = '202610130005';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -252,7 +252,7 @@ function vPedigree(tabs) {
     ${treeBar(tabs, `<div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>`)}
     <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
 }
-const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button></div>${mini ? '<canvas class="minimap" id="minimap" width="220" height="140"></canvas>' : ''}`;
+const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button>${mini ? `<button type="button" data-act="mini-tog" class="${S.ui.mini ? 'on' : ''}" title="Мінікарта: показати / сховати">▦</button>` : ''}</div>${mini ? `<canvas class="minimap" id="minimap" width="220" height="140"${S.ui.mini ? '' : ' hidden'}></canvas>` : ''}`;
 
 /* ── Дерево згори вниз: людина в центрі, над нею батьки, діди…; біля кожного предка — брати й сестри ── */
 const T2 = { W: 216, H: 76, GX: 22, GY: 92, PAD: 60 };
@@ -1647,6 +1647,7 @@ document.addEventListener('click', async e => {
     if (act === 'pp-back') { const h = S.ui.ppHist || []; if (h.length) { S.ui.pp = h.pop(); ppPaint(); } return; }
     if (act === 'pp-tab') { S.ui.ppTab = d.v; ppPaint(); return; }
     if (act === 'pp-tree') { const id = S.ui.pp; S.ui.tf ||= {}; S.ui.tf.center = id; if (S.ui.tmode === 'ped') S.ui.tmode = 'all'; delete S.ui.vp?.all; if (S.view !== 'tree') location.hash = '#/tree'; else render(); return; }
+    if (act === 'mini-tog') { S.ui.mini = !S.ui.mini; render(); return; }
     if (act === 't-me') { S.ui.tf ||= {}; S.ui.tf.center = startId(); S.ui.findId = startId(); delete S.ui.vp?.all; delete S.ui.vp?.ped; if (S.view === 'tree' && S.arg) location.hash = '#/tree'; else render(); return; }
     if (act === 'close') { closeLayer(); return; }
     if (act === 'upd-reload') { t.disabled = true; t.textContent = 'Оновлюю…'; try { const ks = await caches?.keys?.(); for (const k of ks || []) await caches.delete(k); } catch {} location.reload(); return; }
