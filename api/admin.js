@@ -133,7 +133,7 @@ export default handler(async (req, res, ctx, url) => {
       email = m.email; name = m.name; role = m.role === 'owner' ? 'editor' : m.role;
     } else {
       email = S(b.email, 200).toLowerCase(); name = S(b.name, 80); role = b.role === 'editor' ? 'editor' : 'viewer'; person_id = S(b.person_id, 60) || null;
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'email');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && !/^[a-z0-9][a-z0-9._-]{2,31}$/.test(email)) return fail(res, 400, 'email'); // пошта або простий логін (для тих, у кого пошти немає)
       const ex = await db.get('members', { eq: { email } }); if (ex) return fail(res, 409, 'exists');
     }
     const t = token(32);
