@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610132104';
+const BUILD = '202610132113';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1547,11 +1547,14 @@ function vDocs() {
    Клік по мініатюрі — відкрито; клік по фото чи темному тлу — закрито (✕ і Esc теж).
    Збільшити: подвійний клік / подвійний дотик, кнопка 🔍, колесо, два пальці; збільшене тягнеться пальцем чи мишею.
    Кілька сторінок: стрілки ‹ ›, клавіші ← →, свайп убік. Свайп униз — закрити. */
+// Якщо сторінку на телефоні випадково збільшили (щипком чи подвійним дотиком) — повертаємо звичайний масштаб,
+// інакше у переглядачі фото кнопки «⋯» і «✕» опиняються за краєм екрана
+function unzoomPage() { const vv = window.visualViewport; if (!vv || vv.scale <= 1.01) return; const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = m.content; m.content = c.replace(/,?\s*maximum-scale=[\d.]+/, '') + ',maximum-scale=1.0001'; setTimeout(() => { m.content = c; }, 60); }
 const pvPeople = ids => ids.filter(x => P[x]).map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('');
 function viewer({ title, pages, line, text, src, people, photoId, docId, marks, items, startAt }) {
   const canPhoto = !!(items ? items.some(x => x.photoId) : photoId); let i = startAt || 0, sc = 1, tx = 0, ty = 0, mk = (marks || []).slice(), draw = null;
   const L = $('#layer');
-  document.body.classList.add('noscroll');
+  document.body.classList.add('noscroll'); unzoomPage();
   const who_ = (people || []).filter(x => P[x]);
   L.innerHTML = `<div class="pv" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <div class="pv-top"><div class="pv-t"><b>${esc(title)}</b>${pages.length > 1 ? `<span class="mono pv-n"></span>` : ''}</div>
