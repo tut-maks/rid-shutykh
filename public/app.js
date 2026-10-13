@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131129';
+const BUILD = '202610131135';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -55,7 +55,7 @@ const GENNAME = g => g === 0 ? 'Покоління Максима' : g === 1 ? '
 async function load() { S.data = await api('/api/data'); index(); }
 const yearOf = s => { const m = String(s || '').match(/(\d{4})/); return m ? (String(s).trim().startsWith('~') ? '≈' : '') + m[1] : ''; };
 const life = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '?'}–${d}` : b ? `н. ${b}` : ''; };
-const maidenOf = p => p && p.m && p.m !== p.s ? p.m : ''; // дівоче прізвище — у дужках після теперішнього, всюди
+const maidenOf = p => p && p.m ? p.m : ''; // дівоче прізвище — у дужках після теперішнього, всюди
 const full = p => [p.n, p.pt, p.s].filter(Boolean).join(' ') + (maidenOf(p) ? ` (${maidenOf(p)})` : '');
 const short = p => ([p.n, p.s].filter(Boolean).join(' ') || '(без імені)') + (maidenOf(p) ? ` (${maidenOf(p)})` : '');
 const byBirth = (a, b) => (yearOf(P[a]?.b).replace('≈', '') || '9999').localeCompare(yearOf(P[b]?.b).replace('≈', '') || '9999');
