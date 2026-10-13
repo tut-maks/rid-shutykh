@@ -969,3 +969,12 @@ main{padding-block:14px 60px}
 .bk-by b{display:block;font-family:'Old Standard TT',serif;font-size:19px;letter-spacing:.04em;text-transform:none;opacity:1}
 .msh-cr{padding:4px 18px 10px;font-size:13px;color:#8a8175}.msh-cr b{color:var(--wine)}
 @media(max-width:820px){.credit{margin:40px 16px 96px;padding-top:18px}.credit p{font-size:14px}}
+/* Панель книги на ПК — удвічі менша (13.10). Телефон не чіпаємо: там кнопки ≥44 px */
+@media(min-width:821px){
+  .bk-bar{gap:4px;padding:3px 6px}
+  .bk-b{min-width:24px;height:22px;padding:0 7px;font-size:11px;border-radius:11px;line-height:20px}
+  .bk-b span,.bk-b.txt{font-size:11px}
+  .bk-b svg,.bk-b img{width:12px;height:12px}
+  .bk-n{min-width:70px;font-size:11px}
+  .bk-pg{min-height:22px;padding:2px 6px;font-size:11px}
+}
