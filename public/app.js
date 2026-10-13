@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130650';
+const BUILD = '202610130651';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1502,7 +1502,7 @@ function vAdmin() {
   } else if (a.tab === 'access' && a.members) {
     const m = a.members;
     body = joinBlock() + `<div class="sec" style="margin-top:26px"><h3>Запросити родича особисто</h3>
-      <div class="grid2"><label class="f">Ім'я<input class="in" id="iv-name" placeholder="напр. Тетяна Іванівна"></label><label class="f" title="Якщо пошти немає — придумайте логін латиницею, напр. vasyl.shutyi">Пошта або логін<input class="in" id="iv-email" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="пошта або логін, напр. vasyl.shutyi"></label>
+      <div class="grid2"><label class="f">Ім'я<input class="in" id="iv-name" placeholder="напр. Тетяна Іванівна"></label><label class="f" title="Якщо пошти немає — придумайте короткий логін, можна українськими літерами, напр. василь">Пошта або логін<input class="in" id="iv-email" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="пошта або логін, напр. василь"></label>
       <label class="f">Права<select class="in" id="iv-role"><option value="editor">Редактор — додає й змінює картки</option><option value="viewer">Глядач — лише дивиться і пише спогади</option></select></label>
       <label class="f">Хто це в дереві<select class="in" id="iv-person"><option value="">—</option>${Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}</option>`).join('')}</select></label></div>
       <div class="btns"><button class="btn" data-act="invite">Створити запрошення</button><span class="msg" id="ivmsg"></span></div>
