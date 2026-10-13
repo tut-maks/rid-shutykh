@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131052';
+const BUILD = '202610131103';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -414,14 +414,14 @@ function vAll(tabs) {
     return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}</a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
-    if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 18}px;top:${n.y + T2.H - 9}px" title="Показати дітей">▾${h.kids}</button>`;
+    if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 4}px;top:${n.y + T2.H - 13}px" title="Показати дітей">▾${h.kids}</button>`;
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Показати братів і сестер (${h.sib})">▸${h.sib}</button>`;
     return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}).filter(k => S.ui.sibx[k]), Object.keys(S.ui.dsib || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Згорнути">◂−</button>`; }).join('');
   // інші шлюби людей у дереві (чоловік/дружина, яких немає на дереві): значок «⚭ +N» → бічна панель
   const spx = [...V].map(id => { const n = L.N[id]; const open = (S.ui.spx || {})[id];
-    if (open) return `<button type="button" class="tg sp on" data-spx="${id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="Сховати інші шлюби">⚭ −</button>`;
+    if (open) return `<button type="button" class="tg sp on" data-spx="${id}" style="left:${n.x + 10}px;top:${n.y + T2.H - 13}px" title="Сховати інші шлюби">⚭ −</button>`;
     const o = (SPOUSES[id] || []).filter(x => P[x.id] && !V.has(x.id)); if (!o.length) return '';
-    return `<button type="button" class="tg sp" data-spx="${id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="${esc('Показати в дереві: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '') + (ucU(x) ? ' — ' + ucLabel(id, x) : '')).join('; '))}">⚭ +${o.length}</button>`; }).join('');
+    return `<button type="button" class="tg sp" data-spx="${id}" style="left:${n.x + 10}px;top:${n.y + T2.H - 13}px" title="${esc('Показати в дереві: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '') + (ucU(x) ? ' — ' + ucLabel(id, x) : '')).join('; '))}">⚭ +${o.length}</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${Math.max(0, i * (T2.H + T2.GY) + T2.PAD - 62)}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
@@ -1872,11 +1872,36 @@ function evLine(e) {
 function todayCard() {
   const E = dayEvents(), today = E.filter(e => e.days === 0), soon = E.filter(e => e.days > 0 && e.days <= 21), bd = soon.filter(e => e.kind === 'bday');
   const n = new Date();
-  return `<div class="hcard"><h3>Цей день в історії роду <span class="small muted">${n.getDate()} ${MONTHS_G[n.getMonth()]}</span></h3>
+  return `<div class="hcard"><h3>Цей день в історії роду <span class="small"><button class="btn line small" data-act="cal-open">📅 Календар</button></span></h3><p class="small muted" style="margin:-4px 0 8px">${n.getDate()} ${MONTHS_G[n.getMonth()]}</p>
     ${today.length ? `<ul class="evl">${today.map(evLine).join('')}</ul>` : `<p class="small muted">Сьогодні в документах роду подій немає.</p>`}
     ${soon.length ? `<h4>Найближчі три тижні</h4><ul class="evl">${soon.slice(0, 8).map(evLine).join('')}</ul>` : ''}
     ${bd.length ? `<p class="small muted">Не забудьте привітати: ${bd.map(e => pLink(e.ids[0])).join(', ')}.</p>` : ''}</div>`;
 }
+
+
+/* ── Календар роду: місяць туди-сюди, по днях — народження, смерті, шлюби, документи ── */
+const MONTHS_N = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+function calHtml() {
+  const now = new Date(), m = S.ui.calM ?? now.getMonth(), sel = S.ui.calD || (m === now.getMonth() ? now.getDate() : 1);
+  const E = dayEvents().filter(e => e.dm.m - 1 === m), by = {}; E.forEach(e => (by[e.dm.d] ||= []).push(e));
+  const y = now.getFullYear(), first = (new Date(y, m, 1).getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate();
+  const cells = []; for (let i = 0; i < first; i++) cells.push('<span class="cal-e"></span>');
+  for (let d = 1; d <= days; d++) { const L = by[d] || [], bd = L.some(e => e.kind === 'bday'), today = m === now.getMonth() && d === now.getDate();
+    cells.push(`<button class="cal-d${L.length ? ' has' : ''}${bd ? ' bd' : ''}${today ? ' today' : ''}${d === sel ? ' sel' : ''}" data-act="cal-day" data-v="${d}"><b>${d}</b>${L.length ? `<i>${L.length}</i>` : ''}</button>`); }
+  const list = (by[sel] || []).sort((a, b) => a.dm.y - b.dm.y);
+  return `<div class="cal"><div class="cal-h"><button class="btn line small" data-act="cal-m" data-v="-1" aria-label="Попередній місяць">‹</button><b>${MONTHS_N[m]}</b><button class="btn line small" data-act="cal-m" data-v="1" aria-label="Наступний місяць">›</button>${m !== now.getMonth() ? '<button class="btn line small" data-act="cal-now">Сьогодні</button>' : ''}<span class="small muted">${E.length} подій за місяць</span></div>
+    <div class="cal-w">${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map(x => `<span>${x}</span>`).join('')}</div><div class="cal-g">${cells.join('')}</div>
+    <h4>${sel} ${MONTHS_G[m]}</h4>${list.length ? `<ul class="evl">${list.map(evLine).join('')}</ul>` : '<p class="small muted">Цього дня подій у документах роду немає.</p>'}
+    <p class="small muted"><span class="cal-lg has"></span> є події · <span class="cal-lg bd"></span> день народження живого родича</p></div>`;
+}
+function openCal() { modal(`<h2>Календар роду</h2><div id="calbox">${calHtml()}</div><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); }
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return; const a = t.dataset.act;
+  if (a === 'cal-open') { S.ui.calM = null; S.ui.calD = null; openCal(); ev('open', 'calendar', 'cal'); return; }
+  if (a === 'cal-m') { const now = new Date(); S.ui.calM = (((S.ui.calM ?? now.getMonth()) + +t.dataset.v) % 12 + 12) % 12; S.ui.calD = 1; $('#calbox').innerHTML = calHtml(); return; }
+  if (a === 'cal-now') { S.ui.calM = null; S.ui.calD = null; $('#calbox').innerHTML = calHtml(); return; }
+  if (a === 'cal-day') { S.ui.calD = +t.dataset.v; $('#calbox').innerHTML = calHtml(); return; }
+});
 
 /* ── Цифри роду ── */
 function famStats() {
