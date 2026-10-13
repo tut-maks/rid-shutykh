@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130945';
+const BUILD = '202610130947';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -572,7 +572,7 @@ function parDocs(p, own) {
     return `<details class="pdocs" data-pd="${esc(key)}"${open ? ' open' : ''}><summary>Документи ${t} — ${esc(full(par))} <span class="muted small">(${ds.length})</span></summary><div class="thumbs">${ds.map(docCard).join('')}</div></details>`;
   }).join('');
 }
-document.addEventListener('toggle', e => { const h = e.target; if (h.matches?.('details[data-hs]')) { (S.ui.hsOpen = S.ui.hsOpen || {})[h.dataset.hs] = h.open; const b = document.querySelector('[data-act="hs-all"]'); if (b) { const ds = [...document.querySelectorAll('details.hsec[data-hs]')].filter(x => /^\d+$/.test(x.dataset.hs)); b.textContent = ds.every(x => x.open) ? 'Згорнути все' : 'Розгорнути все'; } } }, true);
+document.addEventListener('toggle', e => { const h = e.target; if (h.matches?.('details[data-hs]')) { (S.ui.hsOpen = S.ui.hsOpen || {})[h.dataset.hs] = h.open; const b = document.querySelector('[data-act="hs-all"]'); if (b) { const ds = [...document.querySelectorAll('details.hsec[data-hs]')].filter(x => /^\d+$/.test(x.dataset.hs)); b.textContent = ds.every(x => x.open) ? 'Згорнути все' : 'Читати все'; } } }, true);
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches?.('details[data-pd]')) { (S.ui.pdOpen = S.ui.pdOpen || {})[d.dataset.pd] = d.open; } }, true);
 /* ── Пояснення старих і архівних слів: слово* + виноска під текстом ── */
 const GLOSS = [
@@ -1268,7 +1268,7 @@ function vHistory() {
     const src = l => (l || []).map(x => x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>` : esc(x.name)).join(' · ');
     const O = S.ui.hsOpen || {}, all = v.sections.length && v.sections.every((_, i) => O[i]);
     const det = (k, title, n, body) => `<details class="hsec" data-hs="${k}"${O[k] ? ' open' : ''}><summary><span class="hs-t">${title}</span><span class="hs-n">${n}</span></summary>${body}</details>`;
-    return `<div class="hist">${glossify(`<p>${esc(v.intro || '')}</p><p class="hs-all"><button type="button" class="btn line small" data-act="hs-all">${all ? 'Згорнути все' : 'Розгорнути все'}</button></p>` + v.sections.map((sec, i) => det(i, esc(sec.title), `${sec.items.length} ${sec.items.length === 1 ? 'подія' : sec.items.length < 5 ? 'події' : 'подій'}`, `<div class="hl">${sec.items.map(it => `<div class="hr"><span class="mono">${esc(it.y || '')}</span><span>${esc(it.t)}${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</span></div>`).join('')}</div>`)).join(''))}
+    return `<div class="hist">${glossify(`<p>${esc(v.intro || '')}</p><p class="hs-all"><button type="button" class="btn line small" data-act="hs-all">${all ? 'Згорнути все' : 'Читати все'}</button></p>` + v.sections.map((sec, i) => det(i, esc(sec.title), `${sec.items.length} ${sec.items.length === 1 ? 'подія' : sec.items.length < 5 ? 'події' : 'подій'}`, `<div class="hl">${sec.items.map(it => `<div class="hr"><span class="mono">${esc(it.y || '')}</span><span>${esc(it.t)}${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</span></div>`).join('')}</div>`)).join(''))}
       ${v.ask?.length ? det('ask', 'Що варто замовити в архівах', v.ask.length, `<ul class="small">${v.ask.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`) : ''}
       ${v.sources?.length ? det('src', 'Усі джерела', v.sources.length, `<ol class="small hsrcs">${v.sources.map(x => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>` : esc(x.name)}</li>`).join('')}</ol>`) : ''}</div>`;
   }
