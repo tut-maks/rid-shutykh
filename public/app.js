@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130725';
+const BUILD = '202610130727';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -95,7 +95,7 @@ function top() {
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
   return `<header class="top"><div class="wrap topw">
     <a class="brand" href="#/tree">Рід Шутих<small>Родинний архів</small></a>
-    <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ' title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть"' : ''}>${t}${k === 'q' && qb ? `<i class="bn-badge in">${qb}</i>` : ''}</a>`).join('')}</nav>
+    <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ` title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть${qb ? '. Нових: ' + qb : ''}"` : ''}>${k === 'q' ? 'Запитання<span class="nq-l">&nbsp;й уточнення</span>' : t}${k === 'q' && qb ? `<i class="nq-b" aria-label="нових: ${qb}">${qb}</i>` : ''}</a>`).join('')}</nav>
     <div class="who"><a class="tic" href="#/people" data-act="gsearch" title="Знайти людину" aria-label="Пошук">${IC.search}</a>
       <details class="umenu"><summary class="uav" title="${esc(S.me.name || S.me.email || '')}"><span class="av sm">${esc(initials(me))}</span>${qb + jb ? `<i class="bn-badge">${qb + jb}</i>` : ''}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
         <div class="um-b"><div class="um-n">${esc(S.me.name || '')}<span>${esc(S.me.email || '')}</span></div>
