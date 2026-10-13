@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610132113';
+const BUILD = '202610132114';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1843,7 +1843,7 @@ const pickVal = id => { const v = ($('#' + id)?.value || '').trim(); if (!v) ret
 function tgCard(small) {
   const u = CFG_().tg;
   if (!u) return isOwner() ? `<div class="hcard tgc"><div class="tgc-i">TG</div><div><b>Група родини в Telegram</b><p class="small muted">Створіть групу (налаштування: «Схвалювати нових учасників») і вставте сюди посилання-запрошення — воно з'явиться всюди на сайті.</p><button class="btn small" data-act="tg-set">Додати посилання</button></div></div>` : '';
-  return `<div class="hcard tgc${small ? ' sm' : ''}"><div class="tgc-i">TG</div><div><b>Наша група в Telegram</b><p class="small muted">Фото, спогади, знахідки з архівів і родинні новини — усі разом.</p><a class="btn tgbtn" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-soc="tggroup">Приєднатися до групи</a>${isOwner() ? ` <button class="btn line small" data-act="tg-set">Змінити</button>` : ''}</div></div>`;
+  return `<div class="hcard tgc${small ? ' sm' : ''}"><div class="tgc-i">TG</div><div><b>Наша група в Telegram — доєднуйтесь!</b><p class="small muted">Фото, спогади, знахідки з архівів і родинні новини — усі разом.</p><a class="btn tgbtn" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-soc="tggroup">Приєднатися до групи</a>${isOwner() ? ` <button class="btn line small" data-act="tg-set">Змінити</button>` : ''}</div></div>`;
 }
 function openTgSet() {
   modal(`<h2>Група родини в Telegram</h2><p class="small muted">У Telegram: група → Редагувати → Запрошення (Invite links) → скопіюйте посилання (виду https://t.me/+…). Порада: увімкніть «Схвалювати нових учасників», тоді чужі не зайдуть навіть із посиланням.</p>
