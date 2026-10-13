@@ -2,7 +2,7 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "regions": [
-    "fra1"
+    "dub1"
   ],
   "functions": {
     "api/setup.js": {
