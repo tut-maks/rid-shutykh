@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130727';
+const BUILD = '202610130800';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -58,6 +58,7 @@ const life = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '
 const full = p => [p.n, p.pt, p.s].filter(Boolean).join(' ');
 const short = p => [p.n, p.s].filter(Boolean).join(' ') || '(без імені)';
 const byBirth = (a, b) => (yearOf(P[a]?.b).replace('≈', '') || '9999').localeCompare(yearOf(P[b]?.b).replace('≈', '') || '9999');
+const srcSite = u => /familysearch\.org/.test(u) ? 'FamilySearch' : /pamyat-naroda\.ru/.test(u) ? '«Память народа» (документи Другої світової)' : /obd-memorial/.test(u) ? 'ОБД «Мемориал»' : (String(u).match(/^https?:\/\/(?:www\.)?([^/]+)/) || [])[1] || '';
 const img = (q, thumb) => `/api/file?${q}${thumb ? '&thumb=1' : ''}`;
 const portrait = p => p.portrait ? img('photo=' + encodeURIComponent(p.portrait), true) : null;
 const ph = p => { const u = portrait(p); return `<span class="ph">${u ? `<img src="${u}" alt="" loading="lazy">` : esc((p.n || '?')[0])}</span>`; };
@@ -485,7 +486,7 @@ function vPerson() {
       ${p.d ? `<dt>Смерть</dt><dd><span class="mono">${esc(p.d)}</span>${p.dp ? ' · ' + esc(p.dp) : ''}</dd>` : ''}
     </dl>
     ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
-    <div class="sec" style="margin-top:18px"><h3>Гілка <span class="small muted" style="text-transform:none;letter-spacing:0">натисніть, щоб перейти</span></h3>
+    <div class="sec" style="margin-top:18px"><h3>Гілка <span class="small muted" style="text-transform:none;letter-spacing:0">натисніть на людину нижче — відкриється її картка</span></h3>
       <div class="branch">
         ${L('Діди й баби', gp)}${L('Батьки', par)}
         <div class="bl"><span>${esc(p.sex === 'f' ? 'Вона' : p.sex === 'm' ? 'Він' : 'Ця людина')}${sp.length ? ' і подружжя' : ''}</span><div class="row"><span class="focus">${ph(p)}<span><b style="font-family:var(--f-display);font-size:16px">${esc(short(p))}</b><br><em class="mono small muted">${esc(life(p))}</em></span></span>${sp.map(s => mini(s.id) + (s.date ? `<span class="small muted mono" style="align-self:center">⚭ ${esc(s.date)}</span>` : '')).join('')}</div></div>
@@ -504,7 +505,7 @@ function vPerson() {
       ${qAboutHtml(p.id)}
       ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
-    ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">FamilySearch</span></li>`).join('')}</ul></div>` : ''}
+    ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">${esc(srcSite(s.u))}</span></li>`).join('')}</ul></div>` : ''}
     <div class="sec"><h3>Документи ${canEdit() ? `<button class="btn line small" data-act="docform">+ Архівний документ</button>` : ''}</h3>
       ${canEdit() && S.ui.docform ? `<div class="docform"><input class="in" id="dtitle" placeholder="Назва: напр. «Народження Микити Максимовича»"><input class="in" id="ddate" placeholder="Дата, напр. 27.05.1818"><input class="in" id="dsrc" placeholder="Джерело: архів, книга, запис №"><label class="btn line small" style="cursor:pointer">Вибрати скани<input type="file" accept="image/*" multiple data-docup="${p.id}" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
       ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}

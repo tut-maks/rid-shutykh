@@ -84,6 +84,11 @@ export default handler(async (req, res, _c, url) => {
         await revision('photo', ph.id, 'create', null, { person_id: person.id, caption: it.caption, path: p }, by);
         if (it.portrait) { const nd = { ...person.data, portrait: ph.id }; await db.update('persons', { eq: { id: person.id } }, { data: nd, version: person.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', person.id, 'update', person.data, nd, by); }
         out.push(key + ': ok');
+      } else if (it.kind === 'photodel') { // прибрати фото, яке колись додав імпорт (напр. замінили обрізаним)
+        const p = `photos/${String(it.person)}/imp-${String(it.of).replace(/[^a-z0-9_-]/gi, '')}.jpg`;
+        const [ph] = await db.list('photos', { eq: { path: p, deleted: false }, limit: 1 }); if (!ph) { out.push(key + ': вже є'); continue; }
+        await db.update('photos', { eq: { id: ph.id } }, { deleted: true }); await revision('photo', ph.id, 'delete', { path: p }, null, by);
+        out.push(key + ': ok');
       } else if (it.kind === 'person') { // нова картка з фіксованим id (повторно не створюється)
         const id = String(it.id || '').replace(/[^a-z0-9_]/gi, '').slice(0, 60);
         if (!id || await db.get('persons', { eq: { id } })) { out.push(key + ': вже є'); continue; }
@@ -95,6 +100,8 @@ export default handler(async (req, res, _c, url) => {
         const nd = { ...p.data }; let ch = false;
         for (const [k, v] of Object.entries(it.set || {})) if (nd[k] !== v) { nd[k] = v; ch = true; }
         for (const k of it.unset || []) if (nd[k]) { delete nd[k]; ch = true; }
+        if (it.append && !String(nd.note || '').includes(it.append)) { nd.note = (nd.note ? nd.note.trim() + ' ' : '') + it.append; ch = true; } // дописати в кінець опису (один раз)
+        for (const s of it.srcadd || []) if (!(nd.src || []).some(x => x.u === s.u)) { nd.src = [...(nd.src || []), s]; ch = true; } // додати джерело, не чіпаючи наявні
         for (const [from, to] of it.replace || []) {
           if (typeof nd.note !== 'string') continue;
           // доповнення «новий текст + старий» не повторювати; прибрати повтори, якщо вже задвоїлось
