@@ -5289,6 +5289,19 @@
   ]
  },
  {
+  "key": "pn3-yevdokia-src",
+  "kind": "personpatch",
+  "person": "yevdokia_h",
+  "set": {
+   "src": [
+    {
+     "t": "Чоловік Микола Дмитрович Красновид — список Ново-Басанського РВК (Память народа)",
+     "u": "https://pamyat-naroda.ru/heroes/memorial-chelovek_dopolnitelnoe_donesenie59510717/"
+    }
+   ]
+  }
+ },
+ {
   "key": "text-villages",
   "kind": "text",
   "id": "villages",
