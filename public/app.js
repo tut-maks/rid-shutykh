@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131409';
+const BUILD = '202610131413';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -248,6 +248,7 @@ function ppPaint() {
   if (!id || !P[id]) { old?.remove(); document.body.classList.remove('pp-on'); return; }
   const h = ppHtml(id); if (old) old.outerHTML = h; else $('#app').insertAdjacentHTML('beforeend', h);
   document.body.classList.add('pp-on');
+  if (innerWidth <= 820) sheetSwipe(document.getElementById('pp'), ppClose);
   document.querySelectorAll(`.nd[data-id="${id}"]`).forEach(e => e.classList.add('sel'));
 }
 function ppClose() { S.ui.pp = null; S.ui.ppHist = []; ppPaint(); }
@@ -288,6 +289,21 @@ function mSheet() {
     <div class="msh-cr">Сайт створив і веде <b>Максим Шутий</b></div>
     <button class="msh-row out" data-act="logout">${MI.out}<span>Вийти</span></button></div></div>`;
   document.documentElement.classList.add('msh-open');
+  sheetSwipe($('#layer .msh'), () => { $('#layer').innerHTML = ''; document.documentElement.classList.remove('msh-open'); });
+}
+// Шторка знизу закривається свайпом униз (тягнеться за пальцем; далеко або швидко — закрити, інакше повертається)
+function sheetSwipe(sh, onClose) {
+  if (!sh) return; let y0 = null, t0 = 0, dy = 0, drag = false;
+  const scr = sh.parentElement;
+  const scrolled = el => { for (; el && el !== sh.parentElement; el = el.parentElement) if (el.scrollTop > 0) return true; return false; }; // свайп униз у прокрученому списку — це прокрутка, а не закриття
+  sh.addEventListener('touchstart', e => { if (e.touches.length !== 1 || scrolled(e.target)) { y0 = null; return; } y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0; drag = false; }, { passive: true });
+  sh.addEventListener('touchmove', e => { if (y0 == null) return; dy = e.touches[0].clientY - y0; if (!drag && dy > 8) drag = true; if (!drag) return; if (dy < 0) dy = 0; e.preventDefault(); sh.style.transition = 'none'; sh.style.transform = `translateY(${dy}px)`; if (scr) scr.style.background = `rgba(20,18,15,${Math.max(0, .38 * (1 - dy / 400))})`; }, { passive: false });
+  const end = () => { if (y0 == null) return; y0 = null; if (!drag) return; const fast = dy > 40 && dy / Math.max(1, Date.now() - t0) > 0.5;
+    if (dy > 90 || fast) { sh.style.transition = 'transform .2s ease'; sh.style.transform = 'translateY(100%)'; if (scr) { scr.style.transition = 'background .2s'; scr.style.background = 'rgba(20,18,15,0)'; } setTimeout(onClose, 190); }
+    else { sh.style.transition = 'transform .2s ease'; sh.style.transform = ''; if (scr) scr.style.background = ''; }
+    // клік після свайпу не повинен відкрити пункт меню
+    if (drag) { const stop = ev => { ev.stopPropagation(); ev.preventDefault(); }; sh.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => sh.removeEventListener('click', stop, { capture: true }), 350); } };
+  sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
 }
 
 /* ───── Дерево предків ───── */
