@@ -5,12 +5,18 @@ import crypto from 'node:crypto';
 import { db } from './_db.js';
 import { handler, send, fail, readRaw, revision, track, can, canAddTo, pendGet, pendSet } from './_lib.js';
 
-const OK = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
+const OK = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/wav': 'wav' };
 function sniff(b) {
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
   if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
   if (b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP') return 'image/webp';
   if (b.slice(0, 5).toString() === '%PDF-') return 'application/pdf';
+  // голосові спогади
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'audio/webm';
+  if (b.slice(0, 4).toString() === 'OggS') return 'audio/ogg';
+  if (b.slice(4, 8).toString() === 'ftyp') return 'audio/mp4';
+  if (b.slice(0, 3).toString() === 'ID3' || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return 'audio/mpeg';
+  if (b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WAVE') return 'audio/wav';
   return null;
 }
 
@@ -21,6 +27,8 @@ export default handler(async (req, res, ctx, url) => {
   const mime = sniff(buf);
   if (!mime) return fail(res, 415, 'type');
   const kind = url.searchParams.get('kind') === 'thumb' ? 'thumb' : 'full';
+  const isAudio = mime.startsWith('audio/');
+  if (isAudio && (url.searchParams.get('doc') != null || kind === 'thumb')) return fail(res, 415, 'type');
 
   // Архівні документи (скани метрик тощо): ?doc=<id>[&meta=<json>] — сторінка додається до документа; лише редактор і вище
   const docId = url.searchParams.get('doc');
@@ -70,14 +78,14 @@ export default handler(async (req, res, ctx, url) => {
   if (!person) return fail(res, 404, 'not_found');
   const pending = !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
   const id = crypto.randomUUID();
-  const path = `photos/${personId}/${id}.${OK[mime]}`;
+  const path = `${isAudio ? 'voice' : 'photos'}/${personId}/${id}.${OK[mime]}`;
   await db.put(path, buf, mime);
   const caption = String(url.searchParams.get('caption') || '').slice(0, 500);
   await db.insert('photos', { id, person_id: personId, path, caption, mime, size: buf.length, created_by: me.id });
   await revision('photo', id, 'create', null, { person_id: personId, caption, path }, me.id);
   if (pending) { const pd = await pendGet(); pd[id] = { by: me.id, at: new Date().toISOString(), person: personId }; await pendSet(pd, me.id); }
   // перше фото стає головним (крім тих, що чекають підтвердження)
-  if (!pending && !person.data.portrait && mime !== 'application/pdf') {
+  if (!pending && !isAudio && !person.data.portrait && mime !== 'application/pdf') {
     await db.update('persons', { eq: { id: personId } }, { data: { ...person.data, portrait: id }, version: person.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
   }
   track(me.id, ctx.sid, 'edit', 'upload', personId);

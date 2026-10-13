@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130947';
+const BUILD = '202610131008';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -88,18 +88,18 @@ const mini = id => { const p = P[id]; if (!p) return ''; return `<a class="mini$
 /* ───── Маршрути ───── */
 function parse() {
   const h = location.hash.replace(/^#\/?/, ''); const [v, a] = h.split('/');
-  S.view = v || 'tree'; S.arg = a ? decodeURIComponent(a) : null;
+  S.view = v || 'home'; S.arg = a ? decodeURIComponent(a) : null;
 }
 addEventListener('hashchange', () => { parse(); if (S.view === 'p') { S.ui.pp = null; S.ui.ppHist = []; } render(); window.scrollTo(0, 0); });
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['tree', 'Дерево'], ['families', 'Історія роду'], ['villages', 'Історія сіл'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Карти'], ['q', 'Запитання й уточнення']];
+  const nav = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія роду'], ['villages', 'Історія сіл'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Карти'], ['q', 'Запитання й уточнення']];
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0;
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
   return `<header class="top"><div class="wrap topw">
-    <a class="brand" href="#/tree">Рід Шутих<small>Родинний архів</small></a>
+    <a class="brand" href="#/home">Рід Шутих<small>Родинний архів</small></a>
     <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' || k === 'villages' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ` title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть${qb ? '. Нових: ' + qb : ''}"` : ''}>${k === 'q' ? 'Запитання<span class="nq-l">&nbsp;й уточнення</span>' : t}${k === 'q' && qb ? `<i class="nq-b" aria-label="нових: ${qb}">${qb}</i>` : ''}</a>`).join('')}</nav>
     <div class="who"><a class="tic" href="#/people" data-act="gsearch" title="Знайти людину" aria-label="Пошук">${IC.search}</a>
       <details class="umenu"><summary class="uav" title="${esc(S.me.name || S.me.email || '')}"><span class="av sm">${esc(initials(me))}</span>${qb + jb ? `<i class="bn-badge">${qb + jb}</i>` : ''}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
@@ -183,9 +183,11 @@ const canSoc = p => !!S.me && (canEdit() || S.me.person_id === p.id);
 const socChips = (p, small) => (p.links || []).length ? `<div class="soc${small ? ' sm' : ''}">${p.links.map(l => `<a class="soc-a s-${l.t}" href="${esc(socHref(l))}" target="_blank" rel="noopener noreferrer" data-soc="${l.t}" title="${esc(SOC[l.t]?.[0] || '')}"><span class="si">${esc(SOC[l.t]?.[1] || '·')}</span><span class="sl">${esc(small ? SOC[l.t]?.[0] || '' : socLabel(l))}</span></a>`).join('')}</div>` : '';
 function socBlock(p) {
   const has = (p.links || []).length, can = canSoc(p);
-  if (!has && !(can && !p.d)) return '';
+  if (!has && !(can && !p.d) && !(isLiving(p) && S.me && !accSet().has(p.id))) return '';
   const mine = S.me?.person_id === p.id;
   return `<div class="sec socsec"><h3>Зв'язок ${can ? `<button class="btn line small" data-act="soc-edit">${has ? 'Змінити' : '+ Соцмережі й телефон'}</button>` : ''}</h3>
+    ${isLiving(p) && !mine && S.me && !accSet().has(p.id) ? `<div class="btns"><button class="btn small" data-act="inv" data-id="${p.id}">Запросити на сайт</button><span class="small muted">надіслати посилання у Viber чи Telegram</span></div>` : ''}
+    ${p.dna ? `<p class="small">🧬 Здав${p.sex === 'f' ? 'ла' : ''} ДНК-тест: <b>${esc(p.dna)}</b> · <a href="#/dna">ДНК-збіги</a></p>` : ''}
     ${has ? socChips(p) : `<p class="muted small">${mine ? 'Додайте свій Instagram, Facebook, Telegram чи телефон — щоб родичі могли вас знайти.' : 'Ще не додано. Instagram, Facebook, Telegram чи телефон — щоб родичі могли знайтись.'}</p>`}</div>`;
 }
 document.addEventListener('click', e => { const a = e.target.closest('a[data-soc]'); if (a) ev('open', 'soc', 'soc:' + a.dataset.soc + ':' + (S.ui.pp && a.closest('#pp') ? S.ui.pp : S.arg || '')); }, true);
@@ -195,6 +197,7 @@ function openSoc(p) {
   modal(`<h2>Зв'язок — ${esc(short(p))}</h2>
     <p class="small muted">Бачать лише родичі, які увійшли на сайт. Заповніть те, що є; порожні поля не показуються.</p>
     <div class="grid2 socf">${Object.entries(SOC).map(([k, [t, , im, ph]]) => `<label class="f"><span><span class="si s-${k}">${esc(SOC[k][1])}</span> ${esc(t)}</span><input class="in" id="sc-${k}" value="${esc(cur[k] || '')}" placeholder="${esc(ph)}" inputmode="${im}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>`).join('')}</div>
+    <label class="f">ДНК-тест<select class="in" id="sc-dna"><option value="">не здавав(ла)</option>${['MyHeritage', 'FamilyTreeDNA', 'Ancestry', '23andMe', 'GEDmatch', 'інше'].map(c => `<option${p.dna === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
     <div class="btns"><button class="btn" data-act="soc-save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="scmsg"></span></div>`);
   S.ui.socFor = p.id;
 }
@@ -249,6 +252,12 @@ function ppClose() { S.ui.pp = null; S.ui.ppHist = []; ppPaint(); }
 
 /* ───── Телефон: нижнє меню й шторка «Ще» (як у KRental CRM: 4 розділи + «Ще», кнопки ≥44 px, під великим пальцем) ───── */
 const MI = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h4.5v-5h3v5H18V9.5"/></svg>',
+  kin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="19" r="2.4"/><path d="M6 8.4v2.6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8.4M12 13v3.6"/></svg>',
+  help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M9.3 9.4a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M11 14v.1"/></svg>',
+  geo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+  stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>',
+  dna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c0 6 10 6 10 12s-10 3-10 6M17 3c0 6-10 6-10 12M17 21c0-2-1.4-3.2-3.3-4"/><path d="M8.5 6h7M8.5 18h7"/></svg>',
   villages: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20v-8l4-3 4 3v8"/><path d="M13 20v-6l3.5-2.5L20 14v6"/><path d="M8 20v-4h2v4"/></svg>',
   tree: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5.5" cy="18.5" r="2.2"/><circle cx="18.5" cy="18.5" r="2.2"/><path d="M12 7.2v5.3M5.5 16.3v-1.8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1.8"/></svg>',
   families: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
@@ -261,15 +270,15 @@ const MI = {
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.5h4.5v15H14M10 8l-4 4 4 4M6 12h9.5"/></svg>',
 };
 function mNav(cur) {
-  const more = ['maps', 'villages', 'q', 'admin', 'p'].includes(cur) && cur !== 'p' ? 'more' : cur;
-  const B = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Архів']];
+  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna'].includes(cur) ? 'more' : cur;
+  const B = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
 /* Подяка автору (бажання власника, 13.10) */
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Рід Шутих · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['q', 'Запитання й уточнення', qBadge() || ''], ['villages', 'Історія сіл', ''], ['maps', 'Старі карти', ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -415,17 +424,17 @@ function vAll(tabs) {
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${Math.max(0, i * (T2.H + T2.GY) + T2.PAD - 62)}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
-    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span><span class="small muted"><i class="sw brc" style="display:inline-block;width:18px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px"></i>товста рамка — у брата чи сестри є нащадки в дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}`)}
+    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span><span class="small muted"><i class="sw brc" style="display:inline-block;width:18px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px"></i>товста рамка — у брата чи сестри є нащадки в дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}<button class="btn line small" data-act="poster" title="Велика картинка з рамкою й заголовком — для друку на стіну">🖼 Плакат для друку</button>`)}
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}${spx}</div>${vpCtl(true)}</div>
     `;
 }
 
 /* ── Дерево картинкою (власнику): малюємо відкрите зараз дерево на canvas у великій роздільності ── */
-async function treePng() {
+async function treePng(PO) {
   const L = S.ui.tl, st = $('#stage'); if (!L || !st) return;
   if (document.fonts?.ready) await document.fonts.ready;
-  const HEAD = 110, w = L.w, h = L.h + HEAD + 40;
-  let k = Math.min(3, Math.sqrt(200e6 / (w * h)), 16000 / w, 16000 / h); k = Math.max(0.5, Math.floor(k * 4) / 4); // до 3× (чітко при друку), у межах можливостей браузера
+  const HEAD = PO ? 20 : 110, w = L.w, h = L.h + HEAD + 40;
+  let k = Math.min(3, Math.sqrt((PO ? 90e6 : 200e6) / (w * h)), 16000 / w, 16000 / h); k = Math.max(0.5, Math.floor(k * 4) / 4); // до 3× (чітко при друку), у межах можливостей браузера
   const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
   const g = c.getContext('2d'); g.scale(k, k);
   const css = getComputedStyle(document.documentElement), cv = (n, d) => (css.getPropertyValue(n) || '').trim() || d;
@@ -434,8 +443,8 @@ async function treePng() {
   g.fillStyle = PAPER; g.fillRect(0, 0, w, h);
   // заголовок
   const cen = P[treeCenter()];
-  g.fillStyle = WINE; g.font = `700 40px ${fD}`; g.textBaseline = 'alphabetic'; g.fillText('Рід Шутих — родинне дерево', 60, 62);
-  g.fillStyle = MUT; g.font = `15px ${fB}`; g.fillText(`Від кого будуємо: ${cen ? full(cen) : ''} · осіб у дереві: ${Object.keys(L.N).length} · ${new Date().toLocaleDateString('uk-UA')} · shutyi.com.ua`, 60, 92);
+  if (!PO) { g.fillStyle = WINE; g.font = `700 40px ${fD}`; g.textBaseline = 'alphabetic'; g.fillText('Рід Шутих — родинне дерево', 60, 62);
+  g.fillStyle = MUT; g.font = `15px ${fB}`; g.fillText(`Від кого будуємо: ${cen ? full(cen) : ''} · осіб у дереві: ${Object.keys(L.N).length} · ${new Date().toLocaleDateString('uk-UA')} · shutyi.com.ua`, 60, 92); }
   g.translate(0, HEAD);
   // підписи поколінь
   st.querySelectorAll('.glab').forEach(el => { g.fillStyle = WINE; g.globalAlpha = .55; g.font = `700 22px ${fD}`; g.fillText(el.textContent, 8, parseFloat(el.style.top) + 24); g.globalAlpha = 1; });
@@ -462,9 +471,33 @@ async function treePng() {
     nl.forEach(l => { g.fillText(l, tx, ty); ty += 19; });
     if (yr) { g.fillStyle = MUT; g.font = `13px ${fB}`; g.fillText(yr, tx, ty + 1); }
     if (childAge(p)) { g.fillStyle = WINE; g.font = `700 15px ${fD}`; g.fillText('†', x + W - 18, y + 20); } }
+  if (PO) return posterCompose(c, PO, Object.keys(L.N).length, { PAPER, WINE, INK, MUT, fD, fB });
   const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) throw new Error('canvas');
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rid-shutykh-derevo-${new Date().toISOString().slice(0, 10)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 20000);
   toast(`Картинку збережено: ${c.width}×${c.height} px`);
+}
+/* Плакат: дерево в рамці з заголовком на аркуші A-формату (300 dpi, у межах можливостей браузера) */
+async function posterCompose(tree, PO, n, C) {
+  const MM = { A2: [420, 594], A1: [594, 841], A0: [841, 1189] }, land = PO.or === 'land' || (PO.or === 'auto' && tree.width >= tree.height);
+  let pw, ph; if (PO.f === 'fit') { pw = tree.width * 1.12; ph = tree.height * 1.12 + tree.width * 0.16; } else { const [a, b] = MM[PO.f] || MM.A1; [pw, ph] = land ? [b, a] : [a, b]; const px = 300 / 25.4; pw *= px; ph *= px; }
+  const lim = Math.min(1, 16000 / pw, 16000 / ph, Math.sqrt(140e6 / (pw * ph))); pw = Math.round(pw * lim); ph = Math.round(ph * lim);
+  const c = document.createElement('canvas'); c.width = pw; c.height = ph; const g = c.getContext('2d'); const u = Math.min(pw, ph) / 1000; // «одиниця» плаката
+  g.fillStyle = C.PAPER; g.fillRect(0, 0, pw, ph);
+  // рамка: подвійна лінія й куточки
+  const m = 36 * u; g.strokeStyle = C.WINE; g.lineWidth = 3 * u; g.strokeRect(m, m, pw - 2 * m, ph - 2 * m); g.lineWidth = 1 * u; g.strokeRect(m + 9 * u, m + 9 * u, pw - 2 * m - 18 * u, ph - 2 * m - 18 * u);
+  g.fillStyle = C.WINE; g.font = `${22 * u}px ${C.fD}`; g.textAlign = 'center'; g.textBaseline = 'middle'; [[m, m], [pw - m, m], [m, ph - m], [pw - m, ph - m]].forEach(([x, y]) => { g.fillStyle = C.PAPER; g.fillRect(x - 16 * u, y - 16 * u, 32 * u, 32 * u); g.fillStyle = C.WINE; g.fillText('✥', x, y); });
+  // заголовок
+  g.textBaseline = 'alphabetic'; g.fillStyle = C.WINE; g.font = `700 ${64 * u}px ${C.fD}`; g.fillText(PO.t || 'Рід Шутих', pw / 2, m + 105 * u);
+  g.fillStyle = C.MUT; g.font = `${21 * u}px ${C.fB}`; if (PO.s) g.fillText(PO.s, pw / 2, m + 145 * u);
+  g.strokeStyle = C.WINE; g.globalAlpha = .5; g.lineWidth = 1.2 * u; g.beginPath(); g.moveTo(pw / 2 - 160 * u, m + 170 * u); g.lineTo(pw / 2 + 160 * u, m + 170 * u); g.stroke(); g.globalAlpha = 1;
+  // дерево
+  const top = m + 195 * u, bot = ph - m - 80 * u, side = m + 40 * u, aw = pw - 2 * side, ah = bot - top, sc = Math.min(aw / tree.width, ah / tree.height);
+  const dw = tree.width * sc, dh = tree.height * sc; g.imageSmoothingQuality = 'high'; g.drawImage(tree, (pw - dw) / 2, top + (ah - dh) / 2, dw, dh);
+  // підпис
+  g.fillStyle = C.MUT; g.font = `${15 * u}px ${C.fB}`; g.fillText(`${n} осіб · створив Максим Шутий · shutyi.com.ua · ${new Date().toLocaleDateString('uk-UA')}`, pw / 2, ph - m - 34 * u); g.textAlign = 'left';
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) throw new Error('canvas');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `plakat-rid-shutykh-${PO.f}-${new Date().toISOString().slice(0, 10)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  ev('open', 'poster', PO.f); toast(`Плакат збережено: ${pw}×${ph} px${lim < 1 ? ' (браузер не дозволив більше — для друку однаково вистачить)' : ''}`);
 }
 /* ── Масштаб і переміщення (спільне для обох видів) ── */
 function vpMount() {
@@ -516,7 +549,7 @@ function vPerson() {
   const gch = ch.flatMap(c => KIDS[c] || []);
   const sib = par.length ? [...new Set(par.flatMap(x => KIDS[x] || []))].filter(x => x !== p.id).sort(byBirth) : [];
   const docs = S.data.documents.filter(d => (d.people || []).includes(p.id));
-  const photos = S.data.photos.filter(x => x.person === p.id);
+  const photos = S.data.photos.filter(x => x.person === p.id && !isVoice(x));
   const stories = S.data.stories.filter(s => s.target === p.id);
   const fams = (p.fam || []).filter(f => FAM[f]);
   const pu = portrait(p);
@@ -530,6 +563,7 @@ function vPerson() {
       ${p.d ? `<dt>Смерть</dt><dd><span class="mono">${esc(p.d)}</span>${p.dp ? ' · ' + esc(p.dp) : ''}</dd>` : ''}
     </dl>
     ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
+    ${(() => { const w = kinShort(S.me?.person_id, p.id); return w ? `<p class="kinme">Вам: <b>${esc(w)}</b> <a href="#" data-act="kin-go" data-id="${p.id}">як саме?</a></p>` : ''; })()}
     ${socBlock(p)}
     <div class="sec" style="margin-top:18px"><h3>Гілка <span class="small muted" style="text-transform:none;letter-spacing:0">натисніть на людину нижче — відкриється її картка</span></h3>
       <div class="branch">
@@ -559,6 +593,7 @@ function vPerson() {
       <div class="msg" id="upmsg"></div>
       ${photos.length ? `<div class="thumbs">${photos.map(x => `${x.pending ? '<div class="phpend">' : ''}<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${x.pending ? '<b class="pend-l">Чекає підтвердження</b><br>' : ''}${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}${x.pending && x.by ? `<br><small class="muted">додав(ла): ${esc(who(x.by))}</small>` : ''}</span></button>${x.pending ? `${isOwner() ? `<div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button></div>` : ''}</div>` : ''}`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
     </div>
+    ${voiceSec(p)}
     <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
   </div></div>`;
 }
@@ -1437,7 +1472,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     <div class="pv-menu" hidden>
       ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label><button class="pv-mi" data-pv="mkdraw">Обвести наш запис рамкою</button><button class="pv-mi" data-pv="mkclear">Прибрати рамки з цієї сторінки</button>` : ''}
       ${docId && isOwner() ? `<button class="pv-mi danger" data-pv="docdel">Видалити документ з сайту</button>` : ''}
-      ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button>` : ''}
+      ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button><button class="pv-mi" data-phask="${photoId || ''}">${(CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'}</button>` : ''}
       ${canPhoto ? `<button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}
     </div>
     <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false"><div class="pv-marks" aria-hidden="true"></div><div class="pv-hint" hidden>Проведіть по скану, щоб обвести запис. <button data-pv="mkcancel">Скасувати</button></div>` : '<p class="pv-empty">Скан ще не додано.</p>'}
@@ -1470,7 +1505,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     root.classList.add('loading'); im.onload = () => root.classList.remove('loading'); im.onerror = () => root.classList.remove('loading');
     im.onload = () => { root.classList.remove('loading'); placeMarks(); }; placeMarks();
     if (items) { const it = items[i] || {}; photoId = it.photoId || null; title = it.title || ''; root.querySelector('.pv-t b').textContent = title; const tEl = root.querySelector('.pv-text'); if (tEl) tEl.textContent = it.text || '';
-      root.querySelectorAll('[data-portrait],[data-delphoto]').forEach(b => { if ('portrait' in b.dataset) b.dataset.portrait = photoId || ''; else b.dataset.delphoto = photoId || ''; b.hidden = !photoId; }); const cb = root.querySelector('[data-pv=cap]'); if (cb) cb.hidden = !photoId;
+      root.querySelectorAll('[data-portrait],[data-delphoto]').forEach(b => { if ('portrait' in b.dataset) b.dataset.portrait = photoId || ''; else b.dataset.delphoto = photoId || ''; b.hidden = !photoId; }); root.querySelectorAll('[data-phask]').forEach(b => { b.dataset.phask = photoId || ''; b.hidden = !photoId; b.textContent = (CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'; }); const cb = root.querySelector('[data-pv=cap]'); if (cb) cb.hidden = !photoId;
       const ci = root.querySelector('#cap-in'); if (ci) ci.value = it.caption || ''; const ce = root.querySelector('.pv-capedit'); if (ce) ce.hidden = true; }
     im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `${i + 1} / ${pages.length}`;
     if (pages.length > 1) new Image().src = pages[(i + 1) % pages.length]; // наступна вантажиться заздалегідь
@@ -1552,8 +1587,8 @@ const ICO = {
   r: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
 };
 function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, marks: d.marks, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
-function openPhoto(id) { const x = S.data.photos.find(y => y.id === id); if (!x) return; if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; }
-  const list = S.data.photos.filter(y => y.person === x.person && y.mime !== 'application/pdf'), k = Math.max(0, list.findIndex(y => y.id === id));
+function openPhoto(id) { const x = S.data.photos.find(y => y.id === id) || (S.admin?.pph || []).find(y => y.id === id); if (!x) return; if (isVoice(x)) { modal(`<h2>${esc(x.caption || 'Голосовий спогад')}</h2><div class="vlist">${voiceRow({ ...x, pending: false, by: S.data.photos.find(y => y.id === id)?.by || '' })}</div><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; } if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; }
+  const list = S.data.photos.filter(y => y.person === x.person && y.mime !== 'application/pdf' && !isVoice(y)), k = Math.max(0, list.findIndex(y => y.id === id));
   const items = list.map(y => ({ photoId: (canEdit() || y.by === S.me.id) ? y.id : null, title: y.caption || short(P[y.person] || {}), caption: y.caption || '', text: `Додав(ла): ${who(y.by)}, ${when(y.at)}` }));
   viewer({ title: items[k].title, pages: list.map(y => img('photo=' + y.id)), text: items[k].text, people: [x.person], photoId: items[k].photoId, items, startAt: k }); }
 
@@ -1586,7 +1621,7 @@ function chartDaily(daily, from, to) {
 function sortRows(rows, key) { const k = S.admin.sort || key; const dir = S.admin.dir || -1; return rows.sort((a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * dir); }
 function phPendBlock(list) {
   if (!list?.length) return '';
-  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : ''}</b><br>${esc(x.caption || '')}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
+  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : ''}</b><br>${esc(x.caption || '')}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
 }
 function vAdmin() {
   if (!isOwner()) return '<p>Немає доступу.</p>';
@@ -1683,6 +1718,484 @@ function vInvite(inv) { return gate(`<form id="accept" class="sec"><p style="mar
 function vSetup() { return gate(`<form id="setup" class="sec"><p style="margin:0">Перше налаштування: створіть обліковий запис власника.</p><label class="f">Код налаштування (BOOTSTRAP_TOKEN з Vercel)<input class="in" id="su-t" type="password" required></label><label class="f">Ваше ім'я<input class="in" id="su-n" value="Максим" required></label><label class="f">Пошта<input class="in" id="su-e" type="email" required></label><label class="f">Пароль (від 10 символів)<input class="in" id="su-p" type="password" minlength="10" autocomplete="new-password" required></label><button class="btn" type="submit">Створити</button><div class="msg" id="su-m"></div></form>`); }
 function vSeed() { return gate(`<div class="sec"><p style="margin:0">База порожня. Імпортувати дерево, родини і скани документів із початкового набору?</p><button class="btn" data-act="seed">Імпортувати</button><div class="msg" id="sd-m"></div></div>`); }
 
+/* ═════════ Головна, «Ким ми доводимось», «Хто на фото?», голоси, карта роду, цей день, цифри, «Допоможіть знайти», плакат, запрошення, ДНК (13.10) ═════════ */
+const CFG_ = () => S.data?.cfg || {};
+const yN = s => { const m = String(s || '').match(/(\d{4})/); return m ? +m[1] : null; };
+const dmOf = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? { d: +m[1], m: +m[2], y: +m[3] } : null; };
+const isLiving = p => !p.d && !p.dp && (yN(p.b) || 0) >= 1925;
+const isVoice = x => /^audio\//.test(x?.mime || '');
+const MONTHS_G = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+const pLink = id => P[id] ? `<a href="${href('p', id)}">${esc(short(P[id]))}</a>` : '';
+const pick = (id, sel) => `${id ? `<datalist id="dl-${id}">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(plabel(p))}"></option>`).join('')}</datalist>` : ''}<input class="in" id="${id}" list="dl-${id}" value="${sel && P[sel] ? esc(plabel(P[sel])) : ''}" placeholder="Почніть вводити ім'я…" autocomplete="off">`;
+const pickVal = id => { const v = ($('#' + id)?.value || '').trim(); if (!v) return null; return (Object.values(P).find(p => plabel(p) === v) || Object.values(P).find(p => full(p) === v) || Object.values(P).find(p => short(p) === v))?.id || null; };
+
+/* ── Telegram-група ── */
+function tgCard(small) {
+  const u = CFG_().tg;
+  if (!u) return isOwner() ? `<div class="hcard tgc"><div class="tgc-i">TG</div><div><b>Група родини в Telegram</b><p class="small muted">Створіть групу (налаштування: «Схвалювати нових учасників») і вставте сюди посилання-запрошення — воно з'явиться всюди на сайті.</p><button class="btn small" data-act="tg-set">Додати посилання</button></div></div>` : '';
+  return `<div class="hcard tgc${small ? ' sm' : ''}"><div class="tgc-i">TG</div><div><b>Наша група в Telegram</b><p class="small muted">Фото, спогади, знахідки з архівів і родинні новини — усі разом.</p><a class="btn tgbtn" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-soc="tggroup">Приєднатися до групи</a>${isOwner() ? ` <button class="btn line small" data-act="tg-set">Змінити</button>` : ''}</div></div>`;
+}
+function openTgSet() {
+  modal(`<h2>Група родини в Telegram</h2><p class="small muted">У Telegram: група → Редагувати → Запрошення (Invite links) → скопіюйте посилання (виду https://t.me/+…). Порада: увімкніть «Схвалювати нових учасників», тоді чужі не зайдуть навіть із посиланням.</p>
+    <label class="f">Посилання на групу<input class="in" id="tg-u" value="${esc(CFG_().tg || '')}" placeholder="https://t.me/+AbCdEf…" inputmode="url" autocapitalize="off" spellcheck="false"></label>
+    <div class="btns"><button class="btn" data-act="tg-save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="tgmsg"></span></div>`);
+}
+
+/* ── Ким ми одне одному доводимось ── */
+function ancD(id) { // предок → найменша відстань у поколіннях
+  const m = new Map([[id, 0]]), q = [id];
+  while (q.length) { const x = q.shift(), d = m.get(x), p = P[x]; for (const y of [p?.f, p?.mo]) if (y && P[y] && !m.has(y)) { m.set(y, d + 1); q.push(y); } }
+  return m;
+}
+const cuz = (k, f) => k <= 1 ? '' : (['', '', 'двоюрідн', 'троюрідн', 'четвероюрідн', "п'ятиюрідн", 'шестиюрідн', 'семиюрідн'][k] || k + '-юрідн') + (f ? 'а ' : 'ий ');
+function kinWord(da, db, f) { // хто b для a: da — поколінь від a вгору до спільного предка, db — від b
+  if (da === 0 && db === 0) return 'та сама людина';
+  if (da === 0) return db === 1 ? (f ? 'донька' : 'син') : db === 2 ? (f ? 'онука' : 'онук') : db === 3 ? (f ? 'правнучка' : 'правнук') : 'пра'.repeat(db - 2) + (f ? 'внучка' : 'внук');
+  if (db === 0) return da === 1 ? (f ? 'мати' : 'батько') : da === 2 ? (f ? 'баба' : 'дід') : da === 3 ? (f ? 'прабаба' : 'прадід') : da === 4 ? (f ? 'прапрабаба' : 'прапрадід') : `${da - 1}-${f ? 'а прабаба' : 'й прадід'}`;
+  const k = Math.min(da, db), diff = Math.abs(da - db);
+  if (diff === 0) return cuz(k, f) + (f ? 'сестра' : 'брат');
+  if (da > db) { // b — старше покоління
+    if (diff === 1) return cuz(k, f) + (f ? 'тітка' : 'дядько');
+    if (diff === 2) return cuz(k + 1, f) + (f ? 'баба' : 'дід');
+    if (diff === 3) return cuz(k + 1, f) + (f ? 'прабаба' : 'прадід');
+    return cuz(k + 1, f) + 'пра'.repeat(diff - 2) + (f ? 'баба' : 'дід');
+  }
+  if (diff === 1) return cuz(k, f) + (f ? 'племінниця' : 'племінник');
+  if (diff === 2) return cuz(k + 1, f) + (f ? 'онука' : 'онук');
+  if (diff === 3) return cuz(k + 1, f) + (f ? 'правнучка' : 'правнук');
+  return cuz(k + 1, f) + 'пра'.repeat(diff - 2) + (f ? 'внучка' : 'внук');
+}
+function bloodKin(a, b) {
+  const A = ancD(a), B = ancD(b); let best = null;
+  for (const [x, da] of A) if (B.has(x)) { const db = B.get(x), s = da + db; if (!best || s < best.s || (s === best.s && da < best.da)) best = { x, da, db, s }; }
+  if (!best) return null;
+  const common = [...A.keys()].filter(x => B.has(x) && A.get(x) === best.da && B.get(x) === best.db); // обоє з подружжя-предків
+  const pathUp = (from, to) => { const out = [from]; let cur = from; while (cur !== to) { const p = P[cur]; const nx = [p.f, p.mo].find(y => y && P[y] && (y === to || ancD(y).has(to))); if (!nx) break; out.push(nx); cur = nx; } return out; };
+  const half = best.da === 1 && best.db === 1 && common.length === 1 && [P[a].f, P[a].mo].filter(Boolean).length === 2 && [P[b].f, P[b].mo].filter(Boolean).length === 2;
+  return { ...best, common, word: kinWord(best.da, best.db, P[b].sex === 'f'), half, path: [...pathUp(a, best.x), ...pathUp(b, best.x).reverse().slice(1)] };
+}
+function kinship(a, b) {
+  if (!P[a] || !P[b]) return null;
+  if (a === b) return { text: 'Це та сама людина.' };
+  const sp = (SPOUSES[a] || []).find(s => s.id === b);
+  if (sp) return { word: P[b].sex === 'f' ? 'дружина' : 'чоловік', text: `${short(P[b])} — ${P[b].sex === 'f' ? 'дружина' : P[b].sex === 'm' ? 'чоловік' : 'чоловік / дружина'}${ucU(sp) ? ' (шлюб не підтверджено документами)' : ''}.`, path: [a, b] };
+  const r = bloodKin(a, b);
+  if (r) return { word: r.word + (r.half ? (P[r.common[0]]?.sex === 'f' ? ' по матері' : ' по батькові') : ''), text: `${short(P[b])} — ${r.word}${r.half ? (P[r.common[0]]?.sex === 'f' ? ' по матері' : ' по батькові') : ''}.`, sub: `Спільн${r.common.length > 1 ? 'і предки' : 'ий предок'}: ${r.common.map(pLink).join(' і ')}. ${r.da === 0 || r.db === 0 ? '' : `Від ${esc(short(P[a]))} до ${r.common.length > 1 ? 'них' : P[r.x].sex === 'f' ? 'неї' : 'нього'} — ${r.da} пок., від ${esc(short(P[b]))} — ${r.db} пок.`}`, path: r.path };
+  // через шлюб: b — чоловік/дружина кровного родича a, або a — через свого чоловіка/дружину
+  for (const s of SPOUSES[b] || []) { const r2 = bloodKin(a, s.id); if (r2) return { word: 'родич через шлюб', text: `Родич через шлюб: ${short(P[b])} — ${P[b].sex === 'f' ? 'дружина' : 'чоловік'} людини, яка доводиться ${short(P[a])}: ${r2.word} (${short(P[s.id])}).`, path: [...r2.path, b] }; }
+  for (const s of SPOUSES[a] || []) { const r2 = bloodKin(s.id, b); if (r2) return { word: 'родич через шлюб', text: `Родич через шлюб: для ${short(P[s.id])} (${P[s.id].sex === 'f' ? 'дружина' : 'чоловік'} ${short(P[a])}) ${short(P[b])} — ${r2.word}.`, path: [a, ...r2.path] }; }
+  return { text: 'Спільних предків у дереві поки не знайдено. Можливо, зв\'язок ще не внесено — напишіть у «Запитання й уточнення».' };
+}
+function kinBox(a, b, full_) {
+  const r = a && b ? kinship(a, b) : null;
+  return `<div class="kin${full_ ? ' big' : ''}" id="kinbox">
+    <div class="kin-row"><label class="f">Хто<span class="kin-in">${pick('kin-a', a)}</span></label><button class="btn line small kin-sw" data-act="kin-swap" title="Поміняти місцями" aria-label="Поміняти місцями">⇄</button><label class="f">і хто<span class="kin-in">${pick('kin-b', b)}</span></label></div>
+    ${r ? `<div class="kin-res"><p class="kin-t">${esc(r.text)}</p>${r.sub ? `<p class="small muted">${r.sub}</p>` : ''}${(r.path || []).length > 1 ? `<div class="kin-path">${r.path.map((x, i) => `${i ? '<span class="kin-ar">→</span>' : ''}<a class="kin-p" href="${href('p', x)}">${avatar(P[x], 'sm')}<span><b>${esc(short(P[x]))}</b><i>${esc(years(P[x]))}</i></span></a>`).join('')}</div>` : ''}</div>` : `<p class="small muted">Виберіть двох людей — сайт порахує, ким вони доводяться одне одному, і покаже шлях через спільних предків.</p>`}
+  </div>`;
+}
+function vKin() {
+  const a = S.ui.kinA || S.me?.person_id || rootId(), b = S.ui.kinB || null;
+  return `<div class="lede"><h1>Ким ми доводимось</h1><p class="small muted">Двоюрідні, троюрідні, дядьки, племінники — через спільних предків у дереві.</p></div>${kinBox(a, b, true)}`;
+}
+
+/* ── «Хто на фото?» ── */
+const askList = () => Object.entries(CFG_().photoAsk || {}).map(([id, v]) => ({ ...v, ph: S.data.photos.find(x => x.id === id) })).filter(x => x.ph && !isVoice(x.ph)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+const hintsOf = id => S.data.stories.filter(s => s.target === 'photo:' + id);
+function askGrid(max) {
+  const L = askList(); if (!L.length) return `<p class="muted small">Поки немає фото, на яких треба когось упізнати.${canEdit() ? ' Відкрийте будь-яке фото → «⋯» → «Хто на фото? — попросити родичів».' : ''}</p>`;
+  return `<div class="askg">${L.slice(0, max || 999).map(x => `<button class="askc" data-act="ask-open" data-id="${x.ph.id}"><img src="${img('photo=' + x.ph.id, true)}" alt="" loading="lazy"><span><b>${esc(x.ph.caption || short(P[x.ph.person] || {}))}</b><i>${hintsOf(x.ph.id).length ? hintsOf(x.ph.id).length + ' підказ.' : 'ще ніхто не підказав'}</i></span></button>`).join('')}</div>`;
+}
+function openAsk(id) {
+  const ph = S.data.photos.find(x => x.id === id), a = (CFG_().photoAsk || {})[id]; if (!ph) return;
+  const hs = hintsOf(id);
+  modal(`<h2>Хто на фото?</h2>
+    <div class="ask-im"><img src="${img('photo=' + id)}" alt="" data-act="ask-zoom" data-id="${id}"></div>
+    <p class="small muted">${esc(ph.caption || '')}${P[ph.person] ? ` · фото з картки ${pLink(ph.person)}` : ''}${a?.note ? ` · ${esc(a.note)}` : ''}</p>
+    <h3>Підказки родичів</h3>${hs.length ? storiesHtml(hs) : '<p class="muted small">Ще ніхто не підказав. Будьте першим!</p>'}
+    <div class="sec" style="gap:8px"><textarea class="in" id="st-photo:${id}" placeholder="Напр.: «Друга зліва в другому ряду — баба Вівдя, поруч її сестра Маня. Фото приблизно 1955 р., Веприк»"></textarea>
+    <div class="btns"><button class="btn" data-story="photo:${id}">Додати підказку</button>${canEdit() ? `<button class="btn line small" data-act="ask-off" data-id="${id}">Уже впізнали — прибрати з «Хто на фото?»</button>` : ''}<button class="btn line" data-act="close">Закрити</button><span class="msg" id="stm-photo:${id}"></span></div></div>`);
+  S.ui.askOpen = id;
+}
+
+/* ── Голоси роду (аудіо) ── */
+const voicesOf = pid => S.data.photos.filter(x => isVoice(x) && (!pid || x.person === pid));
+const vcache = {};
+async function voiceUrl(id) { if (vcache[id]) return vcache[id]; const r = await fetch(img('photo=' + id), { credentials: 'same-origin' }); if (!r.ok) throw new Error('http_' + r.status); return (vcache[id] = URL.createObjectURL(await r.blob())); }
+const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${(isOwner() || x.by === S.me.id) && !x.pending ? `<button class="btn line small" data-delphoto="${x.id}" title="Видалити запис">✕</button>` : ''}</div>`;
+function voiceSec(p) {
+  const L = voicesOf(p.id);
+  return `<div class="sec"><h3>Голос і розповіді ${S.me ? `<button class="btn line small" data-act="v-rec" data-id="${p.id}">🎙 Записати спогад</button>` : ''}</h3>
+    ${L.length ? `<div class="vlist">${L.map(voiceRow).join('')}</div>` : `<p class="muted small">Попросіть старших розповісти — про дитинство, війну, родичів, як жили в селі. Натисніть «Записати спогад», покладіть телефон поруч і просто розмовляйте. Голос збережеться назавжди.</p>`}</div>`;
+}
+let REC = null;
+function openRec(pid) {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { modal(`<h2>Запис голосу</h2><p>Цей браузер не вміє записувати звук. Спробуйте Chrome або Safari на телефоні.</p><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
+  modal(`<h2>Записати спогад</h2><p class="small muted">Про кого: ${pLink(pid)}${canAdd(pid) ? '' : ' · запис з\'явиться для всіх після підтвердження Максимом'}. До 15 хвилин.</p>
+    <div class="rec"><button class="recbtn" data-act="rec-go" aria-label="Почати запис"><span></span></button><div class="rec-t mono" id="rec-t">00:00</div><div class="rec-s small muted" id="rec-s">Натисніть червону кнопку, щоб почати</div></div>
+    <audio id="rec-a" controls hidden></audio>
+    <label class="f">Хто розповідає і про що<input class="in" id="rec-c" placeholder="Напр.: «Баба Оля про війну і Веприк»"></label>
+    <div class="btns"><button class="btn" data-act="rec-save" disabled>Зберегти</button><button class="btn line" data-act="rec-cancel">Скасувати</button><span class="msg" id="recmsg"></span></div>`);
+  REC = { pid, chunks: [], blob: null };
+}
+async function recToggle() {
+  if (!REC) return; const b = $('[data-act="rec-go"]'), s = $('#rec-s');
+  if (REC.mr && REC.mr.state === 'recording') { REC.mr.stop(); return; }
+  try {
+    REC.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch { s.textContent = 'Немає доступу до мікрофона. Дозвольте його в налаштуваннях браузера.'; return; }
+  const mt = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported?.(t)) || '';
+  REC.mr = new MediaRecorder(REC.stream, { ...(mt ? { mimeType: mt } : {}), audioBitsPerSecond: 32000 }); REC.chunks = [];
+  REC.mr.ondataavailable = e => { if (e.data.size) REC.chunks.push(e.data); };
+  REC.mr.onstop = () => { clearInterval(REC.tm); REC.stream.getTracks().forEach(t => t.stop()); REC.blob = new Blob(REC.chunks, { type: REC.mr.mimeType || 'audio/webm' });
+    const a = $('#rec-a'); if (a) { a.src = URL.createObjectURL(REC.blob); a.hidden = false; } b.classList.remove('on'); s.textContent = 'Готово. Прослухайте й натисніть «Зберегти» (або запишіть заново).'; const sv = $('[data-act="rec-save"]'); if (sv) sv.disabled = false; };
+  REC.mr.start(1000); REC.t0 = Date.now(); b.classList.add('on'); s.textContent = 'Іде запис… Натисніть ще раз, щоб зупинити';
+  const sv = $('[data-act="rec-save"]'); if (sv) sv.disabled = true; $('#rec-a').hidden = true;
+  REC.tm = setInterval(() => { const sec = Math.floor((Date.now() - REC.t0) / 1000); const t = $('#rec-t'); if (t) t.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); if (sec >= 900 && REC.mr.state === 'recording') REC.mr.stop(); }, 500);
+}
+function recStop() { try { if (REC?.mr?.state === 'recording') REC.mr.stop(); REC?.stream?.getTracks().forEach(t => t.stop()); clearInterval(REC?.tm); } catch {} REC = null; }
+
+/* ── Цей день в історії роду ── */
+function dayEvents() {
+  const now = new Date(), out = [];
+  const push = (dm, kind, ids, extra) => { if (!dm) return; let nx = new Date(now.getFullYear(), dm.m - 1, dm.d); const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()); if (nx < t0) nx = new Date(now.getFullYear() + 1, dm.m - 1, dm.d); out.push({ dm, kind, ids, extra, ny: nx.getFullYear(), days: Math.round((nx - t0) / 864e5) }); };
+  Object.values(P).forEach(p => { push(dmOf(p.b), isLiving(p) ? 'bday' : 'born', [p.id]); push(dmOf(p.d), 'died', [p.id]); });
+  S.data.unions.forEach(u => push(dmOf(u.date), 'wed', [u.a, u.b]));
+  S.data.documents.filter(d => d.type !== 'map').forEach(d => { const dm = dmOf(d.date); if (dm && !/народж|смерт|помер|вінчан|шлюб/i.test(d.title)) push(dm, 'doc', [], d); });
+  return out.sort((a, b) => a.days - b.days || a.dm.y - b.dm.y);
+}
+function evLine(e) {
+  const y = e.dm.y, ago = e.ny - y, p = P[e.ids[0]];
+  const t = e.kind === 'bday' ? `${pLink(p.id)} — день народження${ago > 0 ? `, ${ago} р.` : ''}${e.days === 0 ? ' 🎉' : ''}` : e.kind === 'born' ? `${y} — народи${p.sex === 'f' ? 'лася' : 'вся'} ${pLink(p.id)}` : e.kind === 'died' ? `${y} — помер${p.sex === 'f' ? 'ла' : ''} ${pLink(p.id)}` : e.kind === 'wed' ? `${y} — шлюб: ${pLink(e.ids[0])} і ${pLink(e.ids[1])}` : `${y} — <a href="#" data-doc="${e.extra.id}">${esc(e.extra.title)}</a>`;
+  return `<li class="ev-${e.kind}"><span class="ev-d mono">${e.dm.d} ${MONTHS_G[e.dm.m - 1]}</span><span>${t}</span></li>`;
+}
+function todayCard() {
+  const E = dayEvents(), today = E.filter(e => e.days === 0), soon = E.filter(e => e.days > 0 && e.days <= 21), bd = soon.filter(e => e.kind === 'bday');
+  const n = new Date();
+  return `<div class="hcard"><h3>Цей день в історії роду <span class="small muted">${n.getDate()} ${MONTHS_G[n.getMonth()]}</span></h3>
+    ${today.length ? `<ul class="evl">${today.map(evLine).join('')}</ul>` : `<p class="small muted">Сьогодні в документах роду подій немає.</p>`}
+    ${soon.length ? `<h4>Найближчі три тижні</h4><ul class="evl">${soon.slice(0, 8).map(evLine).join('')}</ul>` : ''}
+    ${bd.length ? `<p class="small muted">Не забудьте привітати: ${bd.map(e => pLink(e.ids[0])).join(', ')}.</p>` : ''}</div>`;
+}
+
+/* ── Цифри роду ── */
+function famStats() {
+  const ps = Object.values(P), memo = {};
+  const depth = id => { if (memo[id] != null) return memo[id]; memo[id] = 1; const p = P[id]; return (memo[id] = 1 + Math.max(0, ...[p.f, p.mo].filter(x => x && P[x]).map(depth))); };
+  const gens = Math.max(0, ...ps.map(p => depth(p.id)));
+  const born = ps.map(p => ({ p, y: yN(p.b) })).filter(x => x.y).sort((a, b) => a.y - b.y);
+  const villages = new Set(ps.flatMap(p => [p.bp, p.dp]).filter(Boolean).map(v => v.split(',')[0].trim()));
+  const pages = S.data.documents.reduce((s, d) => s + (d.pages || 0), 0);
+  return { n: ps.length, m: ps.filter(p => p.sex === 'm').length, f: ps.filter(p => p.sex === 'f').length, gens, first: born[0], docs: S.data.documents.filter(d => d.type !== 'map').length, pages, photos: S.data.photos.filter(x => !isVoice(x) && !x.pending).length, voices: voicesOf().filter(x => !x.pending).length, villages: villages.size, members: Object.keys(S.data.names || {}).length, living: ps.filter(isLiving).length };
+}
+function statTiles() {
+  const s = famStats();
+  const T = [[s.n, 'людей у дереві'], [s.gens, 'поколінь'], [s.first ? s.first.y : '—', 'найдавніша дата народження'], [s.docs, 'архівних документів'], [s.photos, 'фото'], [s.voices, 'голосових спогадів'], [s.villages, 'сіл і міст'], [s.members, 'родичів на сайті']];
+  return `<div class="tiles">${T.map(([v, t]) => `<a class="tile" href="#/stats"><b>${v}</b><span>${t}</span></a>`).join('')}</div>`;
+}
+const sortTh = (k, t, num) => `<th data-sort="${k}"${num ? ' data-num="1"' : ''}>${t}</th>`;
+function vStats() {
+  const s = famStats(), ps = Object.values(P);
+  const fam = S.ui.stFam || '', sex = S.ui.stSex || '', y0 = +S.ui.stY0 || 0, y1 = +S.ui.stY1 || 0;
+  const F = ps.filter(p => (!fam || (p.fam || []).includes(fam)) && (!sex || p.sex === sex) && (!y0 || (yN(p.b) || 0) >= y0) && (!y1 || (yN(p.b) || 9999) <= y1));
+  // по десятиліттях
+  const dec = {}; F.forEach(p => { const y = yN(p.b); if (y) { const d = Math.floor(y / 10) * 10; (dec[d] ||= { m: 0, f: 0, u: 0 })[p.sex === 'm' ? 'm' : p.sex === 'f' ? 'f' : 'u']++; } });
+  const ds = Object.keys(dec).map(Number).sort((a, b) => a - b), mx = Math.max(1, ...ds.map(d => dec[d].m + dec[d].f + dec[d].u));
+  const W = Math.max(320, ds.length * 34), H = 170;
+  const chart = ds.length ? `<div class="chartbox"><svg viewBox="0 0 ${W} ${H + 30}" width="100%" height="${H + 30}" preserveAspectRatio="none" role="img" aria-label="Народження по десятиліттях">${ds.map((d, i) => { const v = dec[d], x = i * 34 + 6, hm = v.m / mx * H, hf = v.f / mx * H, hu = v.u / mx * H; return `<g><title>${d}-ті: ${v.m + v.f + v.u} (чол. ${v.m}, жін. ${v.f})</title><rect x="${x}" y="${H - hm}" width="22" height="${hm}" class="bm"/><rect x="${x}" y="${H - hm - hf}" width="22" height="${hf}" class="bf"/><rect x="${x}" y="${H - hm - hf - hu}" width="22" height="${hu}" class="bu"/><text x="${x + 11}" y="${H + 14}" text-anchor="middle">${String(d).slice(2)}</text>${i % 2 ? '' : `<text x="${x + 11}" y="${H + 27}" text-anchor="middle" class="yy">${d}</text>`}</g>`; }).join('')}</svg><p class="small muted"><span class="lg bm"></span> чоловіки <span class="lg bf"></span> жінки <span class="lg bu"></span> стать не вказано · наведіть на стовпчик, щоб побачити число</p></div>` : '<p class="muted">Немає дат народження за цими фільтрами.</p>';
+  const cnt = (arr) => { const m = {}; arr.forEach(x => { if (x) m[x] = (m[x] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); };
+  const nm = p => String(p.n || '').replace(/\s*\(.*?\)/g, '').trim();
+  const sur = {}; F.forEach(p => { for (const x of [p.s, p.m].filter(Boolean)) { const k = x.split(/[\s/]/)[0]; (sur[k] ||= { n: 0, y: 9999, pl: new Set() }); sur[k].n++; const y = yN(p.b); if (y) sur[k].y = Math.min(sur[k].y, y); if (p.bp) sur[k].pl.add(p.bp.split(',')[0]); } });
+  const life = F.map(p => ({ p, b: yN(p.b), d: yN(p.d) })).filter(x => x.b && x.d && x.d >= x.b).map(x => ({ ...x, a: x.d - x.b }));
+  const cent = {}; life.forEach(x => { const c = Math.floor(x.b / 100) + 1; (cent[c] ||= []).push(x.a); });
+  const kids = F.map(p => ({ p, k: (KIDS[p.id] || []).length })).filter(x => x.k).sort((a, b) => b.k - a.k);
+  const places = cnt(F.map(p => p.bp && p.bp.split(',')[0].trim()));
+  return `<div class="lede"><h1>Цифри роду</h1><p class="small muted">Усе пораховано з карток дерева — що більше внесемо, то точніше.</p></div>
+  ${statTiles()}
+  <div class="stbar"><select class="in" data-st="stFam" aria-label="Гілка"><option value="">Усі гілки</option>${S.data.families.map(f => `<option value="${f.id}"${fam === f.id ? ' selected' : ''}>${esc(f.title)}</option>`).join('')}</select>
+    <select class="in" data-st="stSex" aria-label="Стать"><option value="">Чоловіки й жінки</option><option value="m"${sex === 'm' ? ' selected' : ''}>Чоловіки</option><option value="f"${sex === 'f' ? ' selected' : ''}>Жінки</option></select>
+    <select class="in" data-st="stPer" aria-label="Період"><option value="">Усі роки</option>${[['1700-1799', 'XVIII ст.'], ['1800-1899', 'XIX ст.'], ['1900-1945', '1900–1945'], ['1946-1991', '1946–1991'], ['1992-2100', 'з 1992']].map(([v, t]) => `<option value="${v}"${S.ui.stPer === v ? ' selected' : ''}>${t}</option>`).join('')}<option value="own"${S.ui.stPer === 'own' ? ' selected' : ''}>Свій період…</option></select>
+    ${S.ui.stPer === 'own' ? `<input class="in yr" data-st="stY0" inputmode="numeric" value="${y0 || ''}" placeholder="з року"><input class="in yr" data-st="stY1" inputmode="numeric" value="${y1 || ''}" placeholder="по рік">` : ''}
+    <span class="small muted">${F.length} з ${ps.length}</span></div>
+  <div class="sec"><h3>Народження по десятиліттях</h3>${chart}</div>
+  <div class="stgrid">
+    <div class="sec"><h3>Прізвища</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Прізвище')}${sortTh(1, 'Людей', 1)}${sortTh(2, 'Найраніше', 1)}<th>Звідки</th></tr></thead><tbody>${Object.entries(sur).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v.n}</td><td class="mono">${v.y < 9999 ? v.y : '—'}</td><td class="small">${esc([...v.pl].join(', '))}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="sec"><h3>Найчастіші імена</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Чоловічі')}${sortTh(1, 'Скільки', 1)}</tr></thead><tbody>${cnt(F.filter(p => p.sex === 'm').map(nm)).slice(0, 15).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div>
+      <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Жіночі')}${sortTh(1, 'Скільки', 1)}</tr></thead><tbody>${cnt(F.filter(p => p.sex === 'f').map(nm)).slice(0, 15).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="sec"><h3>Найдовше прожили</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки життя')}${sortTh(2, 'Вік', 1)}</tr></thead><tbody>${life.sort((a, b) => b.a - a.a).slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)}</td><td class="mono">${x.b}–${x.d}</td><td class="mono">${x.a}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Немає</td></tr>'}</tbody></table></div>
+      ${Object.keys(cent).length ? `<p class="small muted">Середній вік (за відомими датами): ${Object.entries(cent).map(([c, a]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${Math.round(a.reduce((x, y) => x + y, 0) / a.length)} р. (${a.length} люд.)`).join('; ')}. Діти, що померли малими, теж враховані.</p>` : ''}</div>
+    <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
+  </div>`;
+}
+const life_ = p => life(p);
+
+/* ── Карта роду в часі ── */
+const placeKey = s => String(s || '').split(',')[0].replace(/^(с\.|село|смт|м\.|місто|хутір|х\.)\s*/i, '').trim();
+const PLACE0 = { 'Вороньки': [50.684, 31.587], 'Веприк': [50.676, 31.615], 'Лідин': [50.698, 31.674] }; // OpenStreetMap (research/11)
+const placeLL = k => (CFG_().places || {})[k] || PLACE0[k] || null;
+function geoEvents() {
+  const E = [];
+  Object.values(P).forEach(p => { const b = yN(p.b), d = yN(p.d);
+    if (p.bp) E.push({ k: placeKey(p.bp), y: b, t: 'b', id: p.id });
+    if (p.dp) E.push({ k: placeKey(p.dp), y: d, t: 'd', id: p.id }); });
+  S.data.documents.filter(x => x.type !== 'map' && x.place).forEach(x => E.push({ k: placeKey(x.place.replace(/\(.*?\)/g, '')), y: yN(x.date), t: 'doc', doc: x.id }));
+  return E.filter(e => e.k);
+}
+function vGeo() {
+  const E = geoEvents(), ys = E.map(e => e.y).filter(Boolean), y0 = Math.min(...ys, 1780), y1 = new Date().getFullYear();
+  const yr = S.ui.geoY || y1, win = S.ui.geoW || 'upto';
+  const keys = [...new Set(E.map(e => e.k))], miss = keys.filter(k => !placeLL(k));
+  return `<div class="lede"><h1>Карта роду</h1><p class="small muted">Де народжувались і де спочили наші — з карток і архівних документів. Пересувайте повзунок років.</p></div>
+  <div class="geobar"><input type="range" id="geo-y" min="${y0}" max="${y1}" value="${yr}" aria-label="Рік"><b class="mono" id="geo-yl">${yr}</b>
+    <div class="seg"><button data-act="geo-w" data-v="upto" class="${win === 'upto' ? 'on' : ''}">усе до цього року</button><button data-act="geo-w" data-v="dec" class="${win === 'dec' ? 'on' : ''}">лише ±10 років</button></div>
+    <button class="btn line small" data-act="geo-play">▶ Програти історію</button></div>
+  <div class="geomap" id="geomap"><div class="gm-tiles"></div><div class="gm-pins"></div><div class="gm-attr">© учасники OpenStreetMap</div><div class="gm-z"><button data-act="geo-z" data-v="1" aria-label="Збільшити">+</button><button data-act="geo-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
+  <div class="geolist" id="geolist"></div>
+  ${miss.length ? `<div class="sec"><p class="small muted">Ще не стоять на карті: ${miss.map(k => `<b>${esc(k)}</b>`).join(', ')}.${canEdit() ? ' Натисніть назву нижче, потім клацніть на карті, де це місце.' : ''}</p>${canEdit() ? `<div class="btns">${miss.map(k => `<button class="btn line small" data-act="geo-place" data-k="${esc(k)}">📍 ${esc(k)}</button>`).join('')}</div>` : ''}</div>` : ''}
+  ${canEdit() && Object.keys(CFG_().places || {}).length ? `<details class="small"><summary>Поставлені вручну місця</summary>${Object.entries(CFG_().places).map(([k, v]) => `<div>${esc(k)} — ${v.join(', ')} <button class="btn line small" data-act="geo-unplace" data-k="${esc(k)}">прибрати</button></div>`).join('')}</details>` : ''}`;
+}
+function geoMount() {
+  const box = $('#geomap'); if (!box) return;
+  const tiles = box.querySelector('.gm-tiles'), pins = box.querySelector('.gm-pins');
+  const E = geoEvents(); const G = S.ui.geo ||= {};
+  const pts = [...new Set(E.map(e => e.k))].map(placeLL).filter(Boolean);
+  if (G.cx == null) { const xs = pts.map(([la, lo]) => merc(la, lo)); const mx = xs.length ? xs.reduce((a, b) => [a[0] + b[0], a[1] + b[1]]).map(v => v / xs.length) : merc(50.68, 31.6); G.cx = mx[0]; G.cy = mx[1]; const spread = xs.length > 1 ? Math.max(...xs.map(x => Math.abs(x[0] - mx[0])), ...xs.map(x => Math.abs(x[1] - mx[1]))) : 0; G.z = spread ? Math.max(5, Math.min(12, Math.log2((Math.min(box.clientWidth, box.clientHeight) / 2.6) / spread))) : 11; }
+  const W = () => box.clientWidth, H = () => box.clientHeight; const cache = new Map();
+  const paint = () => {
+    const zt = Math.max(0, Math.min(18, Math.round(G.z))), S2 = 2 ** G.z, ts = 256 * 2 ** (G.z - zt), n = 2 ** zt;
+    const x0 = (G.cx - W() / 2 / S2) / 256 * n, y0 = (G.cy - H() / 2 / S2) / 256 * n, x1 = (G.cx + W() / 2 / S2) / 256 * n, y1 = (G.cy + H() / 2 / S2) / 256 * n; const want = new Set();
+    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) { if (ty < 0 || ty >= n) continue; const key = zt + '/' + tx + '/' + ty; want.add(key); let el = cache.get(key);
+      if (!el) { el = new Image(); el.alt = ''; el.draggable = false; el.onerror = () => { el.style.visibility = 'hidden'; }; el.referrerPolicy = 'strict-origin-when-cross-origin'; el.src = BASES.osm.url(zt, ((tx % n) + n) % n, ty); cache.set(key, el); tiles.appendChild(el); }
+      el.style.transform = `translate(${(tx * 256 / n - G.cx) * S2 + W() / 2}px,${(ty * 256 / n - G.cy) * S2 + H() / 2}px) scale(${ts / 256})`; }
+    for (const [k, el] of cache) if (!want.has(k)) { el.remove(); cache.delete(k); }
+    // точки
+    const yr = +($('#geo-y')?.value || 9999), win = S.ui.geoW || 'upto';
+    const vis = E.filter(e => placeLL(e.k) && (e.y == null ? win === 'upto' : win === 'upto' ? e.y <= yr : Math.abs(e.y - yr) <= 10));
+    const by = {}; vis.forEach(e => (by[e.k] ||= []).push(e));
+    pins.innerHTML = Object.entries(by).map(([k, L]) => { const [la, lo] = placeLL(k), [wx, wy] = merc(la, lo), r = Math.min(46, 12 + Math.sqrt(L.length) * 5);
+      return `<button class="gpin" data-act="geo-pin" data-k="${esc(k)}" style="left:${(wx - G.cx) * S2 + W() / 2}px;top:${(wy - G.cy) * S2 + H() / 2}px;width:${r * 2}px;height:${r * 2}px" title="${esc(k)}: ${L.length}"><b>${L.length}</b><span>${esc(k)}</span></button>`; }).join('');
+    const gl = $('#geolist'); if (gl) { const k = S.ui.geoK && by[S.ui.geoK] ? S.ui.geoK : Object.keys(by).sort((a, b) => by[b].length - by[a].length)[0]; const L = (by[k] || []).slice().sort((a, b) => (a.y || 0) - (b.y || 0));
+      gl.innerHTML = k ? `<h3>${esc(k)} <span class="small muted">${L.length} подій ${win === 'upto' ? 'до ' + yr : 'у ' + (yr - 10) + '–' + (yr + 10)}</span></h3><ul class="evl">${L.slice(-40).reverse().map(e => `<li><span class="ev-d mono">${e.y || '—'}</span><span>${e.t === 'doc' ? `<a href="#" data-doc="${e.doc}">${esc(S.data.documents.find(d => d.id === e.doc)?.title || '')}</a>` : `${e.t === 'b' ? 'народи' + (P[e.id].sex === 'f' ? 'лася' : 'вся') : 'помер' + (P[e.id].sex === 'f' ? 'ла' : '') + ' / похован' + (P[e.id].sex === 'f' ? 'а' : 'ий')} ${pLink(e.id)}`}</span></li>`).join('')}</ul>` : '<p class="muted small">Немає подій у цей час.</p>'; }
+  };
+  G.paint = paint; paint();
+  const pts_ = new Map(); let st = null, pin = null;
+  box.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; pts_.set(e.pointerId, [e.clientX, e.clientY]); box.setPointerCapture?.(e.pointerId); if (pts_.size === 1) st = { x: e.clientX, y: e.clientY, cx: G.cx, cy: G.cy, moved: false }; if (pts_.size === 2) { const [[a, b], [c, d]] = [...pts_.values()]; pin = { d: Math.hypot(a - c, b - d), z: G.z }; } });
+  box.addEventListener('pointermove', e => { if (!pts_.has(e.pointerId)) return; pts_.set(e.pointerId, [e.clientX, e.clientY]); if (pts_.size === 2 && pin) { const [[a, b], [c, d]] = [...pts_.values()]; G.z = Math.max(4, Math.min(17, pin.z + Math.log2(Math.hypot(a - c, b - d) / pin.d))); paint(); return; } if (st) { const S1 = 2 ** G.z; if (Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y) > 4) st.moved = true; G.cx = st.cx - (e.clientX - st.x) / S1; G.cy = st.cy - (e.clientY - st.y) / S1; paint(); } });
+  const up = async e => { const was = st; pts_.delete(e.pointerId); if (pts_.size < 2) pin = null; if (!pts_.size) st = null;
+    if (was && !was.moved && S.ui.geoPlacing && e.type === 'pointerup') { const r = box.getBoundingClientRect(), S1 = 2 ** G.z, wx = G.cx + (e.clientX - r.left - W() / 2) / S1, wy = G.cy + (e.clientY - r.top - H() / 2) / S1;
+      const lon = wx / 256 * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * wy / 256))) * 180 / Math.PI, k = S.ui.geoPlacing; S.ui.geoPlacing = null; box.classList.remove('placing');
+      try { const rr = await api('/api/data', { body: { op: 'place.set', name: k, lat, lon } }); S.data.cfg.places = rr.places; S.ui.keepScroll = true; render(); toast(`«${k}» поставлено на карту`); } catch (err) { toast(errText(err)); } } };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  box.addEventListener('wheel', e => { e.preventDefault(); const r = box.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top, S1 = 2 ** G.z, nz = Math.max(4, Math.min(17, G.z - e.deltaY / 300)), S2 = 2 ** nz, wx = G.cx + (sx - W() / 2) / S1, wy = G.cy + (sy - H() / 2) / S1; G.cx = wx - (sx - W() / 2) / S2; G.cy = wy - (sy - H() / 2) / S2; G.z = nz; paint(); }, { passive: false });
+  $('#geo-y')?.addEventListener('input', e => { S.ui.geoY = +e.target.value; $('#geo-yl').textContent = e.target.value; paint(); });
+  if (S.ui.geoPlacing) box.classList.add('placing');
+}
+
+/* ── Допоможіть знайти ── */
+function wantList(max) {
+  const L = (CFG_().wanted || []).filter(x => !x.done);
+  return L.length ? `<ul class="wantl">${L.slice(0, max || 999).map(x => { const n = S.data.stories.filter(s => s.target === 'want:' + x.id).length; return `<li><button class="wantc" data-act="want-open" data-id="${x.id}"><b>${esc(x.text)}</b>${x.person && P[x.person] ? `<i>${esc(short(P[x.person]))}</i>` : ''}<span class="small muted">${n ? n + ' відповід.' : 'ще без відповіді'}</span></button></li>`; }).join('')}</ul>` : `<p class="small muted">Поки немає відкритих питань.</p>`;
+}
+function missing() { // чого бракує: прямі предки й найближчі без фото / дат
+  const me = S.me?.person_id || rootId(); const A = ancD(me); const near = [...A.keys()].filter(x => x !== me && A.get(x) <= 4);
+  return { noPhoto: near.filter(x => !P[x].portrait && (yN(P[x].b) || 0) >= 1860), noDate: near.filter(x => !yN(P[x].b)), noParents: near.filter(x => !P[x].f && !P[x].mo && A.get(x) <= 3) };
+}
+function vHelp() {
+  const W = (CFG_().wanted || []), done = W.filter(x => x.done), M = missing();
+  return `<div class="lede"><h1>Допоможіть знайти</h1><p class="small muted">Що ми шукаємо. Знаєте щось — напишіть, навіть «здається, баба казала…».</p></div>
+  <div class="hgrid">
+    <div class="sec"><h3>Питання від Максима ${canEdit() ? '<button class="btn line small" data-act="want-new">+ Питання</button>' : ''}</h3>${wantList()}
+      ${done.length ? `<details class="small"><summary>Уже знайдено (${done.length})</summary><ul class="wantl done">${done.map(x => `<li><button class="wantc" data-act="want-open" data-id="${x.id}"><b>✓ ${esc(x.text)}</b>${x.answer ? `<span class="small">${esc(x.answer)}</span>` : ''}</button></li>`).join('')}</ul></details>` : ''}</div>
+    <div class="sec"><h3>Хто на фото?</h3>${askGrid()}</div>
+  </div>
+  <div class="sec"><h3>Чиїх фото бракує</h3><p class="small muted">Найближчі предки без жодного фото. Може, у вас у альбомі є? Відкрийте картку → «Додати фото».</p><div class="row wrapmini">${M.noPhoto.map(mini).join('') || '<span class="muted small">Фото є в усіх — дякуємо!</span>'}</div></div>
+  ${M.noDate.length ? `<div class="sec"><h3>Невідома дата народження</h3><div class="row wrapmini">${M.noDate.map(mini).join('')}</div></div>` : ''}
+  ${M.noParents.length ? `<div class="sec"><h3>Не знаємо батьків</h3><p class="small muted">Тут обривається гілка — кожне ім'я відкриває ще покоління.</p><div class="row wrapmini">${M.noParents.map(mini).join('')}</div></div>` : ''}`;
+}
+function openWant(id) {
+  const x = (CFG_().wanted || []).find(w => w.id === id); if (!x) return;
+  const L = S.data.stories.filter(s => s.target === 'want:' + id);
+  modal(`<h2>${esc(x.text)}</h2>${x.person && P[x.person] ? `<p class="small">Про кого: ${pLink(x.person)}</p>` : ''}${x.done ? `<p class="hypnote">Знайдено${x.answer ? ': ' + esc(x.answer) : ''}</p>` : ''}
+    <h3>Відповіді</h3>${L.length ? storiesHtml(L) : '<p class="muted small">Ще ніхто не відповів.</p>'}
+    <div class="sec" style="gap:8px"><textarea class="in" id="st-want:${id}" placeholder="Що знаєте або пам'ятаєте? Хто ще може знати?"></textarea>
+    <div class="btns"><button class="btn" data-story="want:${id}">Відповісти</button>${canEdit() ? `<button class="btn line small" data-act="want-edit" data-id="${id}">Змінити</button>` : ''}<button class="btn line" data-act="close">Закрити</button><span class="msg" id="stm-want:${id}"></span></div></div>`);
+}
+function openWantEdit(id) {
+  const x = (CFG_().wanted || []).find(w => w.id === id) || {};
+  modal(`<h2>${id ? 'Змінити питання' : 'Нове питання'}</h2>
+    <label class="f">Що шукаємо<textarea class="in" id="w-t" placeholder="Напр.: «Де похований Яків Шутий (†1949)?»">${esc(x.text || '')}</textarea></label>
+    <label class="f">Про кого (необов'язково)${pick('w-p', x.person)}</label>
+    ${id ? `<label class="small"><input type="checkbox" id="w-d"${x.done ? ' checked' : ''}> Знайдено</label><label class="f">Що знайшли<input class="in" id="w-a" value="${esc(x.answer || '')}"></label>` : ''}
+    <div class="btns"><button class="btn" data-act="want-save" data-id="${id || ''}">Зберегти</button><button class="btn line" data-act="close">Скасувати</button>${id ? `<button class="btn danger small" data-act="want-del" data-id="${id}" style="margin-left:auto">Видалити</button>` : ''}<span class="msg" id="wmsg"></span></div>`);
+}
+
+/* ── Запросити одним дотиком ── */
+const accSet = () => new Set(S.data.accounts || []);
+function inviteText(p) {
+  const link = CFG_().join ? location.origin + '/?join=' + CFG_().join : '';
+  const nm = p ? String(p.n || '').replace(/\s*\(.*?\)/g, '') : '';
+  return `${nm ? 'Привіт, ' + nm + '! ' : 'Привіт! '}Я зробив сайт нашого роду — там родинне дерево, старі документи з архівів, фото і спогади.${p ? ' Ти там теж є 🙂' : ''} Зареєструйся, щоб усе бачити й доповнювати: ${link}${CFG_().tg ? `\nА ще в нас є група в Telegram: ${CFG_().tg}` : ''}`;
+}
+function openInvite(pid) {
+  const p = P[pid] || null, link = CFG_().join ? location.origin + '/?join=' + CFG_().join : '';
+  if (!link) { modal(`<h2>Запросити родича</h2><p>${isOwner() ? 'Реєстрацію за посиланням вимкнено. Увімкніть її: Власнику → Доступи → «Посилання для реєстрації».' : 'Реєстрацію зараз вимкнено — напишіть Максиму.'}</p><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
+  const t = inviteText(p), enc = encodeURIComponent(t), tgl = (p?.links || []).find(l => l.t === 'tg'), ph = (p?.links || []).find(l => l.t === 'tel' || l.t === 'vb');
+  modal(`<h2>Запросити ${p ? esc(short(p)) : 'родича'}</h2>
+    <textarea class="in" id="inv-t" style="min-height:130px">${esc(t)}</textarea>
+    <div class="invb">${navigator.share ? '<button class="btn" data-act="inv-share">Надіслати…</button>' : ''}
+      <a class="btn line s-tg" href="https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(t.replace(link, '').trim())}" target="_blank" rel="noopener noreferrer"><span class="si">TG</span> Telegram</a>
+      <a class="btn line s-vb" href="viber://forward?text=${enc}"><span class="si">Vb</span> Viber</a>
+      <a class="btn line s-wa" href="https://wa.me/${ph && /^\+\d+$/.test(ph.u) ? ph.u.slice(1) : ''}?text=${enc}" target="_blank" rel="noopener noreferrer"><span class="si">WA</span> WhatsApp</a>
+      ${ph ? `<a class="btn line" href="sms:${esc(ph.u)}?&body=${enc}">SMS</a>` : ''}
+      <button class="btn line" data-act="inv-copy">Скопіювати</button></div>
+    ${tgl ? `<p class="small muted">Або скопіюйте текст і відкрийте чат: <a href="${esc(tgl.u)}" target="_blank" rel="noopener noreferrer">${esc(socLabel(tgl))}</a></p>` : ''}
+    <p class="small muted">Після реєстрації ви побачите заявку у «Власнику» і прив'яжете людину до її картки.</p>
+    <div class="btns"><button class="btn line" data-act="close">Закрити</button><span class="msg" id="invmsg"></span></div>`);
+}
+
+/* ── ДНК ── */
+const DNA_CO = ['MyHeritage', 'FamilyTreeDNA', 'Ancestry', '23andMe', 'GEDmatch', 'інше'];
+function vDna() {
+  const L = CFG_().dna || [], tested = Object.values(P).filter(p => p.dna);
+  const so = S.ui.dnaSort || 'cm';
+  const rows = L.slice().sort((a, b) => so === 'cm' ? (b.cm || 0) - (a.cm || 0) : so === 'name' ? a.name.localeCompare(b.name, 'uk') : String(b.at).localeCompare(String(a.at)));
+  return `<div class="lede"><h1>ДНК-тести</h1><p class="small muted">Хто з нас здав тест і кого через нього знайшли. Самих ДНК-даних тут немає — лише імена й ступінь спорідненості.</p></div>
+  <div class="hgrid"><div class="sec"><h3>Хто здав тест</h3>${tested.length ? `<div class="row wrapmini">${tested.map(p => `<span class="dnam">${mini(p.id)}<i>${esc(p.dna)}</i></span>`).join('')}</div>` : '<p class="muted small">Ще ніхто. Позначка ставиться на картці людини → «Зв\'язок» → «Змінити».</p>'}</div>
+  <div class="sec"><h3>Як це працює</h3><ol class="small"><li>Купуєте набір (MyHeritage, FamilyTreeDNA, Ancestry) — пробірка поштою.</li><li>Через 4–8 тижнів у вашому акаунті — список «ДНК-збігів»: люди зі спільною ДНК і оцінкою спорідненості в сантиморганах (сМ).</li><li>Найкраще, коли тест здадуть 2–3 людини з різних гілок — тоді видно, через яку гілку кожен збіг.</li><li>Знайдених вносимо сюди й прив'язуємо до дерева.</li></ol><p class="small muted">Орієнтир: 3400 сМ — батьки/діти; ~850 — двоюрідні; ~200 — троюрідні; 50–100 — четвероюрідні.</p></div></div>
+  <div class="sec"><h3>Знайдені через ДНК ${canEdit() ? '<button class="btn line small" data-act="dna-new">+ Додати збіг</button>' : ''}</h3>
+    ${rows.length ? `<div class="tablebox"><table class="t"><thead><tr><th data-act="dna-sort" data-v="name" class="${so === 'name' ? 'on' : ''}">Хто</th><th>Де</th><th data-act="dna-sort" data-v="cm" class="${so === 'cm' ? 'on' : ''}">сМ</th><th>Ймовірно</th><th>Чий тест</th><th>Через кого в дереві</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td><b>${esc(x.name)}</b>${x.where ? `<br><span class="small muted">${esc(x.where)}</span>` : ''}</td><td class="small">${esc(x.co)}</td><td class="mono">${x.cm ?? '—'}</td><td class="small">${esc(x.rel)}</td><td class="small">${x.tester && P[x.tester] ? pLink(x.tester) : ''}</td><td class="small">${x.via && P[x.via] ? pLink(x.via) : '<span class="muted">ще не ясно</span>'}${x.note ? `<br><span class="muted">${esc(x.note)}</span>` : ''}</td><td>${canEdit() ? `<button class="btn line small" data-act="dna-edit" data-id="${x.id}">✎</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Поки нікого.</p>'}</div>`;
+}
+function openDnaEdit(id) {
+  const x = (CFG_().dna || []).find(d => d.id === id) || {};
+  modal(`<h2>${id ? 'Змінити' : 'Новий'} ДНК-збіг</h2><div class="grid2">
+    <label class="f">Ім'я (як у базі)<input class="in" id="dn-n" value="${esc(x.name || '')}"></label>
+    <label class="f">Де живе<input class="in" id="dn-w" value="${esc(x.where || '')}" placeholder="Напр.: Канада, Торонто"></label>
+    <label class="f">База<select class="in" id="dn-c">${DNA_CO.map(c => `<option${x.co === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
+    <label class="f">Спільна ДНК, сМ<input class="in" id="dn-cm" inputmode="numeric" value="${x.cm ?? ''}"></label>
+    <label class="f">Ймовірна спорідненість (з бази)<input class="in" id="dn-r" value="${esc(x.rel || '')}" placeholder="Напр.: троюрідний брат"></label>
+    <label class="f">Чий тест показав збіг${pick('dn-t', x.tester)}</label>
+    <label class="f">Через кого в дереві (якщо ясно)${pick('dn-v', x.via)}</label>
+    <label class="f">Примітка<input class="in" id="dn-o" value="${esc(x.note || '')}"></label></div>
+    <div class="btns"><button class="btn" data-act="dna-save" data-id="${id || ''}">Зберегти</button><button class="btn line" data-act="close">Скасувати</button>${id ? `<button class="btn danger small" data-act="dna-del" data-id="${id}" style="margin-left:auto">Видалити</button>` : ''}<span class="msg" id="dnmsg"></span></div>`);
+}
+
+/* ── Дерево-плакат ── */
+function openPoster() {
+  modal(`<h2>Дерево-плакат для друку</h2>
+    <p class="small muted">Збирає дерево з усіма гілками, які зараз відкриті на сторінці «Дерево», у велику картинку з рамкою й заголовком. Відкрийте потрібні гілки (кнопки ▲ ▾ ▸), а потім натисніть «Зробити плакат».</p>
+    <label class="f">Заголовок<input class="in" id="po-t" value="Рід Шутих"></label>
+    <label class="f">Підзаголовок<input class="in" id="po-s" value="Родинне дерево · Вороньки — Веприк — Лідин"></label>
+    <label class="f">Формат<select class="in" id="po-f"><option value="A2">A2 (42×59 см)</option><option value="A1" selected>A1 (59×84 см)</option><option value="A0">A0 (84×119 см)</option><option value="fit">Як є, без полів</option></select></label>
+    <label class="f">Орієнтація<select class="in" id="po-o"><option value="auto">Сама підбере</option><option value="land">Альбомна</option><option value="port">Книжкова</option></select></label>
+    <div class="btns"><button class="btn" data-act="po-go">Зробити плакат</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="pomsg"></span></div>
+    <p class="small muted">Друкувати — у копіцентрі «широкоформатний друк», файл PNG 300 dpi. Скажіть, що це плакат на папері 180 г/м² або на полотні.</p>`);
+}
+async function posterMake() {
+  const o = { t: $('#po-t').value.trim(), s: $('#po-s').value.trim(), f: $('#po-f').value, or: $('#po-o').value }, m = $('#pomsg');
+  m.className = 'msg'; m.textContent = 'Будую плакат…';
+  S.ui.poster = o; closeLayer();
+  if (S.view !== 'tree') { location.hash = '#/tree'; await new Promise(r => setTimeout(r, 900)); }
+  try { await treePng(o); } catch (e) { toast('Не вдалося зробити плакат: ' + (e.message || e)); } finally { S.ui.poster = null; }
+}
+
+/* ── Головна ── */
+function vHome() {
+  const me = P[S.me?.person_id], nm = String(S.me?.name || '').split(/\s+/)[0];
+  const living = Object.values(P).filter(p => isLiving(p) && !accSet().has(p.id) && p.id !== S.me?.person_id).length;
+  const V = voicesOf().filter(x => !x.pending || isOwner() || x.by === S.me.id).slice(-3).reverse();
+  return `<div class="lede"><h1>Вітаємо${nm ? ', ' + esc(nm) : ''}!</h1><p class="small muted">Родинний архів: дерево, документи з архівів, фото, спогади й голоси наших.</p></div>
+  ${statTiles()}
+  <div class="hgrid">
+    <div class="hcol">
+      ${tgCard()}
+      ${todayCard()}
+      <div class="hcard"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
+      <div class="hcard"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
+    </div>
+    <div class="hcol">
+      <div class="hcard"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
+      <div class="hcard"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}</div>
+      <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
+      <div class="hcard links3">
+        <a href="#/geo"><b>🗺 Карта роду</b><span>Де жили наші — з 1780-х до сьогодні</span></a>
+        <a href="#/stats"><b>📊 Цифри роду</b><span>Імена, довгожителі, найбільші родини</span></a>
+        <button data-act="poster"><b>🖼 Дерево-плакат</b><span>Велика картинка для друку на стіну</span></button>
+        <a href="#/dna"><b>🧬 ДНК-тести</b><span>Як знайти родичів у світі</span></a>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Дії нових розділів ── */
+const kinShort = (a, b) => { if (!a || !b || a === b || !P[a] || !P[b]) return ''; const r = kinship(a, b); return r?.word || ''; };
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'kin-a' || t.id === 'kin-b') { const v = pickVal(t.id); if (!v && t.value.trim()) return; S.ui[t.id === 'kin-a' ? 'kinA' : 'kinB'] = v; ev('open', 'kin', 'kin:' + (S.ui.kinA || '') + ':' + (S.ui.kinB || '')); S.ui.keepScroll = true; render(); }
+  if (t.dataset?.st) { const k = t.dataset.st; if (k === 'stPer') { S.ui.stPer = t.value; if (t.value && t.value !== 'own') { const [a, b] = t.value.split('-'); S.ui.stY0 = a; S.ui.stY1 = b; } else if (!t.value) { S.ui.stY0 = S.ui.stY1 = ''; } } else S.ui[k] = t.value; S.ui.keepScroll = true; render(); }
+});
+// сортування таблиць кліком по заголовку (таблиці з класом sortable)
+document.addEventListener('click', e => {
+  const th = e.target.closest('table.sortable th[data-sort]'); if (!th) return;
+  const tb = th.closest('table').tBodies[0], i = +th.dataset.sort, num = !!th.dataset.num, dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+  th.closest('tr').querySelectorAll('th').forEach(x => { delete x.dataset.dir; x.classList.remove('on'); }); th.dataset.dir = dir; th.classList.add('on');
+  const val = r => { const c = r.cells[i]?.textContent.trim() || ''; return num ? (parseFloat(c.replace(/[^\d.-]/g, '')) || 0) : c; };
+  [...tb.rows].sort((a, b) => { const x = val(a), y = val(b); const c = num ? x - y : String(x).localeCompare(String(y), 'uk'); return dir === 'asc' ? c : -c; }).forEach(r => tb.appendChild(r));
+});
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act],[data-phask]'); if (!t) return;
+  const a = t.dataset.act, id = t.dataset.id;
+  try {
+    if (t.dataset.phask != null) { const pid = t.dataset.phask; if (!pid) return; const on = !(CFG_().photoAsk || {})[pid]; const r = await api('/api/data', { body: { op: 'photo.ask', id: pid, on } }); S.data.cfg.photoAsk = r.photoAsk; closeLayer(); S.ui.keepScroll = true; render(); toast(on ? 'Фото додано в «Хто на фото?» — родичі побачать його на головній' : 'Прибрано з «Хто на фото?»'); return; }
+    if (!a) return;
+    if (a === 'tg-set') return openTgSet();
+    if (a === 'tg-save') { const m = $('#tgmsg'); try { const r = await api('/api/data', { body: { op: 'cfg.tg', url: $('#tg-u').value.trim() } }); S.data.cfg.tg = r.tg; closeLayer(); S.ui.keepScroll = true; render(); toast('Збережено'); } catch (err) { m.className = 'msg err'; m.textContent = err.message === 'bad_url' ? 'Потрібне посилання виду https://t.me/+… або https://t.me/назва' : errText(err); } return; }
+    if (a === 'kin-swap') { const x = S.ui.kinA || pickVal('kin-a'), y = S.ui.kinB || pickVal('kin-b'); S.ui.kinA = y; S.ui.kinB = x; S.ui.keepScroll = true; render(); return; }
+    if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
+    if (a === 'ask-open') return openAsk(id);
+    if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: [ph.person] }); return; }
+    if (a === 'ask-off') { const r = await api('/api/data', { body: { op: 'photo.ask', id, on: false } }); S.data.cfg.photoAsk = r.photoAsk; closeLayer(); S.ui.keepScroll = true; render(); toast('Прибрано з «Хто на фото?»'); return; }
+    if (a === 'v-rec') return openRec(id);
+    if (a === 'rec-go') return recToggle();
+    if (a === 'rec-cancel') { recStop(); closeLayer(); return; }
+    if (a === 'rec-save') {
+      if (!REC?.blob) return; const m = $('#recmsg'); t.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
+      if (REC.blob.size > 4.1e6) { m.className = 'msg err'; m.textContent = 'Запис завеликий (понад 4 МБ). Запишіть коротший, частинами.'; t.disabled = false; return; }
+      try { const r = await api(`/api/upload?person=${encodeURIComponent(REC.pid)}&caption=${encodeURIComponent($('#rec-c').value.trim())}`, { raw: REC.blob }); const pid = REC.pid; recStop(); await load(); closeLayer(); S.ui.keepScroll = true; render(); toast(r.pending ? 'Запис збережено — з\'явиться для всіх після підтвердження Максимом' : 'Голосовий спогад збережено'); ev('open', 'voice', 'person:' + pid); }
+      catch (err) { t.disabled = false; m.className = 'msg err'; m.textContent = err.message === 'type' ? 'Цей формат запису не підтримується. Спробуйте інший браузер.' : errText(err); }
+      return;
+    }
+    if (a === 'v-play') {
+      const row = t.closest('.vrow'), au = row?.querySelector('audio'); if (!au) return;
+      if (!au.src) { t.textContent = '…'; try { au.src = await voiceUrl(id); } catch { t.textContent = '!'; toast('Не вдалося відкрити запис'); return; } }
+      au.hidden = false; t.hidden = true; au.play().catch(() => {}); ev('open', 'voice', 'photo:' + id); return;
+    }
+    if (a === 'geo-w') { S.ui.geoW = t.dataset.v; t.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === t)); S.ui.geo?.paint?.(); return; }
+    if (a === 'geo-z') { const G = S.ui.geo; if (G) { G.z = Math.max(4, Math.min(17, G.z + +t.dataset.v)); G.paint(); } return; }
+    if (a === 'geo-pin') { S.ui.geoK = t.dataset.k; S.ui.geo?.paint?.(); $('#geolist')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+    if (a === 'geo-place') { S.ui.geoPlacing = t.dataset.k; $('#geomap')?.classList.add('placing'); $('#geomap')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); toast(`Клацніть на карті, де «${t.dataset.k}»`); return; }
+    if (a === 'geo-unplace') { const r = await api('/api/data', { body: { op: 'place.set', name: t.dataset.k, clear: true } }); S.data.cfg.places = r.places; S.ui.keepScroll = true; render(); return; }
+    if (a === 'geo-play') {
+      const r = $('#geo-y'); if (!r) return; if (S.ui.geoTimer) { clearInterval(S.ui.geoTimer); S.ui.geoTimer = null; t.textContent = '▶ Програти історію'; return; }
+      let y = +r.min; t.textContent = '⏸ Зупинити'; S.ui.geoTimer = setInterval(() => { const rr = $('#geo-y'); if (!rr || y > +rr.max) { clearInterval(S.ui.geoTimer); S.ui.geoTimer = null; const b = $('[data-act="geo-play"]'); if (b) b.textContent = '▶ Програти історію'; return; } rr.value = y; S.ui.geoY = y; $('#geo-yl').textContent = y; S.ui.geo?.paint?.(); y += 2; }, 120); return;
+    }
+    if (a === 'want-open') return openWant(id);
+    if (a === 'want-new') return openWantEdit('');
+    if (a === 'want-edit') return openWantEdit(id);
+    if (a === 'want-save') { const m = $('#wmsg'); try { const r = await api('/api/data', { body: { op: 'want.save', id, text: $('#w-t').value.trim(), person: pickVal('w-p') || '', done: !!$('#w-d')?.checked, answer: $('#w-a')?.value || '' } }); S.data.cfg.wanted = r.wanted; closeLayer(); S.ui.keepScroll = true; render(); toast('Збережено'); } catch (err) { m.className = 'msg err'; m.textContent = err.message === 'empty' ? 'Напишіть, що шукаємо.' : errText(err); } return; }
+    if (a === 'want-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити?'; return; } const r = await api('/api/data', { body: { op: 'want.del', id } }); S.data.cfg.wanted = r.wanted; closeLayer(); S.ui.keepScroll = true; render(); return; }
+    if (a === 'inv') return openInvite(id);
+    if (a === 'inv-copy') { const v = $('#inv-t').value; try { await navigator.clipboard.writeText(v); } catch { $('#inv-t').select(); document.execCommand?.('copy'); } $('#invmsg').textContent = 'Скопійовано — вставте в чат.'; ev('open', 'invite', 'copy'); return; }
+    if (a === 'inv-share') { try { await navigator.share({ text: $('#inv-t').value }); ev('open', 'invite', 'share'); } catch {} return; }
+    if (a === 'dna-new') return openDnaEdit('');
+    if (a === 'dna-edit') return openDnaEdit(id);
+    if (a === 'dna-sort') { S.ui.dnaSort = t.dataset.v; render(); return; }
+    if (a === 'dna-save') { const m = $('#dnmsg'), v = k => ($('#' + k)?.value || '').trim(); try { const r = await api('/api/data', { body: { op: 'dna.save', id, name: v('dn-n'), where: v('dn-w'), co: v('dn-c'), cm: v('dn-cm'), rel: v('dn-r'), tester: pickVal('dn-t') || '', via: pickVal('dn-v') || '', note: v('dn-o') } }); S.data.cfg.dna = r.dna; closeLayer(); S.ui.keepScroll = true; render(); toast('Збережено'); } catch (err) { m.className = 'msg err'; m.textContent = err.message === 'empty' ? "Вкажіть ім'я." : errText(err); } return; }
+    if (a === 'dna-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити?'; return; } const r = await api('/api/data', { body: { op: 'dna.del', id } }); S.data.cfg.dna = r.dna; closeLayer(); S.ui.keepScroll = true; render(); return; }
+    if (a === 'poster') return openPoster();
+    if (a === 'po-go') return posterMake();
+  } catch (err) { toast(errText(err)); }
+});
+
 /* ───── Рендер ───── */
 function render() {
   const app = $('#app');
@@ -1691,13 +2204,14 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vTree;
+  const V = { home: vHome, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
+  if (S.view === 'geo') requestAnimationFrame(geoMount);
   if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');
   const bkNew = document.getElementById('bk');
   if (bkNew && bkKeep && BOOK.key && bkKeep.querySelector('.bk-book')?.children.length) bkNew.replaceWith(bkKeep);
@@ -1768,7 +2282,10 @@ document.addEventListener('click', async e => {
       const ta = document.getElementById('st-' + d.story), m = document.getElementById('stm-' + d.story);
       if (!ta.value.trim()) { m.textContent = 'Напишіть кілька слів.'; return; }
       t.disabled = true; const r = await api('/api/data', { body: { op: 'story.add', target: d.story, text: ta.value } });
-      S.data.stories.push(r.story); S.ui.keepScroll = true; render(); toast('Спогад збережено'); return;
+      S.data.stories.push(r.story); S.ui.keepScroll = true; render();
+      if (/^photo:/.test(d.story)) { openAsk(d.story.slice(6)); toast('Дякуємо за підказку!'); return; }
+      if (/^want:/.test(d.story)) { openWant(d.story.slice(5)); toast('Дякуємо!'); return; }
+      toast('Спогад збережено'); return;
     }
     if (d.delstory) { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'точно видалити?'; return; } await api('/api/data', { body: { op: 'story.delete', id: d.delstory } }); S.data.stories = S.data.stories.filter(s => s.id !== d.delstory); S.ui.keepScroll = true; render(); return; }
     if (d.unlink) { await api('/api/data', { body: { op: 'union.remove', id: d.unlink } }); S.data.unions = S.data.unions.filter(u => u.id !== d.unlink); index(); openEdit(P[S.ui.editing]); return; }
@@ -1827,7 +2344,7 @@ document.addEventListener('click', async e => {
       const links = Object.keys(SOC).map(k => ({ t: k, u: ($('#sc-' + k)?.value || '').trim() })).filter(x => x.u);
       const m = $('#scmsg'); m.textContent = 'Зберігаю…'; m.className = 'msg';
       try {
-        const r = await api('/api/data', { body: { op: 'person.links', id: S.ui.socFor, links } });
+        const r = await api('/api/data', { body: { op: 'person.links', id: S.ui.socFor, links, dna: $('#sc-dna')?.value || '' } });
         const bad = links.filter(x => !(r.person.links || []).some(y => y.t === x.t));
         await load(); render();
         if (bad.length) { openSoc(P[S.ui.socFor]); bad.forEach(x => { const i = $('#sc-' + x.t); if (i) { i.value = x.u; i.classList.add('bad'); } }); const mm = $('#scmsg'); mm.className = 'msg err'; mm.textContent = 'Не вдалося прочитати: ' + bad.map(x => SOC[x.t][0]).join(', ') + '. Перевірте посилання або номер.'; return; }

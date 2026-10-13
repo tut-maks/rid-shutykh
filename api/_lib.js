@@ -138,6 +138,7 @@ export function cleanPerson(d) {
   if (Array.isArray(d.src)) o.src = d.src.slice(0, 30).map(s => ({ t: STR(s?.t, 120), u: STR(s?.u, 300) })).filter(s => /^https:\/\/(www\.)?familysearch\.org\//.test(s.u) || /^https:\/\//.test(s.u));
   if (d.root) o.root = true;
   const ln = cleanLinks(d.links); if (ln.length) o.links = ln;
+  if (typeof d.dna === 'string' && d.dna) o.dna = STR(d.dna, 30);
   return o;
 }
 

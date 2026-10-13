@@ -2,12 +2,24 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, can, revision, track, cleanPerson, cleanLinks, slugId, canAddTo, pendGet, pendSet } from './_lib.js';
+import { handler, send, fail, readJSON, can, revision, track, cleanPerson, cleanLinks, slugId, canAddTo, pendGet, pendSet, joinCfg } from './_lib.js';
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
 const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
 const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
+
+/* Спільні налаштування родини (settings): група Telegram, «Хто на фото?», «Допоможіть знайти», ДНК-збіги, місця на карті */
+const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {} };
+async function cfgAll() {
+  const out = {}; for (const k in CFG) out[k] = structuredClone(CFG[k]);
+  try { for (const r of await db.list('settings', { in: { key: Object.keys(CFG) } })) out[r.key] = r.value ?? out[r.key]; } catch {}
+  return out;
+}
+async function cfgGet(k) { try { const r = await db.get('settings', { eq: { key: k } }); return r?.value ?? structuredClone(CFG[k]); } catch { return structuredClone(CFG[k]); } }
+async function cfgSet(k, v, by, before) { await db.upsert('settings', { key: k, value: v, updated_by: by, updated_at: new Date().toISOString() }); await revision('setting', k, 'update', before ?? null, v, by); }
+const rid = () => Math.random().toString(36).slice(2, 10);
+const DNA_CO = ['MyHeritage', 'FamilyTreeDNA', 'Ancestry', '23andMe', 'GEDmatch', 'інше'];
 
 async function bootstrap(ctx) {
   const [persons, unions, families, documents, photos, stories, members, revs] = await Promise.all([
@@ -27,7 +39,7 @@ async function bootstrap(ctx) {
     if (!can(ctx.member, 'editor')) f.eq.created_by = ctx.member.id;
     questions = (await db.list('questions', f)).map(qOut);
   } catch { qReady = false; }
-  const pend = await pendGet(), isOwn = can(ctx.member, 'owner');
+  const [pend, cfg, jc] = await Promise.all([pendGet(), cfgAll(), joinCfg(false).catch(() => null)]); const isOwn = can(ctx.member, 'owner');
   const photosV = photos.filter(p => !pend[p.id] || isOwn || p.created_by === ctx.member.id); // чужі непідтверджені фото не показуємо
   let joinPending = 0;
   if (can(ctx.member, 'owner')) { try { joinPending = (await db.list('join_requests', { eq: { status: 'pending' }, select: 'id' })).length; } catch {} }
@@ -43,7 +55,9 @@ async function bootstrap(ctx) {
     photoPending: isOwn ? photosV.filter(p => pend[p.id]).length : 0,
     stories: stories.map(s => ({ id: s.id, target: s.target, text: s.text, by: s.created_by, at: s.created_at })),
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
+    accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
     questions, qReady, joinPending,
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], dna: cfg.dna_matches || [], places: cfg.places || {}, join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -67,6 +81,58 @@ export default handler(async (req, res, ctx, url) => {
   const done = (out, target) => { track(me.id, ctx.sid, 'edit', op, target); return send(res, 200, out); };
 
   /* ── люди ── */
+  /* ── спільні налаштування родини ── */
+  if (op === 'cfg.tg') { // посилання на групу Telegram — лише власник
+    if (!owner) return fail(res, 403, 'forbidden');
+    const u = S(body.url, 200);
+    if (u && !/^https:\/\/t\.me\/(\+[\w-]{6,}|joinchat\/[\w-]{6,}|[a-zA-Z][\w]{3,})$/.test(u)) return fail(res, 400, 'bad_url');
+    const before = await cfgGet('tg_group'); await cfgSet('tg_group', { url: u }, me.id, before);
+    return done({ tg: u }, 'cfg:tg');
+  }
+  if (op === 'photo.ask') { // «Хто на фото?» — редактор позначає фото, на якому треба впізнати людей
+    if (!editor) return fail(res, 403, 'forbidden');
+    const id = S(body.id, 60); const ph = await db.get('photos', { eq: { id, deleted: false } }); if (!ph) return fail(res, 404, 'not_found');
+    const before = await cfgGet('photo_ask'), v = { ...before };
+    if (body.on) v[id] = { at: new Date().toISOString(), by: me.id, note: S(body.note, 300) }; else delete v[id];
+    await cfgSet('photo_ask', v, me.id, before); return done({ photoAsk: v }, 'photo:' + id);
+  }
+  if (op === 'want.save' || op === 'want.del') { // «Допоможіть знайти»
+    if (!editor) return fail(res, 403, 'forbidden');
+    const before = await cfgGet('wanted'); let v = Array.isArray(before) ? before.slice() : [];
+    const id = S(body.id, 20);
+    if (op === 'want.del') v = v.filter(x => x.id !== id);
+    else {
+      const it = { id: id || rid(), text: S(body.text, 600), person: S(body.person, 60), done: !!body.done, answer: S(body.answer, 600), at: new Date().toISOString(), by: me.id };
+      if (!it.text) return fail(res, 400, 'empty');
+      const i = v.findIndex(x => x.id === it.id); if (i >= 0) v[i] = { ...v[i], ...it, at: v[i].at, by: v[i].by }; else v.unshift(it);
+      v = v.slice(0, 200);
+    }
+    await cfgSet('wanted', v, me.id, before); return done({ wanted: v }, 'want:' + id);
+  }
+  if (op === 'dna.save' || op === 'dna.del') { // ДНК-збіги (без самих ДНК-даних)
+    if (!editor) return fail(res, 403, 'forbidden');
+    const before = await cfgGet('dna_matches'); let v = Array.isArray(before) ? before.slice() : [];
+    const id = S(body.id, 20);
+    if (op === 'dna.del') v = v.filter(x => x.id !== id);
+    else {
+      const cm = Number(body.cm);
+      const it = { id: id || rid(), name: S(body.name, 120), co: DNA_CO.includes(body.co) ? body.co : 'інше', cm: Number.isFinite(cm) && cm > 0 && cm < 4000 ? Math.round(cm) : null, rel: S(body.rel, 120), tester: S(body.tester, 60), via: S(body.via, 60), where: S(body.where, 120), note: S(body.note, 1000), at: new Date().toISOString() };
+      if (!it.name) return fail(res, 400, 'empty');
+      const i = v.findIndex(x => x.id === it.id); if (i >= 0) v[i] = { ...v[i], ...it, at: v[i].at }; else v.unshift(it);
+      v = v.slice(0, 500);
+    }
+    await cfgSet('dna_matches', v, me.id, before); return done({ dna: v }, 'dna:' + id);
+  }
+  if (op === 'place.set') { // координати місця для «Карти роду» — ставить редактор, клацнувши на карті
+    if (!editor) return fail(res, 403, 'forbidden');
+    const name = S(body.name, 120); if (!name) return fail(res, 400, 'empty');
+    const lat = Number(body.lat), lon = Number(body.lon);
+    const before = await cfgGet('places'), v = { ...before };
+    if (body.clear) delete v[name];
+    else { if (!(lat > 30 && lat < 72 && lon > -30 && lon < 180)) return fail(res, 400, 'bad'); v[name] = [Math.round(lat * 1e5) / 1e5, Math.round(lon * 1e5) / 1e5]; }
+    await cfgSet('places', v, me.id, before); return done({ places: v }, 'place:' + name);
+  }
+
   /* соцмережі: редактор — будь-кому, кожен родич — на своїй картці */
   if (op === 'person.links') {
     const cur = await db.get('persons', { eq: { id: S(body.id, 60) } });
@@ -74,9 +140,10 @@ export default handler(async (req, res, ctx, url) => {
     if (!editor && me.person_id !== cur.id) return fail(res, 403, 'forbidden');
     const links = cleanLinks(body.links);
     const data = { ...cur.data }; if (links.length) data.links = links; else delete data.links;
+    if (body.hasOwnProperty('dna')) { if (DNA_CO.includes(body.dna)) data.dna = body.dna; else delete data.dna; }
     const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
     if (!row) return fail(res, 409, 'conflict');
-    await revision('person', cur.id, 'update', { links: cur.data.links || [] }, { links }, me.id);
+    await revision('person', cur.id, 'update', { links: cur.data.links || [], dna: cur.data.dna || '' }, { links, dna: data.dna || '' }, me.id);
     return done({ person: { id: row.id, ...row.data, v: row.version, last: { by: me.id, at: row.updated_at, action: 'update' } } }, cur.id);
   }
   if (op === 'person.save') {
@@ -92,7 +159,7 @@ export default handler(async (req, res, ctx, url) => {
       if (cur.data.root) data.root = true;
       if (cur.data.portrait && !body.data.hasOwnProperty('portrait')) data.portrait = cur.data.portrait;
       // поля, яких немає у формі редагування, не губити (джерела, соцмережі)
-      for (const k of ['src', 'links']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
+      for (const k of ['src', 'links', 'dna']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
       const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
       if (!row) return fail(res, 409, 'conflict');
       await revision('person', cur.id, 'update', cur.data, data, me.id);
@@ -242,7 +309,11 @@ export default handler(async (req, res, ctx, url) => {
   if (op === 'story.add') {
     const text = S(body.text, 20000), target = S(body.target, 80);
     if (!text || !target) return fail(res, 400, 'empty');
-    if (!(await canAddTo(me, target))) return fail(res, 403, 'branch');
+    // підказки «Хто на фото?» і відповіді на «Допоможіть знайти» — може писати кожен родич
+    let open = false;
+    if (/^photo:/.test(target)) open = !!(await cfgGet('photo_ask'))[target.slice(6)];
+    else if (/^want:/.test(target)) open = (await cfgGet('wanted')).some(x => x.id === target.slice(5));
+    if (!open && !(await canAddTo(me, target))) return fail(res, 403, 'branch');
     const [s] = await db.insert('stories', { target, text, created_by: me.id });
     await revision('story', s.id, 'create', null, { target, text }, me.id);
     return done({ story: { id: s.id, target, text, by: me.id, at: s.created_at } }, target);
