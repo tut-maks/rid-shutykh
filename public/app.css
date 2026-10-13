@@ -904,3 +904,15 @@ main{padding-block:14px 60px}
 @media (max-width:1180px) and (min-width:821px){.tbar .tme span{display:none}}
 @media (max-width:1400px) and (min-width:821px){.top .brand small{display:none}.top .nav a .nq-l{display:none}}
 @media (max-width:1000px) and (min-width:821px){.top .nav a{padding-left:7px!important;padding-right:7px!important;font-size:14px}.top .brand{font-size:22px}}
+/* Історія сіл: розділи згортаються */
+.hsec{border-top:1px solid var(--rule)}
+.hsec:last-of-type{border-bottom:1px solid var(--rule)}
+.hsec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 4px;min-height:48px;font-family:var(--f-display);font-size:21px;font-weight:700;color:var(--ink)}
+.hsec>summary::-webkit-details-marker{display:none}
+.hsec>summary::before{content:'▸';color:var(--wine);font-size:15px;transition:transform .15s;flex:none}
+.hsec[open]>summary::before{transform:rotate(90deg)}
+.hsec>summary:hover .hs-t{color:var(--wine)}
+.hs-n{margin-left:auto;font:400 13px var(--f-body);color:var(--muted);white-space:nowrap}
+.hsec>.hl,.hsec>ul,.hsec>ol{margin:0 0 18px}
+.hs-all{margin:10px 0 6px}
+@media (max-width:820px){.hsec>summary{font-size:18px}}

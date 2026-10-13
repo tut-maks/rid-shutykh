@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130836';
+const BUILD = '202610130840';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -528,6 +528,7 @@ function parDocs(p, own) {
     return `<details class="pdocs" data-pd="${esc(key)}"${open ? ' open' : ''}><summary>Документи ${t} — ${esc(full(par))} <span class="muted small">(${ds.length})</span></summary><div class="thumbs">${ds.map(docCard).join('')}</div></details>`;
   }).join('');
 }
+document.addEventListener('toggle', e => { const h = e.target; if (h.matches?.('details[data-hs]')) { (S.ui.hsOpen = S.ui.hsOpen || {})[h.dataset.hs] = h.open; const b = document.querySelector('[data-act="hs-all"]'); if (b) { const ds = [...document.querySelectorAll('details.hsec[data-hs]')].filter(x => /^\d+$/.test(x.dataset.hs)); b.textContent = ds.every(x => x.open) ? 'Згорнути все' : 'Розгорнути все'; } } }, true);
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches?.('details[data-pd]')) { (S.ui.pdOpen = S.ui.pdOpen || {})[d.dataset.pd] = d.open; } }, true);
 /* ── Пояснення старих і архівних слів: слово* + виноска під текстом ── */
 const GLOSS = [
@@ -1221,9 +1222,11 @@ function vHistory() {
   const v = loadText('villages');
   if (v && v.sections) {
     const src = l => (l || []).map(x => x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>` : esc(x.name)).join(' · ');
-    return `<div class="hist">${glossify(`<p>${esc(v.intro || '')}</p>` + v.sections.map(sec => `<h3>${esc(sec.title)}</h3><div class="hl">${sec.items.map(it => `<div class="hr"><span class="mono">${esc(it.y || '')}</span><span>${esc(it.t)}${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</span></div>`).join('')}</div>`).join(''))}
-      ${v.ask?.length ? `<h3>Що варто замовити в архівах</h3><ul class="small">${v.ask.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-      ${v.sources?.length ? `<h3>Усі джерела</h3><ol class="small hsrcs">${v.sources.map(x => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>` : esc(x.name)}</li>`).join('')}</ol>` : ''}</div>`;
+    const O = S.ui.hsOpen || {}, all = v.sections.length && v.sections.every((_, i) => O[i]);
+    const det = (k, title, n, body) => `<details class="hsec" data-hs="${k}"${O[k] ? ' open' : ''}><summary><span class="hs-t">${title}</span><span class="hs-n">${n}</span></summary>${body}</details>`;
+    return `<div class="hist">${glossify(`<p>${esc(v.intro || '')}</p><p class="hs-all"><button type="button" class="btn line small" data-act="hs-all">${all ? 'Згорнути все' : 'Розгорнути все'}</button></p>` + v.sections.map((sec, i) => det(i, esc(sec.title), `${sec.items.length} ${sec.items.length === 1 ? 'подія' : sec.items.length < 5 ? 'події' : 'подій'}`, `<div class="hl">${sec.items.map(it => `<div class="hr"><span class="mono">${esc(it.y || '')}</span><span>${esc(it.t)}${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</span></div>`).join('')}</div>`)).join(''))}
+      ${v.ask?.length ? det('ask', 'Що варто замовити в архівах', v.ask.length, `<ul class="small">${v.ask.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`) : ''}
+      ${v.sources?.length ? det('src', 'Усі джерела', v.sources.length, `<ol class="small hsrcs">${v.sources.map(x => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>` : esc(x.name)}</li>`).join('')}</ol>`) : ''}</div>`;
   }
   return vHistoryOld();
 }
@@ -1759,6 +1762,7 @@ document.addEventListener('click', async e => {
     if (act === 'map-over') return openOverlay(d.id);
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
+    if (act === 'hs-all') { const ds = [...document.querySelectorAll('details.hsec[data-hs]')].filter(x => /^\d+$/.test(x.dataset.hs)); const open = !ds.every(x => x.open); ds.forEach(x => { x.open = open; }); return; }
     if (act === 't-png') { if (t.disabled) return; t.disabled = true; const o = t.textContent; t.textContent = 'Готую картинку…'; try { await treePng(); } catch (err) { console.error(err); toast('Не вдалося зробити картинку'); } t.disabled = false; t.textContent = o; return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; S.ui.kidx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; let r = { result: [] }; for (let k = 0; k < 25; k++) { const x = await api('/api/setup?a=import', { body: {} }); r.result.push(...(x.result || [])); if (!x.more) break; } const ok = (r.result || []).filter(x => / ok/.test(x)).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; delete TXT.history; delete TXT.villages; BOOK.key = ''; await load(); return; }
