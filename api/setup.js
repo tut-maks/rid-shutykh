@@ -10,9 +10,8 @@ const ROOT = process.cwd();
 
 export default handler(async (req, res, _c, url) => {
   const a = url.searchParams.get('a');
-  const members = await db.list('members', { limit: 1 });
-
-  if (a === 'status') return send(res, 200, { initialized: members.length > 0 });
+  const t0 = Date.now(); const members = await db.list('members', { limit: 1 });
+  if (a === 'status') { const t1 = Date.now(); await db.list('members', { limit: 1 }); res.setHeader('server-timing', `db1;dur=${t1 - t0}, db2;dur=${Date.now() - t1}`); return send(res, 200, { initialized: members.length > 0 }); } // час до бази — щоб бачити, чи сервер близько до бази
 
   if (a === 'init' && req.method === 'POST') {
     if (members.length) return fail(res, 409, 'done');
