@@ -18,7 +18,7 @@ async function bootstrap(ctx) {
     db.list('photos', { eq: { deleted: false }, order: 'created_at' }),
     db.list('stories', { eq: { deleted: false }, order: 'created_at' }),
     db.list('members', { select: 'id,name,role,person_id,active' }),
-    db.list('revisions', { eq: { entity: 'person' }, order: 'at', desc: true, limit: 3000 }),
+    db.list('revisions', { eq: { entity: 'person' }, select: 'entity_id,by,at,action', order: 'at', desc: true, limit: 3000 }), // лише 4 поля, без «було/стало» — у рази менше даних
   ]);
   // Запитання: свої — кожному, усі — редакторам і власнику. Якщо таблиці ще немає (міграція 002 не виконана) — порожньо.
   let questions = [], qReady = true;

@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130706';
+const BUILD = '202610130719';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -461,7 +461,8 @@ function vPerson() {
     ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">FamilySearch</span></li>`).join('')}</ul></div>` : ''}
     <div class="sec"><h3>Документи ${canEdit() ? `<button class="btn line small" data-act="docform">+ Архівний документ</button>` : ''}</h3>
       ${canEdit() && S.ui.docform ? `<div class="docform"><input class="in" id="dtitle" placeholder="Назва: напр. «Народження Микити Максимовича»"><input class="in" id="ddate" placeholder="Дата, напр. 27.05.1818"><input class="in" id="dsrc" placeholder="Джерело: архів, книга, запис №"><label class="btn line small" style="cursor:pointer">Вибрати скани<input type="file" accept="image/*" multiple data-docup="${p.id}" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
-      ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}</div>
+      ${docs.length ? `<div class="thumbs">${docs.map(docCard).join('')}</div>` : `<p class="muted">Документів поки немає.</p>`}
+      ${parDocs(p, docs)}</div>
     <div class="sec"><h3>Фото ${canAdd(p.id) ? `<label class="btn line small" style="cursor:pointer" title="Портрет, родинне фото або скан документа (свідоцтво, лист, довідка)">Додати фото чи документ<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>
       ${photos.length ? `<div class="thumbs">${photos.map(x => `<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}</span></button>`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
@@ -469,6 +470,17 @@ function vPerson() {
     <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
   </div></div>`;
 }
+// документи батька й матері під документами людини — згорнуто, з підписом «документи матері: …»
+function parDocs(p, own) {
+  const ownIds = new Set(own.map(d => d.id));
+  return [['f', 'батька'], ['mo', 'матері']].map(([k, t]) => {
+    const par = P[p[k]]; if (!par) return '';
+    const ds = S.data.documents.filter(d => (d.people || []).includes(par.id) && !ownIds.has(d.id)); if (!ds.length) return '';
+    const key = p.id + ':' + k, open = (S.ui.pdOpen || {})[key];
+    return `<details class="pdocs" data-pd="${esc(key)}"${open ? ' open' : ''}><summary>Документи ${t} — ${esc(full(par))} <span class="muted small">(${ds.length})</span></summary><div class="thumbs">${ds.map(docCard).join('')}</div></details>`;
+  }).join('');
+}
+document.addEventListener('toggle', e => { const d = e.target; if (d.matches?.('details[data-pd]')) { (S.ui.pdOpen = S.ui.pdOpen || {})[d.dataset.pd] = d.open; } }, true);
 /* ── Пояснення старих і архівних слів: слово* + виноска під текстом ── */
 const GLOSS = [
   [/артіл[а-яіїєґ']*/i, 'артіль', 'добровільне об\'єднання селян чи ремісників для спільної роботи; на початку 1930-х так часто називали колгоспи.'],
@@ -893,10 +905,11 @@ const VHIST_ASK = ['ЦДІАК України, ф. 57 — Генеральний
 /* ── Великі тексти з сервера (історія роду, історія сіл) ── */
 const TXT = {};
 const TXT_T = {};
-function loadText(k) { // порожній результат не кешуємо назавжди: через 15 с спробуємо ще (текст міг щойно імпортуватись)
+const TXT_PAGE = { history: 'families', villages: 'maps' };
+function loadText(k, quiet) { // порожній результат не кешуємо назавжди: через 15 с спробуємо ще (текст міг щойно імпортуватись)
   if (k in TXT && !(TXT[k] === null && Date.now() - (TXT_T[k] || 0) > 15000)) return TXT[k];
   TXT[k] = undefined; TXT_T[k] = Date.now();
-  api('/api/data?text=' + k).then(r => { TXT[k] = r.text || null; TXT_T[k] = Date.now(); if (k === 'history') BOOK.key = ''; S.ui.keepScroll = true; render(); }).catch(() => { TXT[k] = null; TXT_T[k] = Date.now(); });
+  api('/api/data?text=' + k).then(r => { TXT[k] = r.text || null; TXT_T[k] = Date.now(); if (k === 'history') BOOK.key = ''; if (quiet && S.view !== TXT_PAGE[k]) return; S.ui.keepScroll = true; render(); }).catch(() => { TXT[k] = null; TXT_T[k] = Date.now(); });
   return undefined;
 }
 async function syncNow() { // нові матеріали з репозиторію сервер вносить сам; сайт лише «будить» його при кожному відкритті
@@ -1029,7 +1042,7 @@ function bookPageHtml(i) {
   return `<div class="bk-page"><div class="bk-head">${esc(p.chapter || '')}</div><div class="bk-body">${p.html}</div><div class="bk-foot">${num}</div></div>`;
 }
 function bookCoverHtml() {
-  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>роду Шутих</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><button class="bk-open" data-bk="open">Відкрити книгу</button></div></div>`;
+  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>роду Шутих</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
 }
 function bookRender() {
   const book = document.getElementById('bk-book'); if (!book) return;
@@ -1045,8 +1058,16 @@ function bookRender() {
   const toc = document.getElementById('bk-toc');
   if (toc) toc.innerHTML = `<div class="bk-tset"><span>Шрифт</span><button class="bk-b" data-bk="fs-" aria-label="Менший шрифт">A−</button><button class="bk-b" data-bk="fs+" aria-label="Більший шрифт">A+</button><button class="bk-b txt" data-bk="plain">Читати текстом</button></div>` + BOOK.chapters.map(c => `<a href="#" data-bkgo="${c.page}">${esc(c.title)} <span class="mono">${BOOK.spread ? c.page : c.page + 1}</span></a>`).join('');
 }
+// закладка: де людина зупинилась (у цьому браузері) — за текстом сторінки, тож переживає зміну шрифту, екрана й нові розділи
+const bkHasMark = () => { try { return !!localStorage.getItem('rs_bkmark'); } catch { return false; } };
+function bkMarkSave() { if (!S.ui.bkOpen || !BOOK.pages.length) return; const i = S.ui.bkPos || 0; try { if (i < 2) { if (BOOK.markOk) localStorage.removeItem('rs_bkmark'); } else localStorage.setItem('rs_bkmark', JSON.stringify({ a: bkAnchor(), f: i / BOOK.pages.length })); } catch {} }
+function bkMarkFind() { let m = null; try { m = JSON.parse(localStorage.getItem('rs_bkmark') || 'null'); } catch {} if (!m) return 0;
+  const tx = p => p.html ? p.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') : ''; let k = -1;
+  for (const L of [40, 24, 14]) { if (!m.a || k >= 0) break; const q = m.a.slice(0, L); k = BOOK.pages.findIndex(p => tx(p).includes(q)); }
+  if (k < 0) k = Math.round((m.f || 0) * BOOK.pages.length);
+  k = Math.max(0, Math.min(k, BOOK.pages.length - 1)); if (BOOK.spread && k % 2) k--; return k; }
 function bookCounter() {
-  const n = document.getElementById('bk-n'), N = BOOK.pages.length, i = S.ui.bkPos || 0;
+  const n = document.getElementById('bk-n'), N = BOOK.pages.length, i = S.ui.bkPos || 0; bkMarkSave();
   if (n && !n.querySelector('input')) n.textContent = (!S.ui.bkOpen ? 'обкладинка' : BOOK.spread ? `стор. ${i}–${i + 1} з ${N - 1}` : `стор. ${i + 1} з ${N}`) + ' ▾';
 }
 function bookFlip(dir, target) {
@@ -1089,9 +1110,10 @@ function bookOpen() {
     book.innerHTML = `<div class="bk-side l">${bookPageHtml(i)}</div><div class="bk-side r">${bookPageHtml(i + 1)}</div><div class="bk-spine"></div>`;
     const leaf = document.createElement('div'); leaf.className = 'bk-leaf fwd cover'; leaf.innerHTML = `<div class="bk-face front">${bookCoverHtml()}</div><div class="bk-face backf"><div class="bk-page endp"></div></div>`;
     book.appendChild(leaf); requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
-    const done = () => { S.ui.bkOpen = true; BOOK.busy = false; bookRender(); };
-    leaf.addEventListener('transitionend', done, { once: true }); setTimeout(() => { if (BOOK.busy) done(); }, 1700);
-  } else { S.ui.bkOpen = true; BOOK.busy = false; bookRender(); }
+    const k = bkMarkFind(); let fin = false;
+    const done = () => { if (fin) return; fin = true; S.ui.bkOpen = true; BOOK.busy = false; S.ui.bkPos = 0; bookRender(); if (k > 0) setTimeout(() => { BOOK.markOk = true; bookFlip(0, k); }, 150); else BOOK.markOk = true; };
+    leaf.addEventListener('transitionend', done, { once: true }); setTimeout(done, 1700);
+  } else { S.ui.bkOpen = true; BOOK.busy = false; S.ui.bkPos = bkMarkFind(); BOOK.markOk = true; bookRender(); }
 }
 function bookClose() { SND.play('thud', 0.5); S.ui.bkOpen = false; S.ui.bkPos = 0; bookRender(); }
 function bookMount() {
@@ -1826,11 +1848,14 @@ async function start() {
   if (jc) {
     try { await api('/api/auth?a=join&c=' + encodeURIComponent(jc), { noRedirect: true }); S.join = jc; } catch { S.gate = () => gate(`<p class="msg err" style="text-align:center">${ERR.invalid_join}</p><p style="text-align:center"><a href="/">До входу</a></p>`); return render(); }
   }
-  try { const st = await api('/api/setup?a=status', { noRedirect: true }); if (!st.initialized) { S.gate = vSetup; return render(); } } catch {}
-  try { const r = await api('/api/auth?a=me', { noRedirect: true }); S.me = r.member; } catch { S.me = null; }
-  if (S.me) { render(); await load(); }
+  // три запити одночасно, а не по черзі: чи сайт налаштований, хто увійшов, і самі дані дерева
+  const [st, me, data] = await Promise.allSettled([api('/api/setup?a=status', { noRedirect: true }), api('/api/auth?a=me', { noRedirect: true }), api('/api/data', { noRedirect: true })]);
+  if (st.status === 'fulfilled' && !st.value.initialized) { S.gate = vSetup; return render(); }
+  S.me = me.status === 'fulfilled' ? me.value.member : null;
+  if (S.me) { if (data.status === 'fulfilled') { S.data = data.value; index(); } else { render(); await load(); } }
   render();
   autoImport();
+  if (S.me) setTimeout(() => { loadText('history', true); loadText('villages', true); }, 1200); // заздалегідь, поки людина дивиться дерево — «Історія» відкриється одразу
   setTimeout(checkUpdate, 4000);
 }
 // Власнику: нові фото й картки, які підготував Claude (seed/import), додаються самі — раз за сеанс, повторно нічого не дублюється
