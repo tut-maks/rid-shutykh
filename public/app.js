@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131444';
+const BUILD = '202610131451';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -100,7 +100,7 @@ function top() {
   const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0;
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
   return `<header class="top"><div class="wrap topw">
-    <a class="brand" href="#/home">Наш родовід<small>Родинний архів</small></a>
+    <a class="brand" href="#/home" title="Наш родовід: ${SURN.join(', ')}"><span class="br-t">Наш родовід<span class="br-c">:</span></span><small class="br-s"><span>${SURN.slice(0, 3).join(' · ')} ·</span> <span>${SURN.slice(3).join(' · ')}</span></small></a>
     <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' || k === 'villages' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ` title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть${qb ? '. Нових: ' + qb : ''}"` : ''}>${k === 'q' ? 'Запитання<span class="nq-l">&nbsp;й уточнення</span>' : t}${k === 'q' && qb ? `<i class="nq-b" aria-label="нових: ${qb}">${qb}</i>` : ''}</a>`).join('')}</nav>
     <div class="who"><a class="tic" href="#/people" data-act="gsearch" title="Знайти людину" aria-label="Пошук">${IC.search}</a>
       <details class="umenu"><summary class="uav" title="${esc(S.me.name || S.me.email || '')}"><span class="av sm">${esc(initials(me))}</span>${qb + jb ? `<i class="bn-badge">${qb + jb}</i>` : ''}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
@@ -280,6 +280,7 @@ function mNav(cur) {
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
 /* Подяка автору (бажання власника, 13.10) */
+const SURN = ['Шуті', 'Галаї', 'Левченки', 'Вдовинці', 'Красновиди', 'Семени']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
   const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
@@ -876,7 +877,7 @@ const kidRow = (k = {}) => `<div class="kidr"><input class="in" data-kf="n" plac
 const readKids = box => [...(box?.querySelectorAll('.kidr') || [])].map(r => Object.fromEntries([...r.querySelectorAll('[data-kf]')].map(i => [i.dataset.kf, i.value.trim()]))).filter(k => k.n);
 const RF = (id, label, ph, o = {}) => `<label class="f${o.wide ? ' wide' : ''}">${label}${o.area ? `<textarea class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="2000"></textarea>` : `<input class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="300"${o.type ? ` type="${o.type}"` : ''}${o.im ? ` inputmode="${o.im}"` : ''}${o.ac ? ` autocomplete="${o.ac}"` : ''}${o.req ? ' required' : ''}>`}</label>`;
 function vRegister() {
-  return `<div class="gate reg"><div class="card"><h1>Наш родовід</h1><div class="sub">Реєстрація в родинному архіві</div><div class="orn">◆ ◆ ◆</div>
+  return `<div class="gate reg"><div class="card"><h1>Наш родовід</h1><div class="sub gate-sn">${SURN.join(' · ')}</div><div class="sub">Реєстрація в родинному архіві</div><div class="orn">◆ ◆ ◆</div>
   <form id="register" class="sec" autocomplete="on">
     <p style="margin:0">Розкажіть, хто ви і хто ваші рідні — так Максим знайде вас у дереві й відкриє доступ. Пишіть як знаєте: прізвище, ім'я, по батькові й роки (можна приблизно).</p>
     <h3>Про вас</h3>
@@ -1767,7 +1768,7 @@ const introHtml = btn => `<div class="intro">${INTRO.map((l, i) => `<p class="il
   ${btn ? `<button class="btn ib" data-act="intro-close" style="animation-delay:${1.2 + INTRO.length * 1.3}s">До родинного архіву</button>` : ''}</div>`;
 const introSeen = () => { try { return sessionStorage.getItem('rs_intro') === '1'; } catch { return S.ui.introSeen; } };
 const introMark = () => { S.ui.introSeen = true; try { sessionStorage.setItem('rs_intro', '1'); } catch {} };
-function gate(inner) { return `<div class="gate"><div class="card"><h1>Наш родовід</h1><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
+function gate(inner) { return `<div class="gate"><div class="card"><h1>Наш родовід</h1><div class="sub gate-sn">${SURN.join(' · ')}</div><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
 function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта або логін<input class="in" id="lg-e" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form>${S.join ? `<p style="text-align:center;margin:0"><a href="#" data-act="to-register">Ще немає доступу? Зареєструватися</a></p>` : `<p class="small muted" style="text-align:center;margin:0">Доступ лише для родини. Забули пароль — напишіть Максиму.</p>`}`) + '<p class="lg-cr">Сайт створив і веде <b>Максим Шутий</b></p></div>'; }
 function vInvite(inv) { return gate(`<form id="accept" class="sec"><p style="margin:0">${inv.purpose === 'reset' ? 'Задайте новий пароль' : 'Вас запросили до родинного архіву.'}</p><label class="f">${inv.email.includes('@') ? 'Пошта' : 'Ваш логін (запишіть його)'}<input class="in" value="${esc(inv.email)}" disabled></label><label class="f">Як вас підписувати<input class="in" id="ac-n" value="${esc(inv.name || '')}" required></label><label class="f">Придумайте пароль (від 8 символів)<input class="in" id="ac-p" type="password" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">${inv.purpose === 'reset' ? 'Зберегти пароль' : 'Увійти до архіву'}</button><div class="msg" id="ac-m"></div></form>`); }
 function vSetup() { return gate(`<form id="setup" class="sec"><p style="margin:0">Перше налаштування: створіть обліковий запис власника.</p><label class="f">Код налаштування (BOOTSTRAP_TOKEN з Vercel)<input class="in" id="su-t" type="password" required></label><label class="f">Ваше ім'я<input class="in" id="su-n" value="Максим" required></label><label class="f">Пошта<input class="in" id="su-e" type="email" required></label><label class="f">Пароль (від 10 символів)<input class="in" id="su-p" type="password" minlength="10" autocomplete="new-password" required></label><button class="btn" type="submit">Створити</button><div class="msg" id="su-m"></div></form>`); }
