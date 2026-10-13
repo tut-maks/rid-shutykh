@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130651';
+const BUILD = '202610130700';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1505,11 +1505,12 @@ function vAdmin() {
       <div class="grid2"><label class="f">Ім'я<input class="in" id="iv-name" placeholder="напр. Тетяна Іванівна"></label><label class="f" title="Якщо пошти немає — придумайте короткий логін, можна українськими літерами, напр. василь">Пошта або логін<input class="in" id="iv-email" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="пошта або логін, напр. василь"></label>
       <label class="f">Права<select class="in" id="iv-role"><option value="editor">Редактор — додає й змінює картки</option><option value="viewer">Глядач — лише дивиться і пише спогади</option></select></label>
       <label class="f">Хто це в дереві<select class="in" id="iv-person"><option value="">—</option>${Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}</option>`).join('')}</select></label></div>
-      <div class="btns"><button class="btn" data-act="invite">Створити запрошення</button><span class="msg" id="ivmsg"></span></div>
+      <label class="f" title="Якщо заповнити — акаунт створиться одразу, без посилання; логін і пароль передасте людині самі">Пароль (необов'язково — якщо хочете створити акаунт одразу)<div class="btns" style="flex-wrap:nowrap"><input class="in mono" id="iv-pw" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="від 8 символів"><button type="button" class="btn line small" data-act="iv-gen">Придумати</button></div></label>
+      <div class="btns"><button class="btn" data-act="invite">Створити запрошення</button><button class="btn line" data-act="create-acc">Створити акаунт одразу</button><span class="msg" id="ivmsg"></span></div>
       <div id="ivlink"></div>
       <p class="small muted">Посилання одноразове і діє 7 днів. Надішліть його особисто (Viber, Telegram). Родич відкриває його, вигадує пароль і далі входить з поштою та паролем.</p></div>
       <div class="sec" style="margin-top:26px"><h3>Учасники</h3><div class="tablebox"><table class="t"><thead><tr><th>Хто</th><th>Права</th><th>Пристроїв</th><th>Востаннє</th><th></th></tr></thead><tbody>
-      ${m.members.map(x => `<tr><td><b>${esc(x.name || '—')}</b><br><span class="small muted">${esc(x.email)}</span>${!x.active ? ' <span class="badge">вимкнено</span>' : ''}</td>
+      ${m.members.map(x => `<tr><td class="mcell">${x.id === S.me.id ? '' : `<button class="medit" data-act="medit" data-id="${x.id}" title="Редагувати: ім'я, логін, пароль" aria-label="Редагувати">✎</button>`}<b>${esc(x.name || '—')}</b><br><span class="small muted">${esc(x.email)}</span>${!x.active ? ' <span class="badge">вимкнено</span>' : ''}</td>
         <td>${x.id === S.me.id ? 'власник' : `<select class="in" data-role="${x.id}" style="width:auto;font-size:14px"><option value="editor"${x.role === 'editor' ? ' selected' : ''}>редактор</option><option value="viewer"${x.role === 'viewer' ? ' selected' : ''}>глядач</option><option value="owner"${x.role === 'owner' ? ' selected' : ''}>власник</option></select>`}</td>
         <td class="num"><button class="btn line small" data-act="devs" data-id="${x.id}" title="Показати пристрої">${x.sessions.n} ${S.ui.devs === x.id ? '▴' : '▾'}</button></td><td class="num small">${esc(when(x.sessions.last))}</td>
         <td>${x.id === S.me.id ? '' : `<div class="btns"><button class="btn line small" data-reset="${x.id}">Новий пароль</button><button class="btn line small" data-revoke="${x.id}">Вийти з усіх пристроїв</button><button class="btn ${x.active ? 'danger' : 'line'} small" data-active="${x.id}" data-v="${!x.active}">${x.active ? 'Вимкнути доступ' : 'Увімкнути'}</button>${x.role !== 'owner' ? `<button class="btn danger small" data-act="mdel" data-id="${x.id}">Видалити акаунт</button>` : ''}</div>`}</td></tr>${S.ui.devs === x.id ? devRows(x) : ''}`).join('')}
@@ -1716,6 +1717,30 @@ document.addEventListener('click', async e => {
     }
     if (act === 'delete') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити? Натисніть ще раз'; return; } await api('/api/data', { body: { op: 'person.delete', id: S.ui.editing } }); closeLayer(); await load(); location.hash = '#/people'; return; }
     if (act === 'famsave') { const story = textToHtml($('#fe').value); await api('/api/data', { body: { op: 'family.story', id: S.ui.famEditing, story } }); FAM[S.ui.famEditing].story = story; closeLayer(); S.ui.keepScroll = true; render(); toast('Збережено'); return; }
+    if (act === 'iv-gen') { const w = ['kalyna', 'verba', 'sonce', 'lypa', 'zoria', 'rodyna', 'vyshnia', 'barvinok', 'ridnyi', 'dubok']; const r = crypto.getRandomValues(new Uint32Array(2)); $('#iv-pw').value = w[r[0] % w.length] + String(1000 + r[1] % 9000); return; }
+    if (act === 'create-acc') { const m = $('#ivmsg'), login = $('#iv-email').value.trim().toLowerCase(), pw = $('#iv-pw').value.trim();
+      if (!login) { m.textContent = 'Впишіть логін'; m.className = 'msg err'; return; }
+      if (pw.length < 8) { m.textContent = 'Впишіть пароль (від 8 символів) або натисніть «Придумати»'; m.className = 'msg err'; return; }
+      try { await api('/api/admin?a=create', { body: { name: $('#iv-name').value, login, password: pw, role: $('#iv-role').value, person_id: $('#iv-person').value } }); }
+      catch (er) { m.textContent = /exists/.test(er.message) ? 'Такий логін уже зайнятий' : /email/.test(er.message) ? 'Логін: пошта або слово від 3 символів' : 'Не вдалося створити'; m.className = 'msg err'; return; }
+      const out = `Сайт: ${location.origin}\nЛогін: ${login}\nПароль: ${pw}`; S.admin.members = null; await loadAdmin();
+      modal(`<h2>Акаунт створено</h2><p>Передайте людині особисто:</p><textarea class="in mono" readonly rows="3">${esc(out)}</textarea><div class="btns" style="margin-top:10px"><button class="btn" data-act="close">Готово</button></div>`); return; }
+    if (act === 'medit') { const x = (S.admin.members?.members || []).find(y => y.id === t.dataset.id); if (!x) return;
+      const opts = '<option value="">—</option>' + Object.values(P).sort((p1, p2) => short(p1).localeCompare(short(p2), 'uk')).map(p1 => `<option value="${p1.id}"${p1.id === x.person_id ? ' selected' : ''}>${esc(full(p1))}${yearOf(p1.b) ? ' (' + yearOf(p1.b) + ')' : ''}</option>`).join('');
+      modal(`<h2>Редагувати акаунт</h2><p class="small muted">Старий пароль подивитися не можна — він зберігається зашифрованим, і навіть сайт його не знає. Якщо людина забула — задайте новий тут і передайте їй.</p>
+        <label class="f">Ім'я<input class="in" id="me-n" value="${esc(x.name || '')}"></label>
+        <label class="f">Логін (пошта або коротке слово)<input class="in" id="me-l" value="${esc(x.email)}" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        <label class="f">Хто це в дереві<select class="in" id="me-p">${opts}</select></label>
+        <label class="f">Новий пароль (залиште порожнім, якщо не міняєте)<div class="btns" style="flex-wrap:nowrap"><input class="in mono" id="me-pw" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" minlength="8" placeholder="від 8 символів"><button type="button" class="btn line small" data-act="me-gen">Придумати</button></div></label>
+        <div class="btns"><button class="btn" data-act="me-save" data-id="${x.id}">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="me-msg"></span></div><div id="me-out"></div>`); return; }
+    if (act === 'me-gen') { const w = ['kalyna', 'verba', 'sonce', 'lypa', 'zoria', 'rodyna', 'vyshnia', 'barvinok', 'ridnyi', 'dubok']; const r = crypto.getRandomValues(new Uint32Array(2)); $('#me-pw').value = w[r[0] % w.length] + String(1000 + r[1] % 9000); return; }
+    if (act === 'me-save') { const id = t.dataset.id, msg = $('#me-msg'), pw = $('#me-pw').value.trim(), login = $('#me-l').value.trim().toLowerCase();
+      if (pw && pw.length < 8) { msg.textContent = 'Пароль — від 8 символів'; msg.className = 'msg err'; return; }
+      try { await api('/api/admin?a=member', { body: { id, name: $('#me-n').value, login, person_id: $('#me-p').value, password: pw } }); }
+      catch (er) { msg.textContent = /exists/.test(er.message) ? 'Такий логін уже зайнятий' : /email/.test(er.message) ? 'Логін: пошта або слово від 3 символів (літери, цифри, крапка)' : 'Не вдалося зберегти'; msg.className = 'msg err'; return; }
+      msg.textContent = 'Збережено'; msg.className = 'msg ok';
+      if (pw) $('#me-out').innerHTML = `<div class="sec" style="margin-top:12px"><p style="margin:0 0 6px">Передайте людині (особисто):</p><textarea class="in mono" readonly rows="3">Сайт: ${location.origin}\nЛогін: ${login}\nПароль: ${pw}</textarea><p class="small muted">Старі входи цієї людини закрито — їй треба зайти з новим паролем.</p></div>`;
+      S.admin.members = null; loadAdmin(); return; }
     if (act === 'invite') { const m = $('#ivmsg'); const r = await api('/api/admin?a=invite', { body: { name: $('#iv-name').value, email: $('#iv-email').value, role: $('#iv-role').value, person_id: $('#iv-person').value } }); m.textContent = 'Готово'; m.className = 'msg ok'; $('#ivlink').innerHTML = `<div class="btns" style="margin-top:8px"><input class="in mono" value="${esc(r.link)}" readonly style="max-width:520px"><button class="btn line small" data-act="copy" data-v="${esc(r.link)}">Скопіювати</button></div>`; return; }
     if (act === 'copy') { try { await navigator.clipboard.writeText(d.v); toast('Скопійовано'); } catch { toast('Виділіть і скопіюйте вручну'); } return; }
     if (act === 'per-apply') { S.admin.from = $('#pf').value; S.admin.to = $('#pt').value; return loadAdmin(); }

@@ -1,7 +1,7 @@
 // Панель власника: доступи, аналітика, історія змін і відкат. Лише роль owner.
 // /api/admin?a=members|invite|reset|member|revoke|stats|log|revisions|revert
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId } from './_lib.js';
+import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId, hashPass } from './_lib.js';
 
 const day = 864e5;
 const iso = d => new Date(d).toISOString();
@@ -143,6 +143,16 @@ export default handler(async (req, res, ctx, url) => {
     return send(res, 200, { link: `${origin}/?invite=${t}`, expires_at: iso(Date.now() + 7 * day) });
   }
 
+  if (a === 'create' && req.method === 'POST') { // власник одразу створює акаунт з логіном і паролем (для тих, хто без пошти)
+    const b = await readJSON(req, 10_000);
+    const login = S(b.login, 200).toLowerCase(), name = S(b.name, 80), role = b.role === 'editor' ? 'editor' : 'viewer', person_id = S(b.person_id, 60) || null;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(login) && !/^[a-z0-9а-яіїєґ'][a-z0-9а-яіїєґ'._-]{2,31}$/.test(login)) return fail(res, 400, 'email');
+    if (typeof b.password !== 'string' || b.password.length < 8 || b.password.length > 200) return fail(res, 400, 'weak');
+    if (await db.get('members', { eq: { email: login } })) return fail(res, 409, 'exists');
+    const [m] = await db.insert('members', { email: login, name, role, person_id, pass_hash: hashPass(b.password), created_by: me.id });
+    await revision('member', m.id, 'create', null, { email: login, role, name, person_id }, me.id);
+    return send(res, 200, { ok: true, id: m.id });
+  }
   if (a === 'member' && req.method === 'POST') {
     const b = await readJSON(req, 10_000);
     const m = await db.get('members', { eq: { id: S(b.id, 60) } }); if (!m) return fail(res, 404, 'not_found');
@@ -152,9 +162,21 @@ export default handler(async (req, res, ctx, url) => {
     if (typeof b.active === 'boolean') patch.active = b.active;
     if (typeof b.name === 'string') patch.name = S(b.name, 80);
     if (typeof b.person_id === 'string') patch.person_id = S(b.person_id, 60) || null;
+    if (typeof b.login === 'string' && S(b.login, 200).toLowerCase() !== m.email) { // змінити логін (пошту)
+      const l = S(b.login, 200).toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(l) && !/^[a-z0-9а-яіїєґ'][a-z0-9а-яіїєґ'._-]{2,31}$/.test(l)) return fail(res, 400, 'email');
+      if (await db.get('members', { eq: { email: l } })) return fail(res, 409, 'exists');
+      patch.email = l;
+    }
+    let passChanged = false;
+    if (typeof b.password === 'string' && b.password) { // власник задає новий пароль (людина забула) — старі входи закриваються
+      if (m.id === me.id) return fail(res, 400, 'self');
+      if (b.password.length < 8 || b.password.length > 200) return fail(res, 400, 'weak');
+      patch.pass_hash = hashPass(b.password); passChanged = true;
+    }
     const [row] = await db.update('members', { eq: { id: m.id } }, patch);
-    if (patch.active === false) await db.update('sessions', { eq: { member_id: m.id } }, { revoked: true });
-    await revision('member', m.id, 'update', { role: m.role, active: m.active, name: m.name }, { role: row.role, active: row.active, name: row.name }, me.id);
+    if (patch.active === false || passChanged) await db.update('sessions', { eq: { member_id: m.id } }, { revoked: true });
+    await revision('member', m.id, 'update', { role: m.role, active: m.active, name: m.name, email: m.email, person_id: m.person_id }, { role: row.role, active: row.active, name: row.name, email: row.email, person_id: row.person_id, ...(passChanged ? { password: 'змінено власником' } : {}) }, me.id);
     return send(res, 200, { ok: true });
   }
 

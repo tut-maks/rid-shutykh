@@ -882,3 +882,6 @@ main{padding-block:14px 60px}
 .bk-pg{cursor:pointer;background:none;border:1px dashed transparent;border-radius:999px;padding:6px 10px;font:inherit;color:inherit;min-height:44px}
 .bk-pg:hover{border-color:var(--rule2,#d8cfc3)}
 .bk-pgin{width:64px;font-size:16px;padding:4px 6px;border:1px solid var(--wine);border-radius:8px;text-align:center}
+.mcell{position:relative;padding-right:40px!important}
+.medit{position:absolute;right:6px;top:8px;width:32px;height:32px;border:1px solid var(--rule2,#d8cfc3);border-radius:8px;background:var(--sheet);color:var(--wine);cursor:pointer;font-size:15px}
+.medit:hover{background:#F3E8EA}
