@@ -10,7 +10,7 @@ const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
 const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
 
 /* Спільні налаштування родини (settings): група Telegram, «Хто на фото?», «Допоможіть знайти», ДНК-збіги, місця на карті */
-const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {} };
+const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {} };
 async function cfgAll() {
   const out = {}; for (const k in CFG) out[k] = structuredClone(CFG[k]);
   try { for (const r of await db.list('settings', { in: { key: Object.keys(CFG) } })) out[r.key] = r.value ?? out[r.key]; } catch {}
@@ -57,7 +57,7 @@ async function bootstrap(ctx) {
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
     accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
     questions, qReady, joinPending,
-    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], dna: cfg.dna_matches || [], places: cfg.places || {}, join: jc?.on && jc?.code ? jc.code : '' },
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -328,6 +328,16 @@ export default handler(async (req, res, ctx, url) => {
   }
 
   /* ── фото ── */
+  if (op === 'photo.people') { // хто на фото: позначені люди з дерева (фото з'являється і в їхніх картках)
+    const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');
+    if (!editor && p.created_by !== me.id) return fail(res, 403, 'forbidden');
+    const ids = [...new Set((Array.isArray(body.people) ? body.people : []).map(x => S(x, 60)).filter(Boolean))].slice(0, 40);
+    const ok = new Set((await db.list('persons', { eq: { deleted: false }, select: 'id' })).map(x => x.id));
+    const keep = ids.filter(x => ok.has(x) && x !== p.person_id);
+    const before = await cfgGet('photo_people'), v = { ...before };
+    if (keep.length) v[p.id] = keep; else delete v[p.id];
+    await cfgSet('photo_people', v, me.id, before); return done({ photoPeople: v }, 'photo:' + p.id);
+  }
   if (op === 'photo.caption') {
     const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');
     if (!editor && p.created_by !== me.id) return fail(res, 403, 'forbidden');

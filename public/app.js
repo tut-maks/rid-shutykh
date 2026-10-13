@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131413';
+const BUILD = '202610131422';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -572,7 +572,7 @@ function vPerson() {
   const gch = ch.flatMap(c => KIDS[c] || []);
   const sib = par.length ? [...new Set(par.flatMap(x => KIDS[x] || []))].filter(x => x !== p.id).sort(byBirth) : [];
   const docs = S.data.documents.filter(d => (d.people || []).includes(p.id));
-  const photos = S.data.photos.filter(x => x.person === p.id && !isVoice(x));
+  const photos = S.data.photos.filter(x => photoOf(x, p.id) && !isVoice(x));
   const stories = S.data.stories.filter(s => s.target === p.id);
   const fams = (p.fam || []).filter(f => FAM[f]);
   const pu = portrait(p);
@@ -1628,9 +1628,10 @@ const ICO = {
 };
 function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, marks: d.marks, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
 function openPhoto(id) { const x = S.data.photos.find(y => y.id === id) || (S.admin?.pph || []).find(y => y.id === id); if (!x) return; if (isVoice(x)) { modal(`<h2>${esc(x.caption || 'Голосовий спогад')}</h2><div class="vlist">${voiceRow({ ...x, pending: false, by: S.data.photos.find(y => y.id === id)?.by || '' })}</div><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; } if (x.mime === 'application/pdf') { window.open(img('photo=' + id), '_blank', 'noopener'); return; }
-  const list = S.data.photos.filter(y => y.person === x.person && y.mime !== 'application/pdf' && !isVoice(y)), k = Math.max(0, list.findIndex(y => y.id === id));
+  const ctx = S.view === 'p' && P[S.arg] && photoOf(x, S.arg) ? S.arg : x.person;
+  const list = S.data.photos.filter(y => photoOf(y, ctx) && y.mime !== 'application/pdf' && !isVoice(y)), k = Math.max(0, list.findIndex(y => y.id === id));
   const items = list.map(y => ({ photoId: (canEdit() || y.by === S.me.id) ? y.id : null, title: y.caption || short(P[y.person] || {}), caption: y.caption || '', text: `Додав(ла): ${who(y.by)}, ${when(y.at)}` }));
-  viewer({ title: items[k].title, pages: list.map(y => img('photo=' + y.id)), text: items[k].text, people: [x.person], photoId: items[k].photoId, items, startAt: k }); }
+  viewer({ title: items[k].title, pages: list.map(y => img('photo=' + y.id)), text: items[k].text, people: [x.person, ...tagsOf(x.id)].filter(y => P[y]), photoId: items[k].photoId, items, startAt: k }); }
 
 /* ───── Власнику: аналітика, доступи, історія ───── */
 const fmtT = ms => { const m = Math.round((ms || 0) / 60000); return m < 60 ? `${m} хв` : `${Math.floor(m / 60)} год ${m % 60} хв`; };
@@ -1760,6 +1761,8 @@ function vSeed() { return gate(`<div class="sec"><p style="margin:0">База п
 
 /* ═════════ Головна, «Ким ми доводимось», «Хто на фото?», голоси, карта роду, цей день, цифри, «Допоможіть знайти», плакат, запрошення, ДНК (13.10) ═════════ */
 const CFG_ = () => S.data?.cfg || {};
+const tagsOf = id => (CFG_().photoPeople || {})[id] || []; // хто ще позначений на фото
+const photoOf = (x, pid) => x.person === pid || tagsOf(x.id).includes(pid);
 const yN = s => { const m = String(s || '').match(/(\d{4})/); return m ? +m[1] : null; };
 const dmOf = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? { d: +m[1], m: +m[2], y: +m[3] } : null; };
 const isLiving = p => !p.d && !p.dp && (yN(p.b) || 0) >= 1925;
@@ -2604,10 +2607,33 @@ async function upload(personId, files) {
       else { full = await toJpeg(f, 2200, 0.86); if (full.size > 4e6) full = await toJpeg(f, 1600, 0.8); thumb = await toJpeg(f, 420, 0.78); }
       const r = await api(`/api/upload?person=${encodeURIComponent(personId)}&caption=${encodeURIComponent(prompt2())}`, { raw: full });
       if (thumb) await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
-      if (r.pending) pend = true; n++;
+      if (r.pending) pend = true; n++; if (f.type !== 'application/pdf') (upload.ids ||= []).push(r.id);
     } catch (err) { console.warn("[upload]", err); m.className = "msg err"; m.textContent = `«${f.name}»: ${errText(err)}`; }
   }
   if (n) { await load(); S.ui.keepScroll = true; render(); toast(pend ? `Надіслано фото: ${n}. Вони з'являться для всіх після підтвердження Максимом.` : `Додано фото: ${n}`); }
+  const ids = upload.ids || []; upload.ids = []; if (ids.length) photoTag(ids, 0, personId);
+}
+// Одразу після завантаження: підпис і «хто на фото» (вибір людей з дерева)
+function photoTag(ids, k, personId) {
+  const id = ids[k]; const x = S.data.photos.find(y => y.id === id); if (!x) { if (k + 1 < ids.length) photoTag(ids, k + 1, personId); return; }
+  let sel = [personId, ...tagsOf(id)].filter(y => P[y]);
+  const chips = () => sel.map(y => `<span class="tagc">${esc(short(P[y]))}${y === personId ? '' : `<button type="button" data-rm="${y}" aria-label="Прибрати">×</button>`}</span>`).join('');
+  modal(`<h2>Що на фото?${ids.length > 1 ? ` <small class="muted">${k + 1} з ${ids.length}</small>` : ''}</h2>
+    <div class="ask-prev"><img src="${img('photo=' + id, true)}" alt=""></div>
+    <div class="sec" style="gap:10px">
+      <label class="f">Підпис<textarea class="in" id="tg-c" maxlength="500" placeholder="Хто, коли, де. Напр.: «Весілля Івана й Ольги, Веприк, 1972»">${esc(x.caption || '')}</textarea></label>
+      <div class="f"><span>Хто на фото <small class="muted">— оберіть людей з дерева</small></span><div class="tagl" id="tg-l">${chips()}</div>
+        <input class="in" id="tg-q" list="qpeople" placeholder="Почніть писати ім'я…" autocomplete="off">${personOpts()}</div>
+      <div class="btns"><button class="btn" id="tg-save">${k + 1 < ids.length ? 'Зберегти й далі' : 'Зберегти'}</button><button class="btn line" data-act="close">Пропустити</button><span class="msg" id="tg-m"></span></div></div>`);
+  const paint = () => { $('#tg-l').innerHTML = chips(); };
+  const q = $('#tg-q'); const pick = () => { const pid = personByLabel(q.value); if (pid && !sel.includes(pid)) { sel.push(pid); paint(); } if (pid) q.value = ''; };
+  q.addEventListener('change', pick); q.addEventListener('input', () => { if (personByLabel(q.value)) pick(); });
+  $('#tg-l').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { sel = sel.filter(y => y !== b.dataset.rm); paint(); } });
+  $('#tg-save').onclick = async () => { const b = $('#tg-save'), m = $('#tg-m'); b.disabled = true;
+    try { const c = $('#tg-c').value.trim(); if (c !== (x.caption || '')) { await api('/api/data', { body: { op: 'photo.caption', id, caption: c } }); x.caption = c; }
+      const others = sel.filter(y => y !== x.person); if (others.join() !== tagsOf(id).join()) { const r = await api('/api/data', { body: { op: 'photo.people', id, people: others } }); S.data.cfg.photoPeople = r.photoPeople; }
+      closeLayer(); S.ui.keepScroll = true; render(); if (k + 1 < ids.length) photoTag(ids, k + 1, personId); else toast('Збережено'); }
+    catch (err) { b.disabled = false; m.className = 'msg err'; m.textContent = errText(err); } };
 }
 async function uploadPages(id, files) {
   let n = 0; files.sort((x, y) => x.name.localeCompare(y.name));
