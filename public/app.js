@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130123';
+const BUILD = '202610130645';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1845,6 +1845,51 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('pointerdown', e => { const b = e.target.closest('[data-tfind]'); if (b) { e.preventDefault(); tqPick(b.dataset.tfind); return; } if (!e.target.closest('#tsug,#tq')) document.getElementById('tsug')?.remove(); }, true);
 addEventListener('resize', () => document.getElementById('tsug') && tqShow());
+
+/* Усі довгі списки людей (select) — з пошуком як на дереві: вводиш — лишаються лише ті, хто підходить */
+function pselEnhance(root) {
+  (root || document).querySelectorAll('select:not([data-psel]):not(#tfam):not(.ov-sel)').forEach(sel => {
+    if (sel.options.length < 20 || sel.multiple) return;
+    sel.dataset.psel = '1';
+    const inp = document.createElement('input');
+    inp.type = 'search'; inp.className = 'in psel-in'; inp.autocomplete = 'off';
+    const first = sel.options[0];
+    inp.placeholder = (first && !first.value && first.text && first.text !== '—') ? first.text : 'Почніть вводити ім\'я…';
+    const cur = sel.options[sel.selectedIndex]; inp.value = cur && cur.value ? cur.text : '';
+    if (sel.style.maxWidth) inp.style.maxWidth = sel.style.maxWidth;
+    if (sel.getAttribute('aria-label')) inp.setAttribute('aria-label', sel.getAttribute('aria-label'));
+    sel.style.display = 'none'; sel.after(inp);
+    inp._sel = sel;
+  });
+}
+function pselShow(inp) {
+  const sel = inp._sel; let box = document.getElementById('psug');
+  if (!sel || document.activeElement !== inp) { box?.remove(); return; }
+  const words = inp.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const opts = [...sel.options].filter(o => o.value && words.every(w => o.text.toLowerCase().includes(w))).slice(0, 40);
+  if (!box) { box = document.createElement('div'); box.id = 'psug'; box.className = 'tsug'; document.body.appendChild(box); }
+  const r = inp.getBoundingClientRect(); const below = innerHeight - r.bottom > 260 || r.top < 260;
+  box.style.cssText = `left:${Math.max(8, Math.min(r.left, innerWidth - Math.max(r.width, 300) - 8))}px;${below ? `top:${r.bottom + 6}px` : `bottom:${innerHeight - r.top + 6}px`};width:${Math.min(innerWidth - 16, Math.max(r.width, 300))}px`;
+  box.innerHTML = opts.length ? opts.map((o, i) => { const p = P[o.value]; return `<button type="button" class="tsug-i${i ? '' : ' on'}" data-pselv="${esc(o.value)}">${p ? avatar(p) : ''}<span><b>${esc(o.text)}</b>${p && life(p) ? `<small>${esc(life(p))}</small>` : ''}</span></button>`; }).join('') : '<div class="tsug-no">Нікого не знайдено</div>';
+  box._inp = inp;
+}
+function pselPick(inp, v) {
+  const sel = inp._sel; if (!sel) return; sel.value = v; const o = sel.options[sel.selectedIndex];
+  inp.value = v && o ? o.text : ''; document.getElementById('psug')?.remove();
+  sel.dispatchEvent(new Event('change', { bubbles: true })); sel.dispatchEvent(new Event('input', { bubbles: true }));
+}
+document.addEventListener('input', e => { if (e.target.classList?.contains('psel-in')) pselShow(e.target); });
+document.addEventListener('focusin', e => { if (e.target.classList?.contains('psel-in')) { e.target.select(); pselShow(e.target); } });
+document.addEventListener('focusout', e => { const t = e.target; if (!t.classList?.contains('psel-in')) return; setTimeout(() => { if (document.activeElement === t) return; document.getElementById('psug')?.remove(); const sel = t._sel; if (!sel) return; if (!t.value.trim()) { if (sel.value && sel.options[0] && !sel.options[0].value) pselPick(t, ''); } else { const o = sel.options[sel.selectedIndex]; t.value = o && o.value ? o.text : ''; } }, 150); });
+document.addEventListener('keydown', e => {
+  const t = e.target; if (!t.classList?.contains('psel-in')) return;
+  const items = [...document.querySelectorAll('#psug .tsug-i')]; let i = items.findIndex(x => x.classList.contains('on'));
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!items.length) return; items[i]?.classList.remove('on'); i = (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; items[i].classList.add('on'); items[i].scrollIntoView({ block: 'nearest' }); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (items[i]) pselPick(t, items[i].dataset.pselv); }
+  else if (e.key === 'Escape') { document.getElementById('psug')?.remove(); }
+});
+document.addEventListener('pointerdown', e => { const b = e.target.closest('[data-pselv]'); if (b) { e.preventDefault(); const box = document.getElementById('psug'); if (box?._inp) pselPick(box._inp, b.dataset.pselv); } }, true);
+new MutationObserver(() => pselEnhance()).observe(document.documentElement, { childList: true, subtree: true });
 
 start();
 })();

@@ -876,3 +876,6 @@ main{padding-block:14px 60px}
 .top .nav a.nav-hist::after{display:none!important}
 .top .nav a.nav-hist[aria-current=page]{background:var(--wine);color:#fff}
 .top .nav a .bn-badge.in{margin-left:6px}
+.psel-in{width:100%}
+#psug{max-height:46vh}
+#psug{z-index:2147483000}
