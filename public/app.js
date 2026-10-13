@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610122358';
+const BUILD = '202610130000';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -271,7 +271,7 @@ function layoutTD(center) {
   const EXP = S.ui.exp ||= {}; const SIBX = S.ui.sibx ||= {}; const DS = S.ui.dsib = {}; const DEF = innerWidth < 820 ? 3 : 4; const hid = S.ui.hid = {};
   function up(c, r, side) { // блок предків людини c (c у x=0, ряд r)
     const B = mk(); const all = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
-    const dflt = !SIBX[c] && !f.allOpen && SIBX[c] !== 0 && r >= 0 && r <= 2; const g = (SIBX[c] || f.allOpen || dflt) ? all : [c]; if (dflt && all.length > 1) DS[c] = 1; // брати й сестри до дідів включно — відкриті одразу if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
+    const dflt = !SIBX[c] && !f.allOpen && SIBX[c] !== 0 && r >= 0 && r <= 3; const g = (SIBX[c] || f.allOpen || dflt) ? all : [c]; if (dflt && all.length > 1) DS[c] = 1; /* брати й сестри до прадідів включно — відкриті одразу */ if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
     let order = g.filter(x => x !== c); order = side === 'L' ? [...order, c] : side === 'R' ? [c, ...order] : g;
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
     const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
