@@ -137,7 +137,33 @@ export function cleanPerson(d) {
   if (d.portrait) o.portrait = STR(d.portrait, 60);
   if (Array.isArray(d.src)) o.src = d.src.slice(0, 30).map(s => ({ t: STR(s?.t, 120), u: STR(s?.u, 300) })).filter(s => /^https:\/\/(www\.)?familysearch\.org\//.test(s.u) || /^https:\/\//.test(s.u));
   if (d.root) o.root = true;
+  const ln = cleanLinks(d.links); if (ln.length) o.links = ln;
   return o;
+}
+
+/* Соцмережі й зв'язок живих родичів: [{t, u}]. Посилання — лише https на відомі сайти, телефони — лише цифри. */
+const LINK_HOST = { ig: /^(www\.)?instagram\.com$/, fb: /^(www\.|m\.)?(facebook|fb)\.com$/, tg: /^t\.me$/, tt: /^(www\.)?tiktok\.com$/, yt: /^(www\.|m\.)?youtube\.com$|^youtu\.be$/, li: /^(www\.)?linkedin\.com$/, wa: /^wa\.me$/, web: /./ };
+const LINK_BASE = { ig: 'https://instagram.com/', fb: 'https://facebook.com/', tg: 'https://t.me/', tt: 'https://www.tiktok.com/@', yt: 'https://youtube.com/@', li: 'https://linkedin.com/in/' };
+export function normLink(t, raw) {
+  let v = STR(raw, 300).replace(/\s+/g, ' ');
+  if (!v) return '';
+  if (t === 'tel' || t === 'vb') { const d = v.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, ''); const n = d.replace(/^\+/, ''); if (!/^\d{9,15}$/.test(n)) return ''; return '+' + (n.length === 10 && n[0] === '0' ? '38' + n : n); }
+  if (t === 'wa' && /^[+\d][\d\s()-]{8,}$/.test(v)) { const n = normLink('tel', v); return n ? 'https://wa.me/' + n.slice(1) : ''; }
+  if (t === 'tg' && /^\+?[\d\s()-]{9,}$/.test(v)) { const n = normLink('tel', v); return n ? 'https://t.me/' + n : ''; }
+  if (!/^https?:\/\//i.test(v)) {
+    if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(v) && !(LINK_BASE[t] && /^@/.test(v))) v = 'https://' + v;
+    else if (LINK_BASE[t]) { const h = v.replace(/^@/, ''); if (!/^[\w.-]{1,80}$/.test(h)) return ''; v = LINK_BASE[t] + h; }
+    else return '';
+  }
+  let u; try { u = new URL(v.replace(/^http:/i, 'https:')); } catch { return ''; }
+  if (u.protocol !== 'https:' || u.username || u.password) return '';
+  if (!(LINK_HOST[t] || LINK_HOST.web).test(u.hostname)) return '';
+  return u.href.slice(0, 300);
+}
+export function cleanLinks(a) {
+  if (!Array.isArray(a)) return [];
+  const T = ['ig', 'fb', 'tg', 'vb', 'wa', 'tt', 'yt', 'li', 'tel', 'web'];
+  return a.slice(0, 12).map(x => ({ t: T.includes(x?.t) ? x.t : '', u: '' + (x?.u || '') })).filter(x => x.t).map(x => ({ t: x.t, u: normLink(x.t, x.u) })).filter(x => x.u);
 }
 export const slugId = () => 'p_' + crypto.randomBytes(5).toString('hex');
 

@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './_db.js';
-import { handler, send, fail, readJSON, can, revision, track, cleanPerson, slugId, canAddTo, pendGet, pendSet } from './_lib.js';
+import { handler, send, fail, readJSON, can, revision, track, cleanPerson, cleanLinks, slugId, canAddTo, pendGet, pendSet } from './_lib.js';
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
@@ -67,6 +67,18 @@ export default handler(async (req, res, ctx, url) => {
   const done = (out, target) => { track(me.id, ctx.sid, 'edit', op, target); return send(res, 200, out); };
 
   /* ── люди ── */
+  /* соцмережі: редактор — будь-кому, кожен родич — на своїй картці */
+  if (op === 'person.links') {
+    const cur = await db.get('persons', { eq: { id: S(body.id, 60) } });
+    if (!cur || cur.deleted) return fail(res, 404, 'not_found');
+    if (!editor && me.person_id !== cur.id) return fail(res, 403, 'forbidden');
+    const links = cleanLinks(body.links);
+    const data = { ...cur.data }; if (links.length) data.links = links; else delete data.links;
+    const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
+    if (!row) return fail(res, 409, 'conflict');
+    await revision('person', cur.id, 'update', { links: cur.data.links || [] }, { links }, me.id);
+    return done({ person: { id: row.id, ...row.data, v: row.version, last: { by: me.id, at: row.updated_at, action: 'update' } } }, cur.id);
+  }
   if (op === 'person.save') {
     if (!editor) return fail(res, 403, 'forbidden');
     const data = cleanPerson(body.data || {});
@@ -79,6 +91,8 @@ export default handler(async (req, res, ctx, url) => {
       if (data.f === cur.id || data.mo === cur.id) return fail(res, 400, 'self');
       if (cur.data.root) data.root = true;
       if (cur.data.portrait && !body.data.hasOwnProperty('portrait')) data.portrait = cur.data.portrait;
+      // поля, яких немає у формі редагування, не губити (джерела, соцмережі)
+      for (const k of ['src', 'links']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
       const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
       if (!row) return fail(res, 409, 'conflict');
       await revision('person', cur.id, 'update', cur.data, data, me.id);

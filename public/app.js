@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130927';
+const BUILD = '202610130933';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -175,6 +175,29 @@ function famSelect(f) {
   return `<select class="in tfam" id="tfam" aria-label="Гілка"><option value="">Усі гілки</option>${Object.values(FAM).map(x => `<option value="${x.id}"${f.fam === x.id ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}</select>`;
 }
 /* бічна панель: клік по людині — не перехід на сторінку, а панель праворуч (на телефоні — шторка знизу) */
+/* ───── Соцмережі й зв'язок (живі родичі) ───── */
+const SOC = { tel: ['Телефон', '☎', 'tel', '+380…'], vb: ['Viber', 'Vb', 'tel', '+380…'], tg: ['Telegram', 'TG', 'text', '@нік або номер'], wa: ['WhatsApp', 'WA', 'tel', '+380…'], ig: ['Instagram', 'IG', 'text', '@нік або посилання'], fb: ['Facebook', 'f', 'url', 'посилання на сторінку'], tt: ['TikTok', 'TT', 'text', '@нік'], yt: ['YouTube', 'YT', 'url', 'посилання на канал'], li: ['LinkedIn', 'in', 'url', 'посилання на профіль'], web: ['Сайт', 'www', 'url', 'https://…'] };
+const socHref = l => l.t === 'tel' ? 'tel:' + l.u : l.t === 'vb' ? 'viber://chat?number=' + encodeURIComponent(l.u) : /^https:\/\//.test(l.u) ? l.u : '#';
+const socLabel = l => { if (l.t === 'tel' || l.t === 'vb') return l.u; try { const u = new URL(l.u), seg = decodeURIComponent(u.pathname).split('/').filter(Boolean); if (l.t === 'wa') return '+' + seg[0]; if (['ig', 'tg', 'tt'].includes(l.t) && seg[0]) return /^\+/.test(seg[0]) ? seg[0] : '@' + seg[0].replace(/^@/, ''); if (['fb', 'yt', 'li'].includes(l.t) && seg.length) return seg[seg.length - 1].replace(/^@/, ''); return u.hostname.replace(/^www\./, ''); } catch { return l.u; } };
+const canSoc = p => !!S.me && (canEdit() || S.me.person_id === p.id);
+const socChips = (p, small) => (p.links || []).length ? `<div class="soc${small ? ' sm' : ''}">${p.links.map(l => `<a class="soc-a s-${l.t}" href="${esc(socHref(l))}" target="_blank" rel="noopener noreferrer" data-soc="${l.t}" title="${esc(SOC[l.t]?.[0] || '')}"><span class="si">${esc(SOC[l.t]?.[1] || '·')}</span><span class="sl">${esc(small ? SOC[l.t]?.[0] || '' : socLabel(l))}</span></a>`).join('')}</div>` : '';
+function socBlock(p) {
+  const has = (p.links || []).length, can = canSoc(p);
+  if (!has && !(can && !p.d)) return '';
+  const mine = S.me?.person_id === p.id;
+  return `<div class="sec socsec"><h3>Зв'язок ${can ? `<button class="btn line small" data-act="soc-edit">${has ? 'Змінити' : '+ Соцмережі й телефон'}</button>` : ''}</h3>
+    ${has ? socChips(p) : `<p class="muted small">${mine ? 'Додайте свій Instagram, Facebook, Telegram чи телефон — щоб родичі могли вас знайти.' : 'Ще не додано. Instagram, Facebook, Telegram чи телефон — щоб родичі могли знайтись.'}</p>`}</div>`;
+}
+document.addEventListener('click', e => { const a = e.target.closest('a[data-soc]'); if (a) ev('open', 'soc', 'soc:' + a.dataset.soc + ':' + (S.ui.pp && a.closest('#pp') ? S.ui.pp : S.arg || '')); }, true);
+function openSoc(p) {
+  const cur = {}; (p.links || []).forEach(l => { if (!cur[l.t]) cur[l.t] = l.t === 'tel' || l.t === 'vb' ? l.u : socLabel(l); });
+  (p.links || []).forEach(l => { if (['fb', 'yt', 'li', 'web'].includes(l.t)) cur[l.t] = l.u; });
+  modal(`<h2>Зв'язок — ${esc(short(p))}</h2>
+    <p class="small muted">Бачать лише родичі, які увійшли на сайт. Заповніть те, що є; порожні поля не показуються.</p>
+    <div class="grid2 socf">${Object.entries(SOC).map(([k, [t, , im, ph]]) => `<label class="f"><span><span class="si s-${k}">${esc(SOC[k][1])}</span> ${esc(t)}</span><input class="in" id="sc-${k}" value="${esc(cur[k] || '')}" placeholder="${esc(ph)}" inputmode="${im}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>`).join('')}</div>
+    <div class="btns"><button class="btn" data-act="soc-save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="scmsg"></span></div>`);
+  S.ui.socFor = p.id;
+}
 function ppHtml(id) {
   const p = P[id]; if (!p) return '';
   const tab = S.ui.ppTab || 'life';
@@ -202,7 +225,7 @@ function ppHtml(id) {
     <div class="pp-top"><button type="button" class="pp-ic" data-act="pp-back"${back ? '' : ' disabled'} title="Назад">${IC.back}</button><span>Людина у дереві</span><button type="button" class="pp-ic" data-act="pp-close" title="Закрити">${IC.x}</button></div>
     <div class="pp-sc" id="pp-sc">
       <div class="pp-head">${avatar(p, 'lg')}<h2>${esc(full(p))}</h2>${p.m && p.m !== p.s ? `<div class="pp-m">з дому ${esc(p.m)}</div>` : ''}<div class="pp-y">${esc(years(p))}</div>${childAge(p) ? `<div class="pp-kd">† ${esc(childAge(p).txt)}</div>` : ''}
-        <div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div></div>
+        ${socChips(p, true)}<div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div></div>
       <div class="pp-tabs" role="tablist">${[['life', 'Життя'], ['fam', 'Родина'], ['src', 'Джерела' + (docs.length ? ` <i>${docs.length}</i>` : '')]].map(([k, t]) => `<button type="button" role="tab" data-act="pp-tab" data-v="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="pp-body">${tab === 'fam' ? fam : tab === 'src' ? src : life}</div>
     </div>
@@ -243,11 +266,14 @@ function mNav(cur) {
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
+/* Подяка автору (бажання власника, 13.10) */
+const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — сам зібрав документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Рід Шутих · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
   const L = [['q', 'Запитання й уточнення', qBadge() || ''], ['villages', 'Історія сіл', ''], ['maps', 'Старі карти', ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
+    <div class="msh-cr">Сайт створив і веде <b>Максим Шутий</b></div>
     <button class="msh-row out" data-act="logout">${MI.out}<span>Вийти</span></button></div></div>`;
   document.documentElement.classList.add('msh-open');
 }
@@ -504,6 +530,7 @@ function vPerson() {
       ${p.d ? `<dt>Смерть</dt><dd><span class="mono">${esc(p.d)}</span>${p.dp ? ' · ' + esc(p.dp) : ''}</dd>` : ''}
     </dl>
     ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
+    ${socBlock(p)}
     <div class="sec" style="margin-top:18px"><h3>Гілка <span class="small muted" style="text-transform:none;letter-spacing:0">натисніть на людину нижче — відкриється її картка</span></h3>
       <div class="branch">
         ${L('Діди й баби', gp)}${L('Батьки', par)}
@@ -1108,7 +1135,7 @@ function bookPageHtml(i) {
   return `<div class="bk-page"><div class="bk-head">${esc(p.chapter || '')}</div><div class="bk-body">${p.html}</div><div class="bk-foot">${num}</div></div>`;
 }
 function bookCoverHtml() {
-  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>роду Шутих</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
+  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>роду Шутих</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><div class="bk-by">Зібрав і записав<br><b>Максим Шутий</b></div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
 }
 function bookRender() {
   const book = document.getElementById('bk-book'); if (!book) return;
@@ -1651,7 +1678,7 @@ const introHtml = btn => `<div class="intro">${INTRO.map((l, i) => `<p class="il
 const introSeen = () => { try { return sessionStorage.getItem('rs_intro') === '1'; } catch { return S.ui.introSeen; } };
 const introMark = () => { S.ui.introSeen = true; try { sessionStorage.setItem('rs_intro', '1'); } catch {} };
 function gate(inner) { return `<div class="gate"><div class="card"><h1>Рід Шутих</h1><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
-function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта або логін<input class="in" id="lg-e" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form>${S.join ? `<p style="text-align:center;margin:0"><a href="#" data-act="to-register">Ще немає доступу? Зареєструватися</a></p>` : `<p class="small muted" style="text-align:center;margin:0">Доступ лише для родини. Забули пароль — напишіть Максиму.</p>`}`) + '</div>'; }
+function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта або логін<input class="in" id="lg-e" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form>${S.join ? `<p style="text-align:center;margin:0"><a href="#" data-act="to-register">Ще немає доступу? Зареєструватися</a></p>` : `<p class="small muted" style="text-align:center;margin:0">Доступ лише для родини. Забули пароль — напишіть Максиму.</p>`}`) + '<p class="lg-cr">Сайт створив і веде <b>Максим Шутий</b></p></div>'; }
 function vInvite(inv) { return gate(`<form id="accept" class="sec"><p style="margin:0">${inv.purpose === 'reset' ? 'Задайте новий пароль' : 'Вас запросили до родинного архіву.'}</p><label class="f">${inv.email.includes('@') ? 'Пошта' : 'Ваш логін (запишіть його)'}<input class="in" value="${esc(inv.email)}" disabled></label><label class="f">Як вас підписувати<input class="in" id="ac-n" value="${esc(inv.name || '')}" required></label><label class="f">Придумайте пароль (від 8 символів)<input class="in" id="ac-p" type="password" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">${inv.purpose === 'reset' ? 'Зберегти пароль' : 'Увійти до архіву'}</button><div class="msg" id="ac-m"></div></form>`); }
 function vSetup() { return gate(`<form id="setup" class="sec"><p style="margin:0">Перше налаштування: створіть обліковий запис власника.</p><label class="f">Код налаштування (BOOTSTRAP_TOKEN з Vercel)<input class="in" id="su-t" type="password" required></label><label class="f">Ваше ім'я<input class="in" id="su-n" value="Максим" required></label><label class="f">Пошта<input class="in" id="su-e" type="email" required></label><label class="f">Пароль (від 10 символів)<input class="in" id="su-p" type="password" minlength="10" autocomplete="new-password" required></label><button class="btn" type="submit">Створити</button><div class="msg" id="su-m"></div></form>`); }
 function vSeed() { return gate(`<div class="sec"><p style="margin:0">База порожня. Імпортувати дерево, родини і скани документів із початкового набору?</p><button class="btn" data-act="seed">Імпортувати</button><div class="msg" id="sd-m"></div></div>`); }
@@ -1667,7 +1694,7 @@ function render() {
   const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vTree;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
-  app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>`;
+  app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;
   if (!introSeen() && !document.querySelector('.introlay')) document.body.insertAdjacentHTML('beforeend', `<div class="introlay">${introHtml(true)}</div>`);
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
@@ -1794,6 +1821,20 @@ document.addEventListener('click', async e => {
     if (act === 'logout') { $('#layer').innerHTML = ''; document.documentElement.classList.remove('msh-open'); await api('/api/auth?a=logout', { body: {} }).catch(() => {}); S.me = null; S.data = null; render(); return; }
     if (act === 'docform') { S.ui.docform = !S.ui.docform; S.ui.keepScroll = true; render(); setTimeout(() => $('#dtitle')?.focus(), 30); return; }
     if (act === 'edit') return openEdit(P[S.arg]);
+    if (act === 'soc-edit') return openSoc(P[S.arg]);
+    if (act === 'soc-save') {
+      if (t.disabled) return; t.disabled = true;
+      const links = Object.keys(SOC).map(k => ({ t: k, u: ($('#sc-' + k)?.value || '').trim() })).filter(x => x.u);
+      const m = $('#scmsg'); m.textContent = 'Зберігаю…'; m.className = 'msg';
+      try {
+        const r = await api('/api/data', { body: { op: 'person.links', id: S.ui.socFor, links } });
+        const bad = links.filter(x => !(r.person.links || []).some(y => y.t === x.t));
+        await load(); render();
+        if (bad.length) { openSoc(P[S.ui.socFor]); bad.forEach(x => { const i = $('#sc-' + x.t); if (i) { i.value = x.u; i.classList.add('bad'); } }); const mm = $('#scmsg'); mm.className = 'msg err'; mm.textContent = 'Не вдалося прочитати: ' + bad.map(x => SOC[x.t][0]).join(', ') + '. Перевірте посилання або номер.'; return; }
+        closeLayer(); toast('Збережено');
+      } catch (e2) { t.disabled = false; m.className = 'msg err'; m.textContent = errText(e2); }
+      return;
+    }
     if (act === 'history') { e.preventDefault(); const r = await api(`/api/admin?a=revisions&entity=person&id=${encodeURIComponent(S.arg)}`); modal(`<h2>Історія змін</h2>${revList(r.revisions)}<div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
     if (act === 'save' || act === 'create') {
       if (t.disabled) return; t.disabled = true; // захист від подвійного натискання
