@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130719';
+const BUILD = '202610130725';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -370,11 +370,57 @@ function vAll(tabs) {
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 50}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
-    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span>`)}
+    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}`)}
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}</div>${vpCtl(true)}</div>
     `;
 }
 
+/* ── Дерево картинкою (власнику): малюємо відкрите зараз дерево на canvas у великій роздільності ── */
+async function treePng() {
+  const L = S.ui.tl, st = $('#stage'); if (!L || !st) return;
+  if (document.fonts?.ready) await document.fonts.ready;
+  const HEAD = 110, w = L.w, h = L.h + HEAD + 40;
+  let k = Math.min(3, Math.sqrt(200e6 / (w * h)), 16000 / w, 16000 / h); k = Math.max(0.5, Math.floor(k * 4) / 4); // до 3× (чітко при друку), у межах можливостей браузера
+  const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const g = c.getContext('2d'); g.scale(k, k);
+  const css = getComputedStyle(document.documentElement), cv = (n, d) => (css.getPropertyValue(n) || '').trim() || d;
+  const PAPER = cv('--paper', '#F7F4EF'), WINE = cv('--wine', '#7A2E3B'), INK = cv('--ink', '#1E1B17'), MUT = cv('--muted', '#7A7368'), HYP = cv('--hyp', '#B08A3E');
+  const fD = cv('--f-display', 'Georgia, serif'), fB = cv('--f-body', 'sans-serif'), fM = cv('--f-mono', 'monospace');
+  g.fillStyle = PAPER; g.fillRect(0, 0, w, h);
+  // заголовок
+  const cen = P[treeCenter()];
+  g.fillStyle = WINE; g.font = `700 40px ${fD}`; g.textBaseline = 'alphabetic'; g.fillText('Рід Шутих — родинне дерево', 60, 62);
+  g.fillStyle = MUT; g.font = `15px ${fB}`; g.fillText(`Від кого будуємо: ${cen ? full(cen) : ''} · осіб у дереві: ${Object.keys(L.N).length} · ${new Date().toLocaleDateString('uk-UA')} · shutyi.com.ua`, 60, 92);
+  g.translate(0, HEAD);
+  // підписи поколінь
+  st.querySelectorAll('.glab').forEach(el => { g.fillStyle = WINE; g.globalAlpha = .55; g.font = `700 22px ${fD}`; g.fillText(el.textContent, 8, parseFloat(el.style.top) + 24); g.globalAlpha = 1; });
+  // лінії та кільця з того самого SVG, що на екрані
+  g.lineWidth = 1.6; g.strokeStyle = '#B7AC9E'; st.querySelectorAll('svg.lines path').forEach(pth => g.stroke(new Path2D(pth.getAttribute('d'))));
+  st.querySelectorAll('svg.lines g.ring').forEach(r => { const m = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(r.getAttribute('transform')); if (!m) return; const x = +m[1], y = +m[2];
+    g.beginPath(); g.arc(x, y, 12, 0, 7); g.fillStyle = '#fff'; g.fill(); g.strokeStyle = '#B7AC9E'; g.lineWidth = 1.3; g.stroke();
+    g.strokeStyle = '#8E8275'; g.lineWidth = 1.4; [-3, 3].forEach(dx => { g.beginPath(); g.arc(x + dx, y, 4.2, 0, 7); g.stroke(); }); });
+  // портрети (з тих самих адрес, що й на сторінці — вже в кеші)
+  const ims = {}; await Promise.all(Object.keys(L.N).map(id => { const u = portrait(P[id]); if (!u) return null; return new Promise(res => { const im = new Image(); im.onload = () => { ims[id] = im; res(); }; im.onerror = () => res(); im.src = u; }); }));
+  const rr = (x, y, ww, hh, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + ww, y, x + ww, y + hh, r); g.arcTo(x + ww, y + hh, x, y + hh, r); g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + ww, y, r); g.closePath(); };
+  const wrap = (txt, maxW, lines) => { const words = txt.split(/\s+/), out = []; let cur = ''; for (const wd of words) { const t2 = cur ? cur + ' ' + wd : wd; if (g.measureText(t2).width <= maxW || !cur) cur = t2; else { out.push(cur); cur = wd; } } if (cur) out.push(cur);
+    if (out.length > lines) { out.length = lines; let l = out[lines - 1]; while (l && g.measureText(l + '…').width > maxW) l = l.slice(0, -1); out[lines - 1] = l + '…'; } return out; };
+  const center = treeCenter();
+  for (const [id, n] of Object.entries(L.N)) { const p = P[id]; const x = n.x, y = n.y, W = T2.W, H = T2.H;
+    g.save(); g.shadowColor = 'rgba(60,40,30,.12)'; g.shadowBlur = 10; g.shadowOffsetY = 3; rr(x, y, W, H, 12); g.fillStyle = '#fff'; g.fill(); g.restore();
+    rr(x, y, W, H, 12); g.lineWidth = id === center ? 2 : 1; g.strokeStyle = p.hyp ? HYP : id === center ? WINE : '#EAE3D9'; if (p.hyp) g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]);
+    const ax = x + 14 + 25, ay = y + H / 2; g.save(); g.beginPath(); g.arc(ax, ay, 25, 0, 7); g.closePath(); g.fillStyle = '#EADFD8'; g.fill(); g.clip();
+    if (ims[id]) { const im = ims[id], s2 = Math.max(50 / im.width, 50 / im.height); g.drawImage(im, ax - im.width * s2 / 2, ay - im.height * s2 / 2, im.width * s2, im.height * s2); }
+    else { g.fillStyle = '#4B3A35'; g.font = `19px ${fD}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(initials(p), ax, ay + 1); g.textAlign = 'left'; }
+    g.restore(); g.textBaseline = 'alphabetic';
+    const tx = x + 14 + 50 + 14, tw = W - (tx - x) - 12; g.fillStyle = INK; g.font = `17px ${fD}`;
+    const nl = wrap(tname(p), tw, 2), yr = years(p); const blockH = nl.length * 19 + (yr ? 17 : 0); let ty = y + (H - blockH) / 2 + 15;
+    nl.forEach(l => { g.fillText(l, tx, ty); ty += 19; });
+    if (yr) { g.fillStyle = MUT; g.font = `13px ${fB}`; g.fillText(yr, tx, ty + 1); }
+    if (childAge(p)) { g.fillStyle = WINE; g.font = `700 15px ${fD}`; g.fillText('†', x + W - 18, y + 20); } }
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) throw new Error('canvas');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rid-shutykh-derevo-${new Date().toISOString().slice(0, 10)}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 20000);
+  toast(`Картинку збережено: ${c.width}×${c.height} px`);
+}
 /* ── Масштаб і переміщення (спільне для обох видів) ── */
 function vpMount() {
   const vp = $('#vp'), st = $('#stage'); if (!vp || !st) return;
@@ -1711,6 +1757,7 @@ document.addEventListener('click', async e => {
     if (act === 'map-over') return openOverlay(d.id);
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
+    if (act === 't-png') { if (t.disabled) return; t.disabled = true; const o = t.textContent; t.textContent = 'Готую картинку…'; try { await treePng(); } catch (err) { console.error(err); toast('Не вдалося зробити картинку'); } t.disabled = false; t.textContent = o; return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; S.ui.kidx = {}; } delete S.ui.vp?.all; render(); return; }
     if (act === 'import') { if (t.disabled) return; t.disabled = true; $('#imp-m').textContent = 'Імпортую…'; let r = { result: [] }; for (let k = 0; k < 25; k++) { const x = await api('/api/setup?a=import', { body: {} }); r.result.push(...(x.result || [])); if (!x.more) break; } const ok = (r.result || []).filter(x => / ok/.test(x)).length; $('#imp-m').textContent = ok ? `Додано: ${ok}. ${(r.result || []).join(' · ')}` : 'Нового немає — усе вже імпортовано.'; t.disabled = false; delete TXT.history; delete TXT.villages; BOOK.key = ''; await load(); return; }
     if (act === 'intro-close') { introMark(); document.querySelector('.introlay')?.remove(); return; }
