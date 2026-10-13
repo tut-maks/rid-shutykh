@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131354';
+const BUILD = '202610131357';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -229,7 +229,7 @@ function ppHtml(id) {
   return `<aside class="pp" id="pp" aria-label="Людина у дереві">
     <div class="pp-top"><button type="button" class="pp-ic" data-act="pp-back"${back ? '' : ' disabled'} title="Назад">${IC.back}</button><span>Людина у дереві</span><button type="button" class="pp-ic" data-act="pp-close" title="Закрити">${IC.x}</button></div>
     <div class="pp-sc" id="pp-sc">
-      <div class="pp-head">${avatar(p, 'lg')}<h2>${esc(full(p))}</h2><div class="pp-y">${esc(years(p))}</div>${childAge(p) ? `<div class="pp-kd">† ${esc(childAge(p).txt)}</div>` : ''}
+      <div class="pp-head">${p.portrait ? `<button type="button" class="pp-av" data-photo="${esc(p.portrait)}" title="Відкрити фото">${avatar(p, 'lg')}</button>` : avatar(p, 'lg')}<h2>${esc(full(p))}</h2><div class="pp-y">${esc(years(p))}</div>${childAge(p) ? `<div class="pp-kd">† ${esc(childAge(p).txt)}</div>` : ''}
         ${socChips(p, true)}<div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div></div>
       <div class="pp-tabs" role="tablist">${[['life', 'Життя'], ['fam', 'Родина'], ['src', 'Джерела' + (docs.length ? ` <i>${docs.length}</i>` : '')]].map(([k, t]) => `<button type="button" role="tab" data-act="pp-tab" data-v="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="pp-body">${tab === 'fam' ? fam : tab === 'src' ? src : life}</div>
@@ -563,7 +563,7 @@ function vPerson() {
   const L = (t, ids) => ids.length ? `<div class="bl"><span>${t}</span><div class="row">${ids.map(mini).join('')}</div></div>` : '';
   return `<div class="person">
   <div class="sec" style="align-content:start">
-    <div class="phead">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}</div>`}
+    <div class="phead">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? `<img src="${pu}" alt="" data-photo="${esc(p.portrait)}" title="Відкрити фото">` : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? `<img src="${pu}" alt="">` : esc((p.n || '?')[0])}</div>`}
       <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1></div></div>
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
@@ -2398,7 +2398,7 @@ document.addEventListener('click', async e => {
     if (d.go) { location.hash = href('p', d.go); return; }
     if (d.toh) { e.preventDefault(); document.getElementById(d.toh)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (d.doc) { e.preventDefault(); return openDoc(d.doc); }
-    if (d.photo) return openPhoto(d.photo);
+    if (d.photo) { e.preventDefault(); return openPhoto(d.photo); }
     if (d.add) { const base = P[S.arg]; return openAdd(d.add, d.add === 'new' ? null : base); }
     if (d.story) {
       const ta = document.getElementById('st-' + d.story), m = document.getElementById('stm-' + d.story);
