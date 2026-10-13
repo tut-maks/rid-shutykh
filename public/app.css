@@ -902,3 +902,5 @@ main{padding-block:14px 60px}
 @media (max-width:1180px) and (min-width:821px){.top .nav a .nq-l{display:none}}
 .tbar .tme{white-space:nowrap}
 @media (max-width:1180px) and (min-width:821px){.tbar .tme span{display:none}}
+@media (max-width:1400px) and (min-width:821px){.top .brand small{display:none}.top .nav a .nq-l{display:none}}
+@media (max-width:1000px) and (min-width:821px){.top .nav a{padding-left:7px!important;padding-right:7px!important;font-size:14px}.top .brand{font-size:22px}}

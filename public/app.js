@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130800';
+const BUILD = '202610130836';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -90,13 +90,13 @@ addEventListener('hashchange', () => { parse(); if (S.view === 'p') { S.ui.pp = 
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Місця'], ['q', 'Запитання й уточнення']];
+  const nav = [['tree', 'Дерево'], ['families', 'Історія роду'], ['villages', 'Історія сіл'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Карти'], ['q', 'Запитання й уточнення']];
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) : 0;
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
   return `<header class="top"><div class="wrap topw">
     <a class="brand" href="#/tree">Рід Шутих<small>Родинний архів</small></a>
-    <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ` title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть${qb ? '. Нових: ' + qb : ''}"` : ''}>${k === 'q' ? 'Запитання<span class="nq-l">&nbsp;й уточнення</span>' : t}${k === 'q' && qb ? `<i class="nq-b" aria-label="нових: ${qb}">${qb}</i>` : ''}</a>`).join('')}</nav>
+    <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' || k === 'villages' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ` title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть${qb ? '. Нових: ' + qb : ''}"` : ''}>${k === 'q' ? 'Запитання<span class="nq-l">&nbsp;й уточнення</span>' : t}${k === 'q' && qb ? `<i class="nq-b" aria-label="нових: ${qb}">${qb}</i>` : ''}</a>`).join('')}</nav>
     <div class="who"><a class="tic" href="#/people" data-act="gsearch" title="Знайти людину" aria-label="Пошук">${IC.search}</a>
       <details class="umenu"><summary class="uav" title="${esc(S.me.name || S.me.email || '')}"><span class="av sm">${esc(initials(me))}</span>${qb + jb ? `<i class="bn-badge">${qb + jb}</i>` : ''}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
         <div class="um-b"><div class="um-n">${esc(S.me.name || '')}<span>${esc(S.me.email || '')}</span></div>
@@ -222,6 +222,7 @@ function ppClose() { S.ui.pp = null; S.ui.ppHist = []; ppPaint(); }
 
 /* ───── Телефон: нижнє меню й шторка «Ще» (як у KRental CRM: 4 розділи + «Ще», кнопки ≥44 px, під великим пальцем) ───── */
 const MI = {
+  villages: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20v-8l4-3 4 3v8"/><path d="M13 20v-6l3.5-2.5L20 14v6"/><path d="M8 20v-4h2v4"/></svg>',
   tree: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5.5" cy="18.5" r="2.2"/><circle cx="18.5" cy="18.5" r="2.2"/><path d="M12 7.2v5.3M5.5 16.3v-1.8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1.8"/></svg>',
   families: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
   people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/></svg>',
@@ -233,13 +234,13 @@ const MI = {
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.5h4.5v15H14M10 8l-4 4 4 4M6 12h9.5"/></svg>',
 };
 function mNav(cur) {
-  const more = ['maps', 'q', 'admin', 'p'].includes(cur) && cur !== 'p' ? 'more' : cur;
+  const more = ['maps', 'villages', 'q', 'admin', 'p'].includes(cur) && cur !== 'p' ? 'more' : cur;
   const B = [['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди'], ['docs', 'Архів']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
 function mSheet() {
-  const L = [['q', 'Запитання й уточнення', qBadge() || ''], ['maps', 'Місця: карти й історія сіл', ''], ...(isOwner() ? [['admin', 'Власнику', S.data?.joinPending || '']] : [])];
+  const L = [['q', 'Запитання й уточнення', qBadge() || ''], ['villages', 'Історія сіл', ''], ['maps', 'Старі карти', ''], ...(isOwner() ? [['admin', 'Власнику', S.data?.joinPending || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -952,7 +953,7 @@ const VHIST_ASK = ['ЦДІАК України, ф. 57 — Генеральний
 /* ── Великі тексти з сервера (історія роду, історія сіл) ── */
 const TXT = {};
 const TXT_T = {};
-const TXT_PAGE = { history: 'families', villages: 'maps' };
+const TXT_PAGE = { history: 'families', villages: 'villages' };
 function loadText(k, quiet) { // порожній результат не кешуємо назавжди: через 15 с спробуємо ще (текст міг щойно імпортуватись)
   if (k in TXT && !(TXT[k] === null && Date.now() - (TXT_T[k] || 0) > 15000)) return TXT[k];
   TXT[k] = undefined; TXT_T[k] = Date.now();
@@ -1231,13 +1232,13 @@ function vHistoryOld() {
   <h3>Шутих у цих джерелах поки не знайдено</h3><p class="small">Найдавніший відомий запис — сповідна відомість 1834 р. Щоб піти глибше, варто замовити:</p><ul class="small">${VHIST_ASK.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
   <p class="small muted">Є припущення, що назва «Веприк» — від «вепр» (дикий кабан), як в інших селах з такою назвою; джерела для нашого Веприка не знайдено.</p></div>`;
 }
+function vVillages() { curTarget = 'villages'; return `<div class="pghead"><h1 title="Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.">Історія сіл</h1><p class="tabnote">Вороньки, Веприк і сусідні села — від найдавніших згадок до наших днів, з джерелом біля кожного факту.</p></div>${vHistory()}`; }
 function vMaps() {
   curTarget = 'maps';
   const all = mapsList(), vs = [...new Set(all.flatMap(m => m.villages || []))].sort((a, b) => a.localeCompare(b, 'uk'));
   const f = S.ui.mapv || '', list = f ? all.filter(m => (m.villages || []).includes(f)) : all;
-  const htab = `<div class="seg mtabs"><button type="button" class="${S.ui.mtab !== 'hist' ? 'on' : ''}" data-act="map-tab" data-v="">Старі карти</button><button type="button" class="${S.ui.mtab === 'hist' ? 'on' : ''}" data-act="map-tab" data-v="hist">Історія сіл</button></div>`;
-  if (S.ui.mtab === 'hist') return `<div class="pghead"><h1 title="Старі карти й історія наших сіл.">Місця</h1>${htab}<p class="tabnote" title="Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.">Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.</p></div>${vHistory()}`;
-  return `<div class="pghead"><h1 title="Старі карти й історія наших сіл.">Місця</h1>${htab}<p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p></div>
+  if (S.ui.mtab === 'hist') { S.ui.mtab = ''; location.hash = href('villages'); }
+  return `<div class="pghead"><h1 title="Старі карти наших сіл.">Старі карти</h1><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p></div>
   <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
     ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
   ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
@@ -1547,7 +1548,7 @@ function vAdmin() {
     const names = Object.fromEntries(st.members.map(m => [m.id, m.name || 'Без імені']));
     const rows = sortRows(st.members.map(m => { const c = st.cur[m.id] || {}, p = st.prev[m.id] || {}; return { id: m.id, name: names[m.id], role: m.role, time: c.time || 0, ptime: p.time || 0, opens: c.opens || 0, days: c.days || 0, sessions: c.sessions || 0, edits: c.edits || 0, last: c.last || '' }; }), 'time');
     const active = Object.values(st.cur).filter(x => x.time || x.opens).length, pactive = Object.values(st.prev).filter(x => x.time || x.opens).length;
-    const viewsName = { tree: 'Дерево', p: 'Картки людей', person: 'Картки людей', families: 'Родини', fam: 'Родини', people: 'Покажчик', docs: 'Документи', admin: 'Панель власника' };
+    const viewsName = { tree: 'Дерево', p: 'Картки людей', person: 'Картки людей', families: 'Родини', fam: 'Родини', people: 'Покажчик', docs: 'Документи', maps: 'Старі карти', villages: 'Історія сіл', q: 'Запитання', admin: 'Панель власника' };
     const views = {}; Object.entries(st.views || {}).forEach(([k, v]) => { if (k === 'admin') return; const n = viewsName[k] || k; views[n] = (views[n] || 0) + v; });
     body = `<div class="bar1"><div class="seg">${PERIODS.map(([k, t]) => `<button aria-pressed="${a.period === k}" data-per="${k}">${t}</button>`).join('')}<button aria-pressed="${a.period === 'custom'}" data-per="custom">Свій</button></div>
       ${a.period === 'custom' ? `<input type="date" class="in" id="pf" value="${esc((a.from || '').slice(0, 10))}" style="width:auto"><input type="date" class="in" id="pt" value="${esc((a.to || '').slice(0, 10))}" style="width:auto"><button class="btn line small" data-act="per-apply">Показати</button>` : ''}
@@ -1639,7 +1640,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps }[S.view] || vTree;
+  const V = { tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vTree;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>`;
