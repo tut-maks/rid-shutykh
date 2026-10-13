@@ -1,4 +1,4 @@
-/* Рід Шутих — інтерфейс. Ванільний JS, стан у S, render() перебудовує #app.
+/* Наш родовід (сайт роду Шутих) — інтерфейс. Ванільний JS, стан у S, render() перебудовує #app.
    Усі дані — лише через /api (сесія в HttpOnly-cookie). Жодних ключів і прямих звернень до бази. */
 (function () {
 'use strict';
@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131442';
+const BUILD = '202610131443';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -100,7 +100,7 @@ function top() {
   const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0;
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
   return `<header class="top"><div class="wrap topw">
-    <a class="brand" href="#/home">Рід Шутих<small>Родинний архів</small></a>
+    <a class="brand" href="#/home">Наш родовід<small>Родинний архів</small></a>
     <nav class="nav" aria-label="Розділи">${nav.map(([k, t]) => `<a href="${href(k)}"${k === 'q' ? ' class="nav-q"' : k === 'families' || k === 'villages' ? ' class="nav-hist"' : ''}${cur === k ? ' aria-current="page"' : ''}${k === 'q' ? ` title="Запитання й уточнення: бачите помилку чи знаєте щось — напишіть${qb ? '. Нових: ' + qb : ''}"` : ''}>${k === 'q' ? 'Запитання<span class="nq-l">&nbsp;й уточнення</span>' : t}${k === 'q' && qb ? `<i class="nq-b" aria-label="нових: ${qb}">${qb}</i>` : ''}</a>`).join('')}</nav>
     <div class="who"><a class="tic" href="#/people" data-act="gsearch" title="Знайти людину" aria-label="Пошук">${IC.search}</a>
       <details class="umenu"><summary class="uav" title="${esc(S.me.name || S.me.email || '')}"><span class="av sm">${esc(initials(me))}</span>${qb + jb ? `<i class="bn-badge">${qb + jb}</i>` : ''}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
@@ -280,7 +280,7 @@ function mNav(cur) {
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
 }
 /* Подяка автору (бажання власника, 13.10) */
-const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Рід Шутих · ${new Date().getFullYear()}</p></footer>`; };
+const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
   const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
@@ -466,7 +466,7 @@ async function treePng(PO) {
   g.fillStyle = PAPER; g.fillRect(0, 0, w, h);
   // заголовок
   const cen = P[treeCenter()];
-  if (!PO) { g.fillStyle = WINE; g.font = `700 40px ${fD}`; g.textBaseline = 'alphabetic'; g.fillText('Рід Шутих — родинне дерево', 60, 62);
+  if (!PO) { g.fillStyle = WINE; g.font = `700 40px ${fD}`; g.textBaseline = 'alphabetic'; g.fillText('Наш родовід — родинне дерево', 60, 62);
   g.fillStyle = MUT; g.font = `15px ${fB}`; g.fillText(`Від кого будуємо: ${cen ? full(cen) : ''} · осіб у дереві: ${Object.keys(L.N).length} · ${new Date().toLocaleDateString('uk-UA')} · shutyi.com.ua`, 60, 92); }
   g.translate(0, HEAD);
   // підписи поколінь
@@ -510,7 +510,7 @@ async function posterCompose(tree, PO, n, C) {
   const m = 36 * u; g.strokeStyle = C.WINE; g.lineWidth = 3 * u; g.strokeRect(m, m, pw - 2 * m, ph - 2 * m); g.lineWidth = 1 * u; g.strokeRect(m + 9 * u, m + 9 * u, pw - 2 * m - 18 * u, ph - 2 * m - 18 * u);
   g.fillStyle = C.WINE; g.font = `${22 * u}px ${C.fD}`; g.textAlign = 'center'; g.textBaseline = 'middle'; [[m, m], [pw - m, m], [m, ph - m], [pw - m, ph - m]].forEach(([x, y]) => { g.fillStyle = C.PAPER; g.fillRect(x - 16 * u, y - 16 * u, 32 * u, 32 * u); g.fillStyle = C.WINE; g.fillText('✥', x, y); });
   // заголовок
-  g.textBaseline = 'alphabetic'; g.fillStyle = C.WINE; g.font = `700 ${64 * u}px ${C.fD}`; g.fillText(PO.t || 'Рід Шутих', pw / 2, m + 105 * u);
+  g.textBaseline = 'alphabetic'; g.fillStyle = C.WINE; g.font = `700 ${64 * u}px ${C.fD}`; g.fillText(PO.t || 'Наш родовід', pw / 2, m + 105 * u);
   g.fillStyle = C.MUT; g.font = `${21 * u}px ${C.fB}`; if (PO.s) g.fillText(PO.s, pw / 2, m + 145 * u);
   g.strokeStyle = C.WINE; g.globalAlpha = .5; g.lineWidth = 1.2 * u; g.beginPath(); g.moveTo(pw / 2 - 160 * u, m + 170 * u); g.lineTo(pw / 2 + 160 * u, m + 170 * u); g.stroke(); g.globalAlpha = 1;
   // дерево
@@ -876,7 +876,7 @@ const kidRow = (k = {}) => `<div class="kidr"><input class="in" data-kf="n" plac
 const readKids = box => [...(box?.querySelectorAll('.kidr') || [])].map(r => Object.fromEntries([...r.querySelectorAll('[data-kf]')].map(i => [i.dataset.kf, i.value.trim()]))).filter(k => k.n);
 const RF = (id, label, ph, o = {}) => `<label class="f${o.wide ? ' wide' : ''}">${label}${o.area ? `<textarea class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="2000"></textarea>` : `<input class="in" id="rg-${id}" placeholder="${esc(ph)}" maxlength="300"${o.type ? ` type="${o.type}"` : ''}${o.im ? ` inputmode="${o.im}"` : ''}${o.ac ? ` autocomplete="${o.ac}"` : ''}${o.req ? ' required' : ''}>`}</label>`;
 function vRegister() {
-  return `<div class="gate reg"><div class="card"><h1>Рід Шутих</h1><div class="sub">Реєстрація в родинному архіві</div><div class="orn">◆ ◆ ◆</div>
+  return `<div class="gate reg"><div class="card"><h1>Наш родовід</h1><div class="sub">Реєстрація в родинному архіві</div><div class="orn">◆ ◆ ◆</div>
   <form id="register" class="sec" autocomplete="on">
     <p style="margin:0">Розкажіть, хто ви і хто ваші рідні — так Максим знайде вас у дереві й відкриє доступ. Пишіть як знаєте: прізвище, ім'я, по батькові й роки (можна приблизно).</p>
     <h3>Про вас</h3>
@@ -895,7 +895,7 @@ function vRegister() {
       ${RF('gpm', 'Дідусь і бабуся по матері', 'Галай Іван…, …', { area: 1 })}
       ${RF('spouse', 'Чоловік / дружина', "прізвище, ім'я, рік")}${RF('sibs', 'Брати й сестри', 'імена й роки', { area: 1 })}
       <div class="f wide"><span>Діти — кожна дитина окремим рядком (з'явиться в дереві під вами після підтвердження)</span><div id="rg-kids" class="kidl">${kidRow()}</div><button type="button" class="btn line small" data-act="jr-kidadd" style="justify-self:start">+ ще дитина</button></div>
-      ${RF('link', 'Як ви пов\'язані з родом Шутих (через кого)', 'напр.: моя бабуся — рідна сестра Василя Шутого з Вороньків', { area: 1, wide: 1 })}
+      ${RF('link', 'Як ви пов\'язані з родиною (через кого)', 'напр.: моя бабуся — рідна сестра Василя Шутого з Вороньків', { area: 1, wide: 1 })}
     </div>
     <p class="small muted" style="margin:0">* Обов'язково: прізвище, ім'я і хоча б один із батьків.</p>
     <h3>Вхід</h3>
@@ -1192,13 +1192,13 @@ function bookPageHtml(i) {
   const p = BOOK.pages[i]; if (!p) return '<div class="bk-page blank"></div>';
   const num = BOOK.spread ? i : i + 1;
   if (p.kind === 'paper') return `<div class="bk-page paper"><div class="bk-orn big">❦</div></div>`;
-  if (p.kind === 'title') return `<div class="bk-page title"><div class="bk-tp"><div class="bk-orn">✥</div><div class="small caps">Родинний літопис</div><h2>Історія роду<br>Шутих</h2><div class="bk-rule"></div><p>Вороньки · Веприк · Лідин<br>Розкошівка · Ємилівка</p><p class="small">з 1791 року до наших днів</p><div class="bk-orn">❧</div><p class="small muted">Записано за метричними книгами, сповідними відомостями, записами ЗАГС і спогадами родини.${BOOK.updated ? ' Редакція ' + esc(BOOK.updated) + '.' : ''}</p></div></div>`;
+  if (p.kind === 'title') return `<div class="bk-page title"><div class="bk-tp"><div class="bk-orn">✥</div><div class="small caps">Родинний літопис</div><h2>Історія<br>нашого роду</h2><div class="bk-rule"></div><p>Вороньки · Веприк · Лідин<br>Розкошівка · Ємилівка</p><p class="small">з 1791 року до наших днів</p><div class="bk-orn">❧</div><p class="small muted">Записано за метричними книгами, сповідними відомостями, записами ЗАГС і спогадами родини.${BOOK.updated ? ' Редакція ' + esc(BOOK.updated) + '.' : ''}</p></div></div>`;
   if (p.kind === 'toc') return `<div class="bk-page"><div class="bk-body"><h3 class="ch">Зміст</h3><ol class="bk-tocl">${BOOK.chapters.map(c => `<li><a href="#" data-bkgo="${c.page}"><span>${esc(c.title)}</span><i></i><b>${BOOK.spread ? c.page : c.page + 1}</b></a></li>`).join('')}</ol></div><div class="bk-foot">${num}</div></div>`;
   if (p.kind === 'end') return `<div class="bk-page title"><div class="bk-tp"><div class="bk-orn">❦</div><p><i>Історія роду пишеться далі.</i></p><p class="small">Знаєте більше — напишіть спогад на картці людини або натисніть «Уточнити / запитати».</p><div class="bk-orn">✥</div></div></div>`;
   return `<div class="bk-page"><div class="bk-head">${esc(p.chapter || '')}</div><div class="bk-body">${p.html}</div><div class="bk-foot">${num}</div></div>`;
 }
 function bookCoverHtml() {
-  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>роду Шутих</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><div class="bk-by">Зібрав і записав<br><b>Максим Шутий</b></div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
+  return `<div class="bk-cover"><div class="bk-cv-in"><div class="bk-orn">✥</div><div class="caps">Родинний літопис</div><h2>Історія<br>нашого роду</h2><div class="bk-rule"></div><div class="caps small">1791 — 2025</div><div class="bk-by">Зібрав і записав<br><b>Максим Шутий</b></div><button class="bk-open" data-bk="open">${bkHasMark() ? 'Читати далі' : 'Відкрити книгу'}</button>${bkHasMark() ? '<div class="bk-mk small">🔖 відкриється там, де ви зупинились</div>' : ''}</div></div>`;
 }
 function bookRender() {
   const book = document.getElementById('bk-book'); if (!book) return;
@@ -1767,7 +1767,7 @@ const introHtml = btn => `<div class="intro">${INTRO.map((l, i) => `<p class="il
   ${btn ? `<button class="btn ib" data-act="intro-close" style="animation-delay:${1.2 + INTRO.length * 1.3}s">До родинного архіву</button>` : ''}</div>`;
 const introSeen = () => { try { return sessionStorage.getItem('rs_intro') === '1'; } catch { return S.ui.introSeen; } };
 const introMark = () => { S.ui.introSeen = true; try { sessionStorage.setItem('rs_intro', '1'); } catch {} };
-function gate(inner) { return `<div class="gate"><div class="card"><h1>Рід Шутих</h1><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
+function gate(inner) { return `<div class="gate"><div class="card"><h1>Наш родовід</h1><div class="sub">Родинний архів · закритий доступ</div><div class="orn">◆ ◆ ◆</div>${inner}</div></div>`; }
 function vLogin() { return `<div class="loginwrap">${introHtml(false)}` + gate(`<form id="login" class="sec"><label class="f">Пошта або логін<input class="in" id="lg-e" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" required></label><label class="f">Пароль<input class="in" id="lg-p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Увійти</button><div class="msg" id="lg-m"></div></form>${S.join ? `<p style="text-align:center;margin:0"><a href="#" data-act="to-register">Ще немає доступу? Зареєструватися</a></p>` : `<p class="small muted" style="text-align:center;margin:0">Доступ лише для родини. Забули пароль — напишіть Максиму.</p>`}`) + '<p class="lg-cr">Сайт створив і веде <b>Максим Шутий</b></p></div>'; }
 function vInvite(inv) { return gate(`<form id="accept" class="sec"><p style="margin:0">${inv.purpose === 'reset' ? 'Задайте новий пароль' : 'Вас запросили до родинного архіву.'}</p><label class="f">${inv.email.includes('@') ? 'Пошта' : 'Ваш логін (запишіть його)'}<input class="in" value="${esc(inv.email)}" disabled></label><label class="f">Як вас підписувати<input class="in" id="ac-n" value="${esc(inv.name || '')}" required></label><label class="f">Придумайте пароль (від 8 символів)<input class="in" id="ac-p" type="password" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">${inv.purpose === 'reset' ? 'Зберегти пароль' : 'Увійти до архіву'}</button><div class="msg" id="ac-m"></div></form>`); }
 function vSetup() { return gate(`<form id="setup" class="sec"><p style="margin:0">Перше налаштування: створіть обліковий запис власника.</p><label class="f">Код налаштування (BOOTSTRAP_TOKEN з Vercel)<input class="in" id="su-t" type="password" required></label><label class="f">Ваше ім'я<input class="in" id="su-n" value="Максим" required></label><label class="f">Пошта<input class="in" id="su-e" type="email" required></label><label class="f">Пароль (від 10 символів)<input class="in" id="su-p" type="password" minlength="10" autocomplete="new-password" required></label><button class="btn" type="submit">Створити</button><div class="msg" id="su-m"></div></form>`); }
@@ -2190,7 +2190,7 @@ function openDnaEdit(id) {
 function openPoster() {
   modal(`<h2>Дерево-плакат для друку</h2>
     <p class="small muted">Збирає дерево з усіма гілками, які зараз відкриті на сторінці «Дерево», у велику картинку з рамкою й заголовком. Відкрийте потрібні гілки (кнопки ▲ ▾ ▸), а потім натисніть «Зробити плакат».</p>
-    <label class="f">Заголовок<input class="in" id="po-t" value="Рід Шутих"></label>
+    <label class="f">Заголовок<input class="in" id="po-t" value="Наш родовід"></label>
     <label class="f">Підзаголовок<input class="in" id="po-s" value="Родинне дерево · Вороньки — Веприк — Лідин"></label>
     <label class="f">Формат<select class="in" id="po-f"><option value="A2">A2 (42×59 см)</option><option value="A1" selected>A1 (59×84 см)</option><option value="A0">A0 (84×119 см)</option><option value="fit">Як є, без полів</option></select></label>
     <label class="f">Орієнтація<select class="in" id="po-o"><option value="auto">Сама підбере</option><option value="land">Альбомна</option><option value="port">Книжкова</option></select></label>
