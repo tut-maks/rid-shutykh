@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131121';
+const BUILD = '202610131129';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -418,7 +418,11 @@ function vAll(tabs) {
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 4}px;top:${n.y + T2.H - 13}px" title="Показати дітей">▾${h.kids}</button>`;
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Показати братів і сестер (${h.sib})">▸${h.sib}</button>`;
-    return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}).filter(k => S.ui.sibx[k]), Object.keys(S.ui.dsib || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Згорнути">◂−</button>`; }).join('');
+    return s; }).join('') + [...V].map(id => { const n = L.N[id], h = (S.ui.hid || {})[id] || {}; let s = ''; /* кожне відкрите — своя кнопка «згорнути» на тому ж місці, незалежно від інших */
+    if (((S.ui.sibx || {})[id] || (S.ui.dsib || {})[id]) && !h.sib) s += `<button class="tg cl" data-coll="${id}" data-cw="sib" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Сховати братів і сестер">◂−</button>`;
+    if ((S.ui.exp || {})[id] && !h.up) s += `<button class="tg cl" data-coll="${id}" data-cw="up" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Сховати батьків">▼</button>`;
+    if ((S.ui.kidx || {})[id] && !h.kids) s += `<button class="tg cl" data-coll="${id}" data-cw="kid" style="left:${n.x + T2.W / 2 - 4}px;top:${n.y + T2.H - 13}px" title="Сховати дітей">▴</button>`;
+    return s; }).join('');
   // інші шлюби людей у дереві (чоловік/дружина, яких немає на дереві): значок «⚭ +N» → бічна панель
   const spx = [...V].map(id => { const n = L.N[id]; const open = (S.ui.spx || {})[id];
     if (open) return `<button type="button" class="tg sp on" data-spx="${id}" style="left:${n.x + 10}px;top:${n.y + T2.H - 13}px" title="Сховати інші шлюби">⚭ −</button>`;
@@ -531,7 +535,7 @@ function vpMount() {
   const fb = vp.querySelector('[data-full]'); if (fb) fb.onclick = () => { S.ui.full = !S.ui.full; vp.classList.toggle('full', S.ui.full); document.body.classList.toggle('noscroll', S.ui.full); requestAnimationFrame(() => apply()); };
   vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.kidx || b.dataset.coll || b.dataset.spx; const el = st.querySelector(`[data-id="${id}"]`);
     S.ui.anchor = el ? { id, sx: V.x + el.offsetLeft * V.s, sy: V.y + el.offsetTop * V.s } : null;
-    if (b.dataset.spx) { (S.ui.spx ||= {})[id] = !(S.ui.spx || {})[id]; } else if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { delete S.ui.exp[id]; S.ui.sibx[id] = 0; delete (S.ui.kidx || {})[id]; }
+    if (b.dataset.spx) { (S.ui.spx ||= {})[id] = !(S.ui.spx || {})[id]; } else if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { const w = b.dataset.cw; if (w === 'up') delete S.ui.exp[id]; else if (w === 'kid') delete (S.ui.kidx || {})[id]; else S.ui.sibx[id] = 0; }
     render(); });
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
   vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
