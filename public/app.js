@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130000';
+const BUILD = '202610130002';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1592,7 +1592,6 @@ document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; render(); return; }
   if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
-  if (t.id === 'tq') { S.ui.tf ||= {}; S.ui.tf.q = t.value; const q = t.value.trim().toLowerCase(); const hit = q && Object.keys(S.ui.tl?.N || P).find(id => full(P[id]).toLowerCase().includes(q)); if (hit) S.ui.findId = hit; render(); setTimeout(() => $('#tq')?.focus(), 0); return; }
   if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
   if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.docbulk) return uploadBulk([...t.files]);
@@ -1793,5 +1792,40 @@ async function autoImport() { // кожне відкриття сайту буд
   const ok = await syncNow();
   if (ok && isOwner()) toast(`Додано нових матеріалів від Claude: ${ok}`);
 }
+/* Пошук у дереві: підказки одразу під час введення, по всіх людях (не лише видимих) */
+function tqMatches(q) {
+  q = q.trim().toLowerCase(); if (!q) return [];
+  const words = q.split(/\s+/);
+  const txt = p => [p.s, p.n, p.pt, p.m, yearOf(p.b)].filter(Boolean).join(' ').toLowerCase();
+  return Object.values(P).filter(p => { const t = txt(p); return words.every(w => t.includes(w)); })
+    .sort((a, b) => ((S.ui.tl?.N || {})[b.id] ? 1 : 0) - ((S.ui.tl?.N || {})[a.id] ? 1 : 0) || full(a).localeCompare(full(b), 'uk')).slice(0, 8);
+}
+function tqShow() {
+  const inp = $('#tq'); let box = document.getElementById('tsug');
+  const list = inp ? tqMatches(inp.value) : [];
+  if (!inp || !inp.value.trim() || document.activeElement !== inp) { box?.remove(); return; }
+  if (!box) { box = document.createElement('div'); box.id = 'tsug'; box.className = 'tsug'; document.body.appendChild(box); }
+  const r = inp.closest('.tsearch').getBoundingClientRect();
+  box.style.cssText = `left:${Math.max(8, r.left)}px;top:${r.bottom + 6}px;width:${Math.min(innerWidth - 16, Math.max(r.width, 300))}px`;
+  box.innerHTML = list.length ? list.map((p, i) => `<button type="button" class="tsug-i${i ? '' : ' on'}" data-tfind="${p.id}">${avatar(p)}<span><b>${esc(full(p))}</b><small>${esc([life(p), (S.ui.tl?.N || {})[p.id] ? '' : 'відкриє дерево від неї/нього'].filter(Boolean).join(' · '))}</small></span></button>`).join('') : '<div class="tsug-no">Нікого не знайдено</div>';
+}
+function tqPick(id) {
+  if (!P[id]) return; document.getElementById('tsug')?.remove();
+  S.ui.tf ||= {}; S.ui.tf.q = '';
+  if (!(S.ui.tl?.N || {})[id]) { S.ui.tf.center = id; delete S.ui.vp?.all; }
+  S.ui.findId = id; S.ui.pp = id; render();
+}
+document.addEventListener('input', e => { if (e.target.id === 'tq') tqShow(); });
+document.addEventListener('focusin', e => { if (e.target.id === 'tq') tqShow(); });
+document.addEventListener('keydown', e => {
+  if (e.target.id !== 'tq') return;
+  const items = [...document.querySelectorAll('#tsug .tsug-i')]; let i = items.findIndex(x => x.classList.contains('on'));
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!items.length) return; items[i]?.classList.remove('on'); i = (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; items[i].classList.add('on'); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (items[i]) tqPick(items[i].dataset.tfind); }
+  else if (e.key === 'Escape') { e.target.value = ''; document.getElementById('tsug')?.remove(); }
+});
+document.addEventListener('pointerdown', e => { const b = e.target.closest('[data-tfind]'); if (b) { e.preventDefault(); tqPick(b.dataset.tfind); return; } if (!e.target.closest('#tsug,#tq')) document.getElementById('tsug')?.remove(); }, true);
+addEventListener('resize', () => document.getElementById('tsug') && tqShow());
+
 start();
 })();
