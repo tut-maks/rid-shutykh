@@ -867,3 +867,12 @@ main{padding-block:14px 60px}
 .nd.t2 .kd{position:absolute;right:8px;bottom:6px;font-style:normal;font-size:15px;line-height:1;color:#8a7d70;background:#f1ece4;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
 .pp-kd{margin-top:6px;font-size:14px;color:var(--muted)}
 .kd-line{color:var(--muted)}
+/* виділені пункти меню (13.10): «Запитання й уточнення» в рамці, «Історія» підсвічена */
+.top .nav a.nav-q{border:1.5px solid var(--wine);border-radius:999px;padding:6px 14px!important;color:var(--wine);margin-left:6px;line-height:1.2;align-self:center}
+.top .nav a.nav-q:hover{background:#F3E8EA}
+.top .nav a.nav-q[aria-current=page]{background:var(--wine);color:#fff}
+.top .nav a.nav-q::after{display:none!important}
+.top .nav a.nav-hist{background:#F3E8EA;border-radius:999px;padding:6px 14px!important;color:var(--wine);align-self:center;line-height:1.2}
+.top .nav a.nav-hist::after{display:none!important}
+.top .nav a.nav-hist[aria-current=page]{background:var(--wine);color:#fff}
+.top .nav a .bn-badge.in{margin-left:6px}
