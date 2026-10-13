@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130923';
+const BUILD = '202610130927';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -387,7 +387,7 @@ function vAll(tabs) {
     const o = (SPOUSES[id] || []).filter(x => P[x.id] && !V.has(x.id)); if (!o.length) return '';
     return `<button type="button" class="tg sp" data-spx="${id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="${esc('Показати в дереві: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '') + (ucU(x) ? ' — ' + ucLabel(id, x) : '')).join('; '))}">⚭ +${o.length}</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
-  const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 50}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
+  const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${Math.max(0, i * (T2.H + T2.GY) + T2.PAD - 62)}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
     ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span><span class="small muted"><i class="sw brc" style="display:inline-block;width:18px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px"></i>товста рамка — у брата чи сестри є нащадки в дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}`)}
     <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}${spx}</div>${vpCtl(true)}</div>
