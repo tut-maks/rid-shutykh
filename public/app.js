@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131357';
+const BUILD = '202610131359';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1518,9 +1518,23 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       root.querySelectorAll('[data-portrait],[data-delphoto]').forEach(b => { if ('portrait' in b.dataset) b.dataset.portrait = photoId || ''; else b.dataset.delphoto = photoId || ''; b.hidden = !photoId; }); root.querySelectorAll('[data-phask]').forEach(b => { b.dataset.phask = photoId || ''; b.hidden = !photoId; b.textContent = (CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'; }); const cb = root.querySelector('[data-pv=cap]'); if (cb) cb.hidden = !photoId;
       const ci = root.querySelector('#cap-in'); if (ci) ci.value = it.caption || ''; const ce = root.querySelector('.pv-capedit'); if (ce) ce.hidden = true; }
     im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `${i + 1} / ${pages.length}`;
-    if (pages.length > 1) new Image().src = pages[(i + 1) % pages.length]; // наступна вантажиться заздалегідь
+    if (pages.length > 1) { new Image().src = pages[(i + 1) % pages.length]; new Image().src = pages[(i - 1 + pages.length) % pages.length]; } // сусідні вантажаться заздалегідь
   };
-  const go = d => { if (pages.length < 2) return; i = (i + d + pages.length) % pages.length; show(); };
+  let sliding = false; // плавне гортання: поточне фото від'їжджає вбік, нове заїжджає з іншого боку
+  const go = (d, fromDx = 0) => {
+    if (pages.length < 2 || sliding) return;
+    i = (i + d + pages.length) % pages.length;
+    if (!im || matchMedia('(prefers-reduced-motion: reduce)').matches) { show(); return; }
+    sliding = true; const W = stage.getBoundingClientRect().width || innerWidth;
+    const els = [im, mkEl].filter(Boolean), ease = 'transform .26s cubic-bezier(.2,.7,.3,1), opacity .26s';
+    els.forEach(el => { el.style.transition = ease; el.style.transform = `translateX(${-d * W * 0.6}px)`; el.style.opacity = '0'; });
+    setTimeout(() => {
+      const pre = new Image(); pre.src = pages[i];
+      const enter = () => { show(); els.forEach(el => { el.style.transition = 'none'; el.style.transform = `translateX(${d * W * 0.6}px)`; el.style.opacity = '0'; });
+        requestAnimationFrame(() => requestAnimationFrame(() => { els.forEach(el => { el.style.transition = ease; el.style.transform = 'translateX(0)'; el.style.opacity = '1'; }); setTimeout(() => { sliding = false; els.forEach(el => { el.style.transition = 'none'; }); }, 280); })); };
+      if (pre.complete) enter(); else { let done = false; const f = () => { if (!done) { done = true; enter(); } }; pre.onload = f; pre.onerror = f; setTimeout(f, 400); }
+    }, 200);
+  };
   const onRs = () => placeMarks(); window.addEventListener('resize', onRs);
   const close = () => { document.body.classList.remove('noscroll'); document.removeEventListener('keydown', key, true); window.removeEventListener('resize', onRs); closeLayer(); };
   const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.target.tagName === 'INPUT') return; if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); if (e.key === '+' || e.key === '=') zoomTo(sc * 1.5, 0, 0); if (e.key === '-') zoomTo(sc / 1.5, 0, 0); };
