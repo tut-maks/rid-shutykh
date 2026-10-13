@@ -927,3 +927,5 @@ main{padding-block:14px 60px}
 .pend-l{font-size:12px;color:#9A6A12}
 .pend-b{gap:6px}
 .pendsec{background:#FFF8EA;border:1px solid #EAD7AE;border-radius:var(--rr);padding:14px 16px;margin-bottom:22px}
+.stage .ln.sp.unc{stroke-dasharray:5 5}
+.tg.sp.on{background:var(--wine)!important;color:#fff!important;border-color:var(--wine)!important}

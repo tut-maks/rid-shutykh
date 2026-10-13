@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130919';
+const BUILD = '202610130923';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -337,6 +337,12 @@ function layoutTD(center) {
     if (d > 0) right.forEach(n => n.x += d);
     Sb.n.forEach(n => add(A, n.id, n.x, n.r));
   }
+  // інші шлюби, розгорнуті кнопкою «⚭ +N»: ставимо поруч із людиною в тому самому ряду, решту дерева розсуваємо
+  const SPX = S.ui.spx ||= {};
+  Object.keys(SPX).forEach(id => { if (!SPX[id]) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id)); if (!extra.length) return;
+    const k = extra.length, rightTaken = A.n.some(x => x.r === o.r && Math.abs(x.x - (o.x + P2)) < 1 && (SPOUSES[id] || []).some(y => y.id === x.id));
+    if (!rightTaken) { A.n.forEach(x => { if (x.x > o.x) x.x += k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
+    else { A.n.forEach(x => { if (x.x < o.x) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
   if (!f.allOpen) A.n.forEach(o => { if (o.id !== center && !KX[o.id] && hasHidden(o.id) && !(KIDS[o.id] || []).some(k => seen.has(k))) /* хтось із дітей уже в дереві — решту відкриває «+N» біля нього */ (hid[o.id] ||= {}).kids = (KIDS[o.id] || []).filter(k => !seen.has(k)).length; });
   const rows = [...new Set(A.n.map(o => o.r))].sort((a, b) => b - a); const ri = Object.fromEntries(rows.map((r, i) => [r, i]));
   const minX = Math.min(...A.n.map(o => o.x)), maxX = Math.max(...A.n.map(o => o.x));
@@ -358,7 +364,7 @@ function vAll(tabs) {
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
   let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
-    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp"/>`; const rx = (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); rings += `<g class="ring" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
+    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp${ucU(s) ? ' unc' : ''}"/>`; const gap = L.N[b].x - (L.N[a].x + T2.W), rx = gap > T2.GX + 30 ? L.N[b].x - 13 : (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); /* далекий шлюб — кільце біля самої людини, не на сусідній картці */ rings += `<g class="ring" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
   const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
   Object.entries(fam).forEach(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
     const px = two ? (cx(ps[0]) + cx(ps[1])) / 2 : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]);
@@ -376,8 +382,10 @@ function vAll(tabs) {
     if (h.sib) s += `<button class="tg sib" data-sibx="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Показати братів і сестер (${h.sib})">▸${h.sib}</button>`;
     return s; }).join('') + Object.keys(S.ui.exp || {}).concat(Object.keys(S.ui.sibx || {}).filter(k => S.ui.sibx[k]), Object.keys(S.ui.dsib || {}), Object.keys(S.ui.kidx || {})).filter(id => L.N[id] && !(S.ui.hid || {})[id]).map(id => { const n = L.N[id]; return `<button class="tg cl" data-coll="${id}" style="left:${n.x + T2.W - 44}px;top:${n.y - 15}px" title="Згорнути">◂−</button>`; }).join('');
   // інші шлюби людей у дереві (чоловік/дружина, яких немає на дереві): значок «⚭ +N» → бічна панель
-  const spx = [...V].map(id => { const o = (SPOUSES[id] || []).filter(x => P[x.id] && !V.has(x.id)); if (!o.length) return ''; const n = L.N[id];
-    return `<button type="button" class="tg sp" data-pp="${o.length > 1 ? id : o[0].id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="${esc('Ще шлюб: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '') + (ucU(x) ? ' — ' + ucLabel(id, x) : '')).join('; ') + '' + (o.length > 1 ? ' — натисніть: відкриється картка з усіма шлюбами' : ' — натисніть, щоб відкрити'))}">⚭ +${o.length}</button>`; }).join('');
+  const spx = [...V].map(id => { const n = L.N[id]; const open = (S.ui.spx || {})[id];
+    if (open) return `<button type="button" class="tg sp on" data-spx="${id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="Сховати інші шлюби">⚭ −</button>`;
+    const o = (SPOUSES[id] || []).filter(x => P[x.id] && !V.has(x.id)); if (!o.length) return '';
+    return `<button type="button" class="tg sp" data-spx="${id}" style="left:${n.x + 64}px;top:${n.y + T2.H - 3}px" title="${esc('Показати в дереві: ' + o.map(x => full(P[x.id]) + (life(P[x.id]) ? ' (' + life(P[x.id]) + ')' : '') + (ucU(x) ? ' — ' + ucLabel(id, x) : '')).join('; '))}">⚭ +${o.length}</button>`; }).join('');
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${i * (T2.H + T2.GY) + T2.PAD - 50}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
@@ -459,9 +467,9 @@ function vpMount() {
   vp.onpointerup = vp.onpointercancel = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (pts.size === 1) { const [p] = [...pts.values()]; drag = { x: p.x, y: p.y, vx: V.x, vy: V.y }; } if (!pts.size) drag = null; };
   vp.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
   const fb = vp.querySelector('[data-full]'); if (fb) fb.onclick = () => { S.ui.full = !S.ui.full; vp.classList.toggle('full', S.ui.full); document.body.classList.toggle('noscroll', S.ui.full); requestAnimationFrame(() => apply()); };
-  vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.kidx || b.dataset.coll; const el = st.querySelector(`[data-id="${id}"]`);
+  vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.kidx || b.dataset.coll || b.dataset.spx; const el = st.querySelector(`[data-id="${id}"]`);
     S.ui.anchor = el ? { id, sx: V.x + el.offsetLeft * V.s, sy: V.y + el.offsetTop * V.s } : null;
-    if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { delete S.ui.exp[id]; S.ui.sibx[id] = 0; delete (S.ui.kidx || {})[id]; }
+    if (b.dataset.spx) { (S.ui.spx ||= {})[id] = !(S.ui.spx || {})[id]; } else if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { delete S.ui.exp[id]; S.ui.sibx[id] = 0; delete (S.ui.kidx || {})[id]; }
     render(); });
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
   vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
@@ -1708,7 +1716,7 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#layer').innerHTML) closeLayer(); });
 document.addEventListener('click', e => { // людина → бічна панель (не перехід на сторінку)
-  const a = e.target.closest('a.nd[data-pp], .pp-p[data-pp], a.mini, tr.click[data-go], button.tg.sp[data-pp]');
+  const a = e.target.closest('a.nd[data-pp], .pp-p[data-pp], a.mini, tr.click[data-go]');
   if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
   const id = a.dataset.pp || a.dataset.go || decodeURIComponent((a.getAttribute('href') || '').split('/').pop() || '');
   if (!P[id]) return; e.preventDefault(); e.stopImmediatePropagation();
