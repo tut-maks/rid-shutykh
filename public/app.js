@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131439';
+const BUILD = '202610131442';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1063,7 +1063,7 @@ const TXT_PAGE = { history: 'families', villages: 'villages', hyps: 'hyp' };
 function loadText(k, quiet) { // порожній результат не кешуємо назавжди: через 15 с спробуємо ще (текст міг щойно імпортуватись)
   if (k in TXT && !(TXT[k] === null && Date.now() - (TXT_T[k] || 0) > 15000)) return TXT[k];
   TXT[k] = undefined; TXT_T[k] = Date.now();
-  api('/api/data?text=' + k).then(r => { TXT[k] = r.text || null; TXT_T[k] = Date.now(); if (k === 'history') BOOK.key = ''; if (quiet && S.view !== TXT_PAGE[k] && S.view !== 'hyp') return; S.ui.keepScroll = true; render(); }).catch(() => { TXT[k] = null; TXT_T[k] = Date.now(); });
+  api('/api/data?text=' + k).then(r => { TXT[k] = r.text || null; TXT_T[k] = Date.now(); if (k === 'history') BOOK.key = ''; if (quiet && S.view !== TXT_PAGE[k] && S.view !== 'hyp' && !(k === 'hyps' && S.view === 'home')) return; S.ui.keepScroll = true; render(); }).catch(() => { TXT[k] = null; TXT_T[k] = Date.now(); });
   return undefined;
 }
 async function syncNow() { // нові матеріали з репозиторію сервер вносить сам; сайт лише «будить» його при кожному відкритті
@@ -2220,8 +2220,8 @@ function vHome() {
       <div class="hcard h-voice"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
     </div>
     <div class="hcol">
-      <div class="hcard h-hyp"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const H = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin').sort((a, b) => b.p - a.p).slice(0, 3); return H.length ? `<ul class="wantl">${H.map(x => `<li><button class="wantc" data-act="hyp-open" data-id="${esc(x.id)}"><b>${esc(x.title)}</b><span class="small muted">${hypAns(x.id).length ? hypAns(x.id).length + ' відповід.' : 'ще без відповіді'}</span></button></li>`).join('')}</ul>` : ''; })()}</div>
-      <div class="hcard"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
+      <div class="hcard h-hyp"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const all = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin'), H = all.sort((a, b) => b.p - a.p).slice(0, 4); return H.length ? `<ul class="hypprev">${H.map(x => { const n = hypAns(x.id).length, pr = x.p >= 75 ? ['hi', 'Дуже ймовірно'] : x.p >= 50 ? ['mid', 'Ймовірно'] : ['lo', 'Можливо']; return `<li><button class="hpv" data-act="hyp-open" data-id="${esc(x.id)}"><span class="hpv-h"><span class="hyp-pr pr-${pr[0]}">${pr[1]}</span>${x.cat === 'kin' ? '<span class="hpv-k">можлива рідня</span>' : ''}</span><b>${esc(x.title)}</b><span class="hpv-t">${esc(String(x.text || '').slice(0, 140))}${String(x.text || '').length > 140 ? '…' : ''}</span><span class="hpv-f">${n ? '💬 ' + n + ' відповід.' : 'Ще ніхто не відповів — будьте першим'} <i>Щось знаю →</i></span></button></li>`; }).join('')}</ul><a class="btn line small hpv-all" href="#/hyp">Усі припущення (${all.length}) →</a>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : ''); })()}</div>
+      <div class="hcard h-help"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
       <div class="hcard h-ask"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}</div>
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
       <div class="hcard links3">

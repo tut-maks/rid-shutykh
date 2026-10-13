@@ -1175,3 +1175,17 @@ html.bk-full .bk-toc{position:fixed;bottom:calc(60px + env(safe-area-inset-botto
 }
 .h-today{display:grid}
 @media(max-width:900px){.hgrid .h-hyp{order:11}.hgrid .h-voice{order:12}.hgrid .hcol>:not(.tgc):not(.h-today):not(.h-ask):not(.h-hyp):not(.h-voice):not(.h-kin){order:13}.hgrid .hcol>.h-kin{order:10}}
+/* Головна: превʼю припущень */
+.hypprev{list-style:none;margin:10px 0 12px;padding:0;display:grid;gap:10px}
+.hpv{all:unset;box-sizing:border-box;display:grid;gap:5px;width:100%;padding:12px 14px;border:1px solid var(--rule);border-left:3px solid var(--wine);border-radius:10px;background:var(--paper);cursor:pointer;transition:transform .15s,box-shadow .15s}
+.hpv:hover,.hpv:focus-visible{transform:translateY(-1px);box-shadow:0 4px 14px -6px rgba(60,30,20,.3)}
+.hpv-h{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hpv-k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.hpv b{font-family:var(--f-display);font-size:16px;line-height:1.3}
+.hpv-t{font-size:13.5px;color:var(--muted);line-height:1.45}
+.hpv-f{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted)}.hpv-f i{font-style:normal;color:var(--wine);font-weight:600;white-space:nowrap}
+.hpv-all{margin-top:2px}
+@media(max-width:900px){.hgrid .hcol>*{width:100%;box-sizing:border-box}}
+/* «Допоможіть знайти» — виразна рамка, щоб кидалось в око */
+.hcard.h-help{border:2px solid var(--wine)!important;box-shadow:0 6px 18px -10px rgba(110,30,40,.45)}
+.hcard.h-help h3{color:var(--wine)}
