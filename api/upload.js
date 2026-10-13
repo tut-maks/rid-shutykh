@@ -77,11 +77,14 @@ export default handler(async (req, res, ctx, url) => {
   const ask = url.searchParams.get('ask') === '1' && !url.searchParams.get('person');
   if (ask && (isAudio || mime === 'application/pdf')) return fail(res, 415, 'type');
   const personId = ask ? '_ask' : String(url.searchParams.get('person') || '').slice(0, 60);
-  const person = ask ? null : await db.get('persons', { eq: { id: personId, deleted: false } });
-  if (!ask && !person) return fail(res, 404, 'not_found');
+  const famRec = !ask && personId.startsWith('fam:'); // загальна історія роду (лише голосові записи)
+  if (famRec && !isAudio) return fail(res, 415, 'type');
+  const person = ask || famRec ? null : await db.get('persons', { eq: { id: personId, deleted: false } });
+  if (famRec && !(await db.get('families', { eq: { id: personId.slice(4) } }))) return fail(res, 404, 'not_found');
+  if (!ask && !famRec && !person) return fail(res, 404, 'not_found');
   const pending = ask ? !can(me, 'editor') : !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
   const id = crypto.randomUUID();
-  const path = `${isAudio ? 'voice' : 'photos'}/${personId}/${id}.${OK[mime]}`;
+  const path = `${isAudio ? 'voice' : 'photos'}/${personId.replace(/[^a-z0-9_-]/gi, '_')}/${id}.${OK[mime]}`;
   await db.put(path, buf, mime);
   const caption = String(url.searchParams.get('caption') || '').slice(0, 500);
   await db.insert('photos', { id, person_id: personId, path, caption, mime, size: buf.length, created_by: me.id });

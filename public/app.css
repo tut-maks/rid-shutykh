@@ -1218,3 +1218,10 @@ html.bk-full .bk-toc{position:fixed;bottom:calc(60px + env(safe-area-inset-botto
 .dupnote b{color:var(--wine)}.dupnote .btns{margin-top:8px;gap:8px}
 .dupnote.sm{margin:12px 0 0;text-align:left;font-size:13px}
 .msg.dupask{display:block;flex-basis:100%;line-height:1.45}
+
+/* запис історії: про людину чи про рід */
+.rec-about{display:grid;gap:10px}
+.seg{display:flex;border:1px solid var(--line,#d8d0c4);border-radius:10px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;background:transparent;font:inherit;font-size:14px;color:inherit;cursor:pointer;padding:6px 8px}
+.seg button.on{background:var(--wine);color:#fff}
+.h-voice .btns{margin-top:10px}

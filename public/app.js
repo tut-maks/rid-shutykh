@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131737';
+const BUILD = '202610131803';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -783,6 +783,7 @@ function famBlock(f) {
     ${canEdit() ? `<div><button class="btn line small" data-famedit="${f.id}">Редагувати історію</button></div>` : ''}
     <div class="sec"><h3>Хто в гілці</h3><div class="fammem">${famMembersHtml(f)}</div></div>
     <div class="sec"><h3>Спогади про родину</h3>${storiesHtml(S.data.stories.filter(s => s.target === 'fam:' + f.id))}${canAdd('fam:' + f.id) ? storyForm('fam:' + f.id) : ''}</div>
+    <div class="sec"><h3>Голоси роду <button class="btn line small" data-act="v-rec" data-id="fam:${f.id}">🎙 Записати історію</button></h3>${(() => { const vv = voicesOf('fam:' + f.id).filter(x => !x.pending || isOwner() || x.by === S.me.id); return vv.length ? `<div class="vlist">${vv.map(voiceRow).join('')}</div>` : '<p class="small muted">Загальних записів про цей рід ще немає.</p>'; })()}</div>
   </div></article>`;
 }
 function vFamily() { const f = FAM[S.arg]; if (!f) return vFamilies(); curTarget = 'fam:' + f.id; return `<p><a href="#/families" class="small">← Усі родини</a></p><div class="famlist">${famBlock(f)}</div>`; }
@@ -1943,7 +1944,7 @@ async function askSend(btn) {
 const voicesOf = pid => S.data.photos.filter(x => isVoice(x) && (!pid || x.person === pid));
 const vcache = {};
 async function voiceUrl(id) { if (vcache[id]) return vcache[id]; const r = await fetch(img('photo=' + id), { credentials: 'same-origin' }); if (!r.ok) throw new Error('http_' + r.status); return (vcache[id] = URL.createObjectURL(await r.blob())); }
-const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${(isOwner() || x.by === S.me.id) && !x.pending ? `<button class="btn line small" data-delphoto="${x.id}" title="Видалити запис">✕</button>` : ''}</div>`;
+const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${(isOwner() || x.by === S.me.id) && !x.pending ? `<button class="btn line small" data-delphoto="${x.id}" title="Видалити запис">✕</button>` : ''}</div>`;
 function voiceSec(p) {
   const L = voicesOf(p.id);
   return `<div class="sec"><h3>Голос і розповіді ${S.me ? `<button class="btn line small" data-act="v-rec" data-id="${p.id}">🎙 Записати спогад</button>` : ''}</h3>
@@ -1952,12 +1953,20 @@ function voiceSec(p) {
 let REC = null;
 function openRec(pid) {
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { modal(`<h2>Запис голосу</h2><p>Цей браузер не вміє записувати звук. Спробуйте Chrome або Safari на телефоні.</p><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
-  modal(`<h2>Записати спогад</h2><p class="small muted">Про кого: ${pLink(pid)}${canAdd(pid) ? '' : ' · запис з\'явиться для всіх після підтвердження Максимом'}. До 15 хвилин.</p>
+  const fixed = pid && (P[pid] || FAM[String(pid).replace(/^fam:/, '')]); // відкрили з картки людини чи родини — «про кого» вже відомо
+  const famOpts = S.data.families.map(f => `<option value="fam:${f.id}"${pid === 'fam:' + f.id ? ' selected' : ''}>${esc(f.title)}</option>`).join('');
+  const pplOpts = `<option value="">Почніть вводити ім'я…</option>` + Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}${life(x) ? ' (' + esc(life(x)) + ')' : ''}</option>`).join('');
+  const about = fixed ? `<p class="small muted">Про кого: ${P[pid] ? pLink(pid) : esc(FAM[pid.slice(4)].title) + ' (загальна історія)'}${canAdd(pid) ? '' : ' · запис з\'явиться для всіх після підтвердження Максимом'}. До 15 хвилин.</p>`
+    : `<div class="rec-about"><div class="seg" role="tablist"><button type="button" class="on" data-act="rec-mode" data-v="p">Про людину</button><button type="button" data-act="rec-mode" data-v="fam">Загальна історія роду</button></div>
+      <label class="f rec-p">Про кого розповідь<select class="in" id="rec-p">${pplOpts}</select></label>
+      <label class="f rec-fam" hidden>Якого роду<select class="in" id="rec-fam">${famOpts}</select></label>
+      <p class="small muted" style="margin:0">До 15 хвилин. Можна записати бабусю чи дідуся просто зараз — телефон поруч, і натисніть червону кнопку.</p></div>`;
+  modal(`<h2>Записати історію</h2>${about}
     <div class="rec"><button class="recbtn" data-act="rec-go" aria-label="Почати запис"><span></span></button><div class="rec-t mono" id="rec-t">00:00</div><div class="rec-s small muted" id="rec-s">Натисніть червону кнопку, щоб почати</div></div>
     <audio id="rec-a" controls hidden></audio>
     <label class="f">Хто розповідає і про що<input class="in" id="rec-c" placeholder="Напр.: «Баба Оля про війну і Веприк»"></label>
     <div class="btns"><button class="btn" data-act="rec-save" disabled>Зберегти</button><button class="btn line" data-act="rec-cancel">Скасувати</button><span class="msg" id="recmsg"></span></div>`);
-  REC = { pid, chunks: [], blob: null };
+  REC = { pid: fixed ? pid : '', mode: 'p', chunks: [], blob: null };
 }
 async function recToggle() {
   if (!REC) return; const b = $('[data-act="rec-go"]'), s = $('#rec-s');
@@ -2258,7 +2267,7 @@ function vHome() {
       ${tgCard()}
       <div class="h-today">${todayCard()}</div>
       <div class="hcard h-kin"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
-      <div class="hcard h-voice"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
+      <div class="hcard h-voice"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Попросіть бабусю чи дідуся розповісти, як жили, — і запишіть просто з телефона. Це найцінніше, що можна зберегти.</p>'}<div class="btns"><button class="btn wine" data-act="v-rec">🎙 Записати історію</button></div></div>
     </div>
     <div class="hcol">
       <div class="hcard h-hyp"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const all = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin'), H = all.sort((a, b) => b.p - a.p).slice(0, 2); return H.length ? `<ul class="hypprev">${H.map(x => { const n = hypAns(x.id).length, pr = x.p >= 75 ? ['hi', 'Дуже ймовірно'] : x.p >= 50 ? ['mid', 'Ймовірно'] : ['lo', 'Можливо']; return `<li><button class="hpv" data-act="hyp-open" data-id="${esc(x.id)}"><span class="hpv-h"><span class="hyp-pr pr-${pr[0]}">${pr[1]}</span>${x.cat === 'kin' ? '<span class="hpv-k">можлива рідня</span>' : ''}</span><b>${esc(x.title)}</b><span class="hpv-t">${esc(String(x.text || '').slice(0, 140))}${String(x.text || '').length > 140 ? '…' : ''}</span><span class="hpv-f">${n ? '💬 ' + n + ' відповід.' : 'Ще ніхто не відповів — будьте першим'} <i>Щось знаю →</i></span></button></li>`; }).join('')}</ul><a class="btn line small hpv-all" href="#/hyp">Усі припущення (${all.length}) →</a>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : ''); })()}</div>
@@ -2308,8 +2317,11 @@ document.addEventListener('click', async e => {
     if (a === 'v-rec') return openRec(id);
     if (a === 'rec-go') return recToggle();
     if (a === 'rec-cancel') { recStop(); closeLayer(); return; }
+    if (a === 'rec-mode') { if (!REC) return; const d = t.dataset; REC.mode = d.v; document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('on', b.dataset.v === d.v)); $('.rec-p').hidden = d.v !== 'p'; $('.rec-fam').hidden = d.v !== 'fam'; return; }
     if (a === 'rec-save') {
-      if (!REC?.blob) return; const m = $('#recmsg'); t.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
+      if (!REC?.blob) return; const m = $('#recmsg');
+      if (!REC.pid) { const v = REC.mode === 'fam' ? $('#rec-fam')?.value : $('#rec-p')?.value; if (!v) { m.className = 'msg err'; m.textContent = 'Оберіть, про кого ця розповідь (або «Загальна історія роду»).'; return; } REC.pid = v; }
+      t.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
       if (REC.blob.size > 4.1e6) { m.className = 'msg err'; m.textContent = 'Запис завеликий (понад 4 МБ). Запишіть коротший, частинами.'; t.disabled = false; return; }
       try { const r = await api(`/api/upload?person=${encodeURIComponent(REC.pid)}&caption=${encodeURIComponent($('#rec-c').value.trim())}`, { raw: REC.blob }); const pid = REC.pid; recStop(); await load(); closeLayer(); S.ui.keepScroll = true; render(); toast(r.pending ? 'Запис збережено — з\'явиться для всіх після підтвердження Максимом' : 'Голосовий спогад збережено'); ev('open', 'voice', 'person:' + pid); }
       catch (err) { t.disabled = false; m.className = 'msg err'; m.textContent = err.message === 'type' ? 'Цей формат запису не підтримується. Спробуйте інший браузер.' : errText(err); }
