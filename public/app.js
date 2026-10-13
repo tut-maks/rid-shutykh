@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130646';
+const BUILD = '202610130650';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -946,7 +946,7 @@ function bookShell() {
     <div class="bk-bar">
       <button class="bk-b" data-bk="toc" title="Зміст" aria-label="Зміст">☰ <span>Зміст</span></button>
       <button class="bk-b" data-bk="prev" title="Попередня сторінка (←)" aria-label="Попередня">‹</button>
-      <span class="bk-n mono" id="bk-n"></span>
+      <button type="button" class="bk-n bk-pg mono" id="bk-n" data-bk="pg" title="Перейти на сторінку"></button>
       <button class="bk-b" data-bk="next" title="Наступна сторінка (→)" aria-label="Наступна">›</button>
       <button class="bk-b bk-dk" data-bk="fs-" title="Менший шрифт" aria-label="Менший шрифт">A−</button><button class="bk-b bk-dk" data-bk="fs+" title="Більший шрифт" aria-label="Більший шрифт">A+</button>
       <button class="bk-b" data-bk="snd" id="bk-snd" title="${SND.on ? 'Вимкнути звук' : 'Увімкнути звук'}" aria-label="Звук">${SND.on ? '🔊' : '🔇'}</button>
@@ -1047,7 +1047,7 @@ function bookRender() {
 }
 function bookCounter() {
   const n = document.getElementById('bk-n'), N = BOOK.pages.length, i = S.ui.bkPos || 0;
-  if (n) n.textContent = !S.ui.bkOpen ? 'обкладинка' : BOOK.spread ? `${i}–${i + 1} з ${N - 1}` : `${i + 1} з ${N}`;
+  if (n && !n.querySelector('input')) n.textContent = (!S.ui.bkOpen ? 'обкладинка' : BOOK.spread ? `стор. ${i}–${i + 1} з ${N - 1}` : `стор. ${i + 1} з ${N}`) + ' ▾';
 }
 function bookFlip(dir, target) {
   if (BOOK.busy) return; const book = document.getElementById('bk-book'); if (!book) return;
@@ -1110,6 +1110,8 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-bk]'); if (!b || !document.getElementById('bk')) return;
   if (e.target.closest('a') && !e.target.closest('[data-bk="toc"]')) return; // посилання всередині сторінки працюють як звичайно
   const a = b.dataset.bk;
+  if (a === 'pg') { if (e.target.closest('input')) return; const N = BOOK.pages.length, max = BOOK.spread ? N - 1 : N, cur = S.ui.bkOpen ? (BOOK.spread ? S.ui.bkPos || 1 : (S.ui.bkPos || 0) + 1) : 1;
+    b.innerHTML = `стор. <input type="number" class="bk-pgin" min="1" max="${max}" value="${cur}" inputmode="numeric" aria-label="Номер сторінки"> з ${max}`; const inp = b.querySelector('input'); inp.focus(); inp.select(); return; }
   if (Date.now() - (BOOK.swiped || 0) < 400) return; // клік одразу після свайпу не рахуємо
   if (a === 'next' && !BOOK.spread && b.classList.contains('bk-side') && e.clientX < b.getBoundingClientRect().left + b.offsetWidth * 0.33) return bookFlip(-1);
   if (a === 'next') return bookFlip(1);
@@ -1890,6 +1892,16 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('pointerdown', e => { const b = e.target.closest('[data-pselv]'); if (b) { e.preventDefault(); const box = document.getElementById('psug'); if (box?._inp) pselPick(box._inp, b.dataset.pselv); } }, true);
 new MutationObserver(() => pselEnhance()).observe(document.documentElement, { childList: true, subtree: true });
+
+/* Перейти на сторінку книги: номер у полі → Enter */
+function bookGoPage(n) {
+  const N = BOOK.pages.length, max = BOOK.spread ? N - 1 : N; n = Math.max(1, Math.min(max, Math.round(+n || 1)));
+  const t = BOOK.spread ? n : n - 1;
+  if (!S.ui.bkOpen) { S.ui.bkOpen = true; SND.startMusic(); S.ui.bkPos = t; bookRender(); } else bookFlip(0, t);
+  setTimeout(bookCounter, 50);
+}
+document.addEventListener('keydown', e => { if (!e.target.classList?.contains('bk-pgin')) return; e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value; e.target.closest('.bk-pg').textContent = ''; bookGoPage(v); } else if (e.key === 'Escape') { e.target.closest('.bk-pg').textContent = ''; bookCounter(); } }, true);
+document.addEventListener('focusout', e => { if (!e.target.classList?.contains('bk-pgin')) return; const t = e.target; setTimeout(() => { if (!t.isConnected) return; const v = t.value, p = t.closest('.bk-pg'); p.textContent = ''; const N = BOOK.pages.length, cur = S.ui.bkOpen ? (BOOK.spread ? S.ui.bkPos || 1 : (S.ui.bkPos || 0) + 1) : 0; if (+v && +v !== cur) bookGoPage(v); else bookCounter(); }, 120); });
 
 start();
 })();
