@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130023';
+const BUILD = '202610130119';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -149,6 +149,23 @@ const initials = p => ((String(p.n || '').replace(/\s*\(.*?\)/g, '')[0] || '') +
 const avatar = (p, cls = '') => { const u = portrait(p); return `<span class="av ${cls}">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(initials(p))}</span>`; };
 const years = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '?'} – ${d}` : b ? (String(p.b).startsWith('~') ? '≈' + b : b) : ''; };
 const treeHead = () => '';
+/* Діти, що померли малими: вік на момент смерті (до 15 років) — для позначки на дереві й опису */
+function childAge(p) {
+  if (!p || !p.d) return null;
+  const D = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); if (m) return new Date(+m[3], m[2] - 1, +m[1]); const y = String(s || '').match(/(\d{4})/); return y ? new Date(+y[1], 6, 1) : null; };
+  const b = D(p.b), d = D(p.d); if (!b || !d || d < b) return null;
+  const exact = /\d\.\d/.test(p.b || '') && /\d\.\d/.test(p.d || '');
+  const days = Math.round((d - b) / 864e5); if (days > 15 * 365.25) return null;
+  const pl = (n, a, b2, c) => { const m10 = n % 10, m100 = n % 100; return n + ' ' + (m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b2 : c); };
+  let t;
+  if (!exact) { const y = d.getFullYear() - b.getFullYear(); t = y < 1 ? 'до року' : 'близько ' + pl(y, 'року', 'років', 'років'); }
+  else if (days < 31) t = pl(days, 'день', 'дні', 'днів');
+  else if (days < 365) t = pl(Math.max(1, Math.round(days / 30.44)), 'місяць', 'місяці', 'місяців');
+  else { const y = Math.floor(days / 365.25), mo = Math.round((days - y * 365.25) / 30.44); t = pl(y, 'рік', 'роки', 'років') + (mo ? ' ' + mo + ' міс.' : ''); }
+  return { t, txt: (p.sex === 'f' ? 'Померла малою' : p.sex === 'm' ? 'Помер малим' : 'Померла дитина') + ', у віці ' + t + '.' };
+}
+const kdBadge = p => { const a = childAge(p); return a ? `<i class="kd" title="${esc(a.txt)}">†</i>` : ''; };
+
 function famSelect(f) {
   return `<select class="in tfam" id="tfam" aria-label="Гілка"><option value="">Усі гілки</option>${Object.values(FAM).map(x => `<option value="${x.id}"${f.fam === x.id ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}</select>`;
 }
@@ -167,7 +184,7 @@ function ppHtml(id) {
   if (p.d || p.dp) ev.push([yearOf(p.d) || '?', 'Завершення життєвого шляху', p.d && /\d\d\.\d\d/.test(p.d) ? p.d : '', p.dp]);
   const yk = e => e[1] === 'Народження' ? '0' : e[1].startsWith('Завершення') ? '9' : e[0] ? '1' + e[0] : '5';
   ev.sort((a, b) => yk(a).localeCompare(yk(b)));
-  const row = x => `<button type="button" class="pp-p" data-pp="${x}">${avatar(P[x], 'sm')}<span><b>${esc(short(P[x]))}</b><i>${esc(years(P[x]))}</i></span></button>`;
+  const row = x => `<button type="button" class="pp-p" data-pp="${x}">${avatar(P[x], 'sm')}<span><b>${esc(short(P[x]))}</b><i>${esc(years(P[x]))}${childAge(P[x]) ? ' · †' : ''}</i></span></button>`;
   const grp = (t, ids) => ids.length ? `<div class="pp-g"><h4>${t}</h4>${ids.map(row).join('')}</div>` : '';
   const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
@@ -179,7 +196,7 @@ function ppHtml(id) {
   return `<aside class="pp" id="pp" aria-label="Людина у дереві">
     <div class="pp-top"><button type="button" class="pp-ic" data-act="pp-back"${back ? '' : ' disabled'} title="Назад">${IC.back}</button><span>Людина у дереві</span><button type="button" class="pp-ic" data-act="pp-close" title="Закрити">${IC.x}</button></div>
     <div class="pp-sc" id="pp-sc">
-      <div class="pp-head">${avatar(p, 'lg')}<h2>${esc(full(p))}</h2>${p.m && p.m !== p.s ? `<div class="pp-m">з дому ${esc(p.m)}</div>` : ''}<div class="pp-y">${esc(years(p))}</div>
+      <div class="pp-head">${avatar(p, 'lg')}<h2>${esc(full(p))}</h2>${p.m && p.m !== p.s ? `<div class="pp-m">з дому ${esc(p.m)}</div>` : ''}<div class="pp-y">${esc(years(p))}</div>${childAge(p) ? `<div class="pp-kd">† ${esc(childAge(p).txt)}</div>` : ''}
         <div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div></div>
       <div class="pp-tabs" role="tablist">${[['life', 'Життя'], ['fam', 'Родина'], ['src', 'Джерела' + (docs.length ? ` <i>${docs.length}</i>` : '')]].map(([k, t]) => `<button type="button" role="tab" data-act="pp-tab" data-v="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="pp-body">${tab === 'fam' ? fam : tab === 'src' ? src : life}</div>
@@ -344,7 +361,7 @@ function vAll(tabs) {
   const q = (f.q || '').trim().toLowerCase();
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q);
     const dim = f.fam && !(p.fam || []).includes(f.fam);
-    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span></a>`; }).join('');
+    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (p.m && p.m !== p.s ? ' (з дому ' + p.m + ')' : '') + (life(p) ? ', ' + life(p) : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}</a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 18}px;top:${n.y + T2.H - 9}px" title="Показати дітей">▾${h.kids}</button>`;
@@ -434,6 +451,7 @@ function vPerson() {
   </div>
   <div class="sec" style="align-content:start;gap:30px">
     <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Уточнити / запитати</button></span></h3>
+      ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
       ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : ''}
       ${aboutMore(p, docs)}
       ${!p.note && !docs.length && !ridMentions(p.id).length ? `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>` : ''}
