@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './_db.js';
+import { findDupes, mergePersons, notDup, pairKey } from './_merge.js';
 import { handler, send, fail, readJSON, can, revision, track, cleanPerson, cleanLinks, slugId, canAddTo, pendGet, pendSet, joinCfg } from './_lib.js';
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
@@ -57,7 +58,7 @@ async function bootstrap(ctx) {
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
     accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
     questions, qReady, joinPending,
-    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, join: jc?.on && jc?.code ? jc.code : '' },
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -166,6 +167,8 @@ export default handler(async (req, res, ctx, url) => {
       await revision('person', cur.id, 'update', cur.data, data, me.id);
       return done({ person: { id: row.id, ...row.data, v: row.version, last: { by: me.id, at: row.updated_at, action: 'update' } } }, cur.id);
     }
+    // можливо, ця людина вже є в дереві — спершу перепитати (body.force — «Ні, це інша людина»)
+    if (!body.force) { const dd = await findDupes(data); if (dd.length) return send(res, 409, { error: 'dupe', dupes: dd.slice(0, 5).map(p => p.id) }); }
     const id = slugId();
     const [row] = await db.insert('persons', { id, data, created_by: me.id, updated_by: me.id });
     await revision('person', id, 'create', null, data, me.id);
@@ -195,41 +198,16 @@ export default handler(async (req, res, ctx, url) => {
 
   if (op === 'person.merge') { // дві картки однієї людини → одна: усі зв'язки, фото, спогади, документи, акаунт переходять на «keep»
     if (!owner) return fail(res, 403, 'forbidden');
-    const keepId = S(body.keep, 60), dropId = S(body.drop, 60); if (!keepId || !dropId || keepId === dropId) return fail(res, 400, 'bad');
-    const keep = await db.get('persons', { eq: { id: keepId, deleted: false } }), drop = await db.get('persons', { eq: { id: dropId, deleted: false } });
-    if (!keep || !drop) return fail(res, 404, 'not_found');
-    if (drop.data.root) return fail(res, 400, 'root');
-    const now = () => new Date().toISOString();
-    const up = async (row, nd) => { await db.update('persons', { eq: { id: row.id } }, { data: nd, version: (row.version || 1) + 1, updated_by: me.id, updated_at: now() }); await revision('person', row.id, 'update', row.data, nd, me.id); };
-    // 1) порожні поля keep доповнюємо з drop; нотатки зводимо
-    const kd = { ...keep.data };
-    for (const [k, v] of Object.entries(drop.data)) { if (['root', 'portrait'].includes(k)) continue; if (k === 'note' && v && kd.note && !kd.note.includes(v)) kd.note = kd.note + '\n\n' + v; else if (k === 'fam' && Array.isArray(v)) kd.fam = [...new Set([...(kd.fam || []), ...v])]; else if (v && (kd[k] === undefined || kd[k] === '' || kd[k] === null)) kd[k] = v; }
-    if (!kd.portrait && drop.data.portrait) kd.portrait = drop.data.portrait;
-    if (kd.f === keepId || kd.f === dropId) kd.f = ''; if (kd.mo === keepId || kd.mo === dropId) kd.mo = '';
-    await up(keep, cleanPerson(kd));
-    // 2) діти drop → діти keep
-    for (const p of await db.list('persons', { eq: { deleted: false } })) {
-      if (p.id === keepId || p.id === dropId) continue;
-      if (p.data.f === dropId || p.data.mo === dropId) { const nd = { ...p.data }; if (nd.f === dropId) nd.f = keepId; if (nd.mo === dropId) nd.mo = keepId; await up(p, nd); }
-    }
-    // 3) шлюби (без дублів з тим самим партнером)
-    const us = await db.list('unions', { eq: { deleted: false } });
-    const partners = new Set(us.filter(u => u.a === keepId || u.b === keepId).map(u => u.a === keepId ? u.b : u.a));
-    for (const u of us.filter(u => u.a === dropId || u.b === dropId)) {
-      const other = u.a === dropId ? u.b : u.a;
-      if (other === keepId || partners.has(other)) { await db.update('unions', { eq: { id: u.id } }, { deleted: true }); await revision('union', u.id, 'delete', u, null, me.id); continue; }
-      const nu = { a: u.a === dropId ? keepId : u.a, b: u.b === dropId ? keepId : u.b }; await db.update('unions', { eq: { id: u.id } }, nu); await revision('union', u.id, 'update', u, { ...u, ...nu }, me.id); partners.add(other);
-    }
-    // 4) фото, спогади, акаунти, заявки, запитання, документи, гілки
-    for (const ph of await db.list('photos', { eq: { person_id: dropId } })) { await db.update('photos', { eq: { id: ph.id } }, { person_id: keepId }); await revision('photo', ph.id, 'update', { person_id: dropId }, { person_id: keepId }, me.id); }
-    for (const st of await db.list('stories', { eq: { target: dropId } })) { await db.update('stories', { eq: { id: st.id } }, { target: keepId }); await revision('story', st.id, 'update', { target: dropId }, { target: keepId }, me.id); }
-    for (const t of ['members', 'join_requests', 'questions', 'invites']) { try { for (const r of await db.list(t, { eq: { person_id: dropId } })) { await db.update(t, { eq: { id: r.id } }, { person_id: keepId }); await revision(t === 'members' ? 'member' : t, r.id, 'update', { person_id: dropId }, { person_id: keepId }, me.id); } } catch {} }
-    for (const d of await db.list('documents', {})) { const pp = d.data?.people || []; if (pp.includes(dropId)) { const data = { ...d.data, people: [...new Set(pp.map(x => x === dropId ? keepId : x))] }; await db.update('documents', { eq: { id: d.id } }, { data }); await revision('document', d.id, 'update', d.data, data, me.id); } }
-    for (const f of await db.list('families', {})) { const mm = f.data?.members || []; if (mm.includes(dropId)) { const data = { ...f.data, members: [...new Set(mm.map(x => x === dropId ? keepId : x))] }; await db.update('families', { eq: { id: f.id } }, { data }); await revision('family', f.id, 'update', f.data, data, me.id); } }
-    // 5) дубль прибираємо
-    await db.update('persons', { eq: { id: dropId } }, { deleted: true, updated_by: me.id, updated_at: now() });
-    await revision('person', dropId, 'delete', drop.data, { mergedInto: keepId }, me.id);
-    return done({ ok: true, keep: keepId }, keepId);
+    const r = await mergePersons(S(body.keep, 60), S(body.drop, 60), me.id);
+    if (r.error) return fail(res, r.error === 'not_found' ? 404 : 400, r.error);
+    return done(r, r.keep);
+  }
+  if (op === 'dup.no') { // «Це різні люди» — більше не показувати попередження про цю пару
+    if (!editor) return fail(res, 403, 'forbidden');
+    const a = S(body.a, 60), b = S(body.b, 60); if (!a || !b || a === b) return fail(res, 400, 'bad');
+    const before = await notDup(), v = [...new Set([...before, pairKey(a, b)])].slice(-2000);
+    await db.upsert('settings', { key: 'not_dup', value: v, updated_by: me.id, updated_at: new Date().toISOString() }); await revision('setting', 'not_dup', 'update', null, { add: pairKey(a, b) }, me.id);
+    return done({ notDup: v }, 'person:' + a);
   }
 
   if (op === 'person.portrait') {

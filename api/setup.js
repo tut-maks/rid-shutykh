@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { db } from './_db.js';
+import { findDupes, mergePersons } from './_merge.js';
 import { handler, send, fail, readJSON, env, safeEq, hashPass, createSession, who, can, tooMany, attempt, clientIp, revision, cleanPerson } from './_lib.js';
 
 const ROOT = process.cwd();
@@ -94,7 +95,15 @@ export default handler(async (req, res, _c, url) => {
         if (!id || await db.get('persons', { eq: { id } })) { out.push(key + ': вже є'); continue; }
         const data = cleanPerson(it.data || {}); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by);
         if (it.spouseOf && await db.get('persons', { eq: { id: String(it.spouseOf) } })) { const u = { id: 'u_' + id, a: String(it.spouseOf), b: id, date: String(it.date || ''), created_by: by }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, by); }
-        out.push(key + ': ok');
+        // ця людина вже була в дереві (додали вручну)? — зводимо в одну картку з id з manifest, щоб не було дублів
+        let mg = 0; for (const d of await findDupes({ id, ...data })) { if (d.data.root) continue; const r = await mergePersons(id, d.id, by); if (r.ok) mg++; }
+        out.push(key + ': ok' + (mg ? ` (об'єднано з наявною карткою: ${mg})` : ''));
+      } else if (it.kind === 'merge') { // прибрати дублі картки it.keep: усі картки тієї самої людини зводяться в неї
+        const k = await db.get('persons', { eq: { id: String(it.keep), deleted: false } }); if (!k) { out.push(key + ': no person'); continue; }
+        const dd = (await findDupes({ id: k.id, ...k.data })).filter(d => !d.data.root);
+        if (!dd.length) { out.push(key + ': вже є'); continue; }
+        for (const d of dd) await mergePersons(k.id, d.id, by);
+        out.push(key + `: ok (об'єднано: ${dd.length})`);
       } else if (it.kind === 'personpatch') { // точкові виправлення тексту/полів картки
         const p = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!p) { out.push(key + ': no person'); continue; }
         const nd = { ...p.data }; let ch = false;

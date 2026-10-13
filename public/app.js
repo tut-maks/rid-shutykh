@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131624';
+const BUILD = '202610131737';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -22,7 +22,7 @@ async function api(path, opts = {}) {
   const r = await fetch(path, { method: opts.method || (opts.body || opts.raw ? 'POST' : 'GET'), headers: opts.raw ? { 'content-type': 'application/octet-stream' } : opts.body ? { 'content-type': 'application/json' } : {}, body: opts.raw || (opts.body ? JSON.stringify(opts.body) : undefined), credentials: 'same-origin' });
   let j = {}; try { j = await r.json(); } catch {}
   if (r.status === 401 && !opts.noRedirect) { S.me = null; render(); }
-  if (!r.ok) { const e = new Error(j.error || 'http_' + r.status); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(j.error || 'http_' + r.status); e.status = r.status; e.data = j; throw e; }
   return j;
 }
 const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.', empty: 'Напишіть кілька слів.', pending: 'Вашу заявку ще розглядають. Максим відкриє доступ найближчим часом — тоді увійдете з цією поштою й паролем.', exists_login: 'З цією поштою вже є доступ — просто увійдіть.', parents: 'Вкажіть хоча б батька або матір — так ми знайдемо вас у дереві.', invalid_join: 'Посилання для реєстрації недійсне або вимкнене. Попросіть у Максима нове.', bad_person: 'Такої картки немає в дереві.', about: 'Вкажіть, кого шукаємо: ім\'я, роки, село.', too_many_q: 'У вас уже багато нових запитань — зачекайте відповіді на них.' };
@@ -154,6 +154,28 @@ const IC = {
 const initials = p => ((String(p.n || '').replace(/\s*\(.*?\)/g, '')[0] || '') + (String(p.s || '')[0] || '')).toUpperCase() || '?';
 const avatar = (p, cls = '') => { const u = portrait(p); return `<span class="av ${cls}">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(initials(p))}</span>`; };
 const years = p => { const b = yearOf(p.b), d = yearOf(p.d); return d ? `${b || '?'} – ${d}` : b ? (String(p.b).startsWith('~') ? '≈' + b : b) : ''; };
+// Можливі дублі: те саме правило, що sameMan() в api/_merge.js (міняти обидва разом)
+const dNorm = x => String(x || '').toLowerCase().replace(/\s*\(.*?\)/g, '').replace(/[’ʼ`]/g, "'").replace(/ё/g, 'е').trim().split(/\s+/)[0] || '';
+const dYr = x => (String(x || '').match(/\d{4}/) || [])[0] || '';
+function sameMan(a, b) {
+  if (!a || !b || a.id === b.id) return false;
+  if ([a.f, a.mo].includes(b.id) || [b.f, b.mo].includes(a.id)) return false;
+  const na = dNorm(a.n); if (!na || na !== dNorm(b.n)) return false;
+  const sa = [a.s, a.m].map(dNorm).filter(Boolean), sb = [b.s, b.m].map(dNorm).filter(Boolean);
+  if (!sa.length || !sa.some(x => sb.includes(x))) return false;
+  if (a.sex && b.sex && a.sex !== b.sex) return false;
+  if (a.pt && b.pt && dNorm(a.pt) !== dNorm(b.pt)) return false;
+  if (dYr(a.d) && dYr(b.d) && dYr(a.d) !== dYr(b.d)) return false;
+  const ya = dYr(a.b), yb = dYr(b.b); if (ya && yb) return ya === yb;
+  return !!((a.f && a.f === b.f) || (a.mo && a.mo === b.mo));
+}
+const dupesOf = id => { const nd = new Set(S.data?.cfg?.notDup || []); return Object.values(P).filter(x => sameMan(P[id], x) && !nd.has([id, x.id].sort().join('|'))).map(x => x.id); };
+const dupKeep = (a, b) => { const ph = id => S.data.photos.filter(x => x.person === id).length; return P[b].root || (P[b].portrait && !P[a].portrait) || (!!P[b].portrait === !!P[a].portrait && ph(b) > ph(a)) ? [b, a] : [a, b]; }; // головна — та, що з фото
+function dupNote(id, small) {
+  if (!canEdit()) return ''; const dd = dupesOf(id); if (!dd.length) return '';
+  return dd.map(o => `<div class="dupnote${small ? ' sm' : ''}"><b>Можливо, це та сама людина</b>, що й <a href="${href('p', o)}">${esc(full(P[o]))}${years(P[o]) ? ' (' + esc(years(P[o])) + ')' : ''}</a>.
+    <div class="btns">${isOwner() ? `<button class="btn small" data-act="dup-merge" data-a="${id}" data-b="${o}">Об'єднати</button>` : '<span class="small muted">Об\'єднати може Максим.</span>'}<button class="btn line small" data-act="dup-no" data-a="${id}" data-b="${o}">Це різні люди</button></div></div>`).join('');
+}
 const treeHead = () => '';
 /* Діти, що померли малими: вік на момент смерті (до 15 років) — для позначки на дереві й опису */
 function childAge(p) {
@@ -222,7 +244,7 @@ function ppHtml(id) {
   const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
     ${(() => { const t = p.note || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
-    ${docs[0] ? `<div class="pp-g"><h4>Джерело</h4>${docRow(docs[0])}</div>` : ''}`;
+    ${docs.length ? `<div class="pp-g"><h4>${docs.length > 1 ? 'Джерела' : 'Джерело'}</h4>${docs.slice(0, 4).map(docRow).join('')}${docs.length > 4 ? `<button type="button" class="btn line small" data-act="pp-tab" data-v="src">Усі джерела (${docs.length})</button>` : ''}</div>` : ''}`;
   const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.filter(x => !ucU(x)).map(x => x.id).filter(x => P[x])) + sp.filter(x => ucU(x) && P[x.id]).map(x => grp(esc(ucLabel(p.id, x).replace(/^./, c => c.toUpperCase())), [x.id])).join('') + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
   const src = docs.length ? docs.map(docRow).join('') : '<p class="muted">Документів поки немає.</p>';
   const back = (S.ui.ppHist || []).length;
@@ -230,7 +252,7 @@ function ppHtml(id) {
     <div class="pp-top"><button type="button" class="pp-ic" data-act="pp-back"${back ? '' : ' disabled'} title="Назад">${IC.back}</button><span>Людина у дереві</span><button type="button" class="pp-ic" data-act="pp-close" title="Закрити">${IC.x}</button></div>
     <div class="pp-sc" id="pp-sc">
       <div class="pp-head">${p.portrait ? `<button type="button" class="pp-av" data-photo="${esc(p.portrait)}" title="Відкрити фото">${avatar(p, 'lg')}</button>` : avatar(p, 'lg')}<h2>${esc(full(p))}</h2><div class="pp-y">${esc(years(p))}</div>${childAge(p) ? `<div class="pp-kd">† ${esc(childAge(p).txt)}</div>` : ''}
-        ${socChips(p, true)}<div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div></div>
+        ${socChips(p, true)}<div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div>${dupNote(p.id, true)}</div>
       <div class="pp-tabs" role="tablist">${[['life', 'Життя'], ['fam', 'Родина'], ['src', 'Джерела' + (docs.length ? ` <i>${docs.length}</i>` : '')]].map(([k, t]) => `<button type="button" role="tab" data-act="pp-tab" data-v="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="pp-body">${tab === 'fam' ? fam : tab === 'src' ? src : life}</div>
     </div>
@@ -421,10 +443,14 @@ function vAll(tabs) {
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
     const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp${ucU(s) ? ' unc' : ''}"/>`; const gap = L.N[b].x - (L.N[a].x + T2.W), rx = gap > T2.GX + 30 ? L.N[b].x - 13 : (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); /* далекий шлюб — кільце біля самої людини, не на сусідній картці */ rings += `<g class="ring" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
   const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
-  Object.entries(fam).forEach(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
-    const px = two ? (cx(ps[0]) + cx(ps[1])) / 2 : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]);
-    const by = top(kids[0]) - T2.GY / 2; const xs = kids.map(cx); const x1 = Math.min(px, ...xs), x2 = Math.max(px, ...xs);
-    lines += `<path d="M${px} ${py}V${by}M${x1} ${by}H${x2}${xs.map(x => `M${x} ${by}V${top(kids[0])}`).join('')}" class="ln"/>`; });
+  // батьки → діти: товстіша лінія; сусідні родини в одному ряду — кожна на своїй висоті, щоб лінії не зливалися в одну
+  const FL = Object.entries(fam).map(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
+    const px = two ? (cx(ps[0]) + cx(ps[1])) / 2 : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]); const xs = kids.map(cx);
+    return { kids, px, py, xs, x1: Math.min(px, ...xs), x2: Math.max(px, ...xs), row: L.N[kids[0]].r }; });
+  const LANE = 14, rowsF = {}; FL.forEach(o => (rowsF[o.row] ||= []).push(o));
+  Object.values(rowsF).forEach(list => { const ends = []; list.sort((a, b) => a.x1 - b.x1).forEach(o => { let i = ends.findIndex(e => e < o.x1 - 10); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = o.x2; o.lane = i; }); list.forEach(o => { o.n = ends.length; }); });
+  FL.forEach(o => { const ty = top(o.kids[0]), by = ty - T2.GY / 2 + (o.lane - (o.n - 1) / 2) * Math.min(LANE, 64 / Math.max(1, o.n - 1));
+    lines += `<path d="M${o.px} ${o.py}V${by}M${o.x1} ${by}H${o.x2}${o.xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc"/>`; });
   const q = (f.q || '').trim().toLowerCase();
   const anc = new Set(); (function up(id) { if (!id || anc.has(id) || !P[id]) return; anc.add(id); up(P[id].f); up(P[id].mo); })(center);
   const desc = new Set(); (function dn(id) { (KIDS[id] || []).forEach(k => { if (!desc.has(k)) { desc.add(k); dn(k); } }); })(center);
@@ -473,7 +499,7 @@ async function treePng(PO) {
   // підписи поколінь
   st.querySelectorAll('.glab').forEach(el => { g.fillStyle = WINE; g.globalAlpha = .55; g.font = `700 22px ${fD}`; g.fillText(el.textContent, 8, parseFloat(el.style.top) + 24); g.globalAlpha = 1; });
   // лінії та кільця з того самого SVG, що на екрані
-  g.lineWidth = 1.6; g.strokeStyle = '#B7AC9E'; st.querySelectorAll('svg.lines path').forEach(pth => g.stroke(new Path2D(pth.getAttribute('d'))));
+  st.querySelectorAll('svg.lines path').forEach(pth => { const pc = pth.classList.contains('pc'); g.lineWidth = pc ? 2.6 : 1.6; g.strokeStyle = pc ? '#6F6457' : '#B7AC9E'; g.lineJoin = 'round'; g.stroke(new Path2D(pth.getAttribute('d'))); });
   st.querySelectorAll('svg.lines g.ring').forEach(r => { const m = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(r.getAttribute('transform')); if (!m) return; const x = +m[1], y = +m[2];
     g.beginPath(); g.arc(x, y, 12, 0, 7); g.fillStyle = '#fff'; g.fill(); g.strokeStyle = '#B7AC9E'; g.lineWidth = 1.3; g.stroke();
     g.strokeStyle = '#8E8275'; g.lineWidth = 1.4; [-3, 3].forEach(dx => { g.beginPath(); g.arc(x + dx, y, 4.2, 0, 7); g.stroke(); }); });
@@ -588,6 +614,7 @@ function vPerson() {
       ${p.lp ? `<dt>${p.d ? 'Жив' + (p.sex === 'f' ? 'ла' : '') : 'Живе'}</dt><dd>${esc(p.lp)} <a class="small" href="#/geo" data-act="geo-k" data-k="${esc(placeKey(p.lp))}">на карті</a></dd>` : ''}
     </dl>
     ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
+    ${dupNote(p.id)}
     ${(() => { const w = kinShort(S.me?.person_id, p.id); return w ? `<p class="kinme">Вам: <b>${esc(w)}</b> <a href="#" data-act="kin-go" data-id="${p.id}">як саме?</a></p>` : ''; })()}
     ${socBlock(p)}
     <div class="sec" style="margin-top:18px"><h3>Гілка <span class="small muted" style="text-transform:none;letter-spacing:0">натисніть на людину нижче — відкриється її картка</span></h3>
@@ -2565,12 +2592,25 @@ document.addEventListener('click', async e => {
       return;
     }
     if (act === 'history') { e.preventDefault(); const r = await api(`/api/admin?a=revisions&entity=person&id=${encodeURIComponent(S.arg)}`); modal(`<h2>Історія змін</h2>${revList(r.revisions)}<div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
+    if (act === 'dup-merge') { // головна картка — та, що з фото; усе з другої переходить у неї
+      const [keep, drop] = dupKeep(t.dataset.a, t.dataset.b);
+      if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Так, це одна людина — об\'єднати'; return; }
+      t.disabled = true; try { await api('/api/data', { body: { op: 'person.merge', keep, drop } }); } catch (e2) { t.disabled = false; toast(errText(e2)); return; }
+      await load(); if (S.ui.pp === drop) S.ui.pp = keep; if (S.view === 'p') location.hash = href('p', keep); render(); toast('Картки об\'єднано'); return;
+    }
+    if (act === 'dup-no') { t.disabled = true; const r = await api('/api/data', { body: { op: 'dup.no', a: t.dataset.a, b: t.dataset.b } }); S.data.cfg.notDup = r.notDup; render(); if (S.ui.pp) ppPaint(); toast('Добре, більше не питатиму'); return; }
     if (act === 'save' || act === 'create') {
       if (t.disabled) return; t.disabled = true; // захист від подвійного натискання
       const data = readForm(); const m = $('#emsg'); m.textContent = 'Зберігаю…'; m.className = 'msg';
       const cur = act === 'save' ? P[S.ui.editing] : null;
       const body = cur ? { op: 'person.save', id: cur.id, v: cur.v, data: { ...data, ...(cur.portrait ? { portrait: cur.portrait } : {}) } } : { op: 'person.save', data, link: S.ui.adding?.link || {} };
-      const r = await api('/api/data', { body });
+      if (!cur && t.dataset.force === '1') body.force = true;
+      let r; try { r = await api('/api/data', { body }); } catch (e2) {
+        t.disabled = false;
+        if (e2.message === 'dupe') { const dd = (e2.data?.dupes || []).filter(x => P[x]); m.className = 'msg err dupask';
+          m.innerHTML = `<b>Можливо, ця людина вже є в дереві:</b> ${dd.map(x => `<a href="${href('p', x)}" data-act="close">${esc(full(P[x]))}${years(P[x]) ? ' (' + esc(years(P[x])) + ')' : ''}</a>`).join(', ')}. Відкрийте її картку й доповніть там — або, якщо це інша людина, натисніть «Створити картку» ще раз.`;
+          t.dataset.force = '1'; t.textContent = 'Ні, це інша людина — створити'; return; }
+        m.className = 'msg err'; m.textContent = errText(e2); return; }
       await load(); closeLayer(); toast(cur ? 'Збережено' : 'Картку створено');
       location.hash = href('p', r.person.id); render(); return;
     }

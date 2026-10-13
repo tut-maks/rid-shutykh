@@ -10386,5 +10386,29 @@
     "u": "http://www.vm-school.org.ua/docs/Cerkvi%20Motovilivki.pdf"
    }
   ]
+ },
+ {
+  "key": "mg-sofia-zoz",
+  "kind": "merge",
+  "keep": "sofia_zoz",
+  "note": "Софія Павлівна Зозульська (2014) була в дереві двічі — зводимо в одну картку"
+ },
+ {
+  "key": "mg-ivan-2000",
+  "kind": "merge",
+  "keep": "p_81f6413d06",
+  "note": "Іван Іванович Шутий (2000) був у дереві двічі — зводимо в одну картку"
+ },
+ {
+  "key": "mg-rostyslav-kr",
+  "kind": "merge",
+  "keep": "rostyslav_kr",
+  "note": "Ростислав Леонідович Красновид — друга картка з'явилася із заявки на реєстрацію"
+ },
+ {
+  "key": "mg-vasylyna-kr",
+  "kind": "merge",
+  "keep": "vasylyna_kr",
+  "note": "Василина Леонідівна Красновид — друга картка з'явилася із заявки на реєстрацію"
  }
 ]

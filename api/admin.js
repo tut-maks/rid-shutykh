@@ -1,6 +1,7 @@
 // Панель власника: доступи, аналітика, історія змін і відкат. Лише роль owner.
 // /api/admin?a=members|invite|reset|member|revoke|stats|log|revisions|revert
 import { db } from './_db.js';
+import { findDupes } from './_merge.js';
 import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId, hashPass, pendGet, pendSet } from './_lib.js';
 
 const day = 864e5;
@@ -38,13 +39,15 @@ async function addKids(pid, kids, by) {
   const sps = us.filter(u => u.a === pid || u.b === pid).map(u => u.a === pid ? u.b : u.a);
   const other = sps.length === 1 ? sps[0] : '';
   const isF = par.data.sex === 'f';
-  const low = t => String(t || '').toLowerCase().replace(/\s*\(.*\)/, '').trim();
+  const low = t => String(t || '').toLowerCase().replace(/\s*\(.*\)/, '').trim().split(/\s+/)[0] || ''; // лише ім'я: «Василина Леонідівна» = «Василина»
   const made = [];
   for (const k of (Array.isArray(kids) ? kids : []).slice(0, 12)) {
-    const n = S(k.n, 60); if (!n) continue;
-    if (all.some(p => (p.data.f === pid || p.data.mo === pid) && low(p.data.n) === low(n))) continue;
+    let n = S(k.n, 60), pt = S(k.pt, 60); if (!n) continue;
+    if (!pt && /\s/.test(n)) { const w = n.split(/\s+/); if (/(вич|ич|вна|івна|ївна)$/i.test(w[1])) { n = w[0]; pt = w.slice(1).join(' '); } } // «Ім'я По батькові» в одному полі
+    // така дитина вже є в дереві (у цього з батьків або в його чоловіка/дружини) — не дублюємо
+    if (all.some(p => [pid, other].filter(Boolean).some(x => p.data.f === x || p.data.mo === x) && low(p.data.n) === low(n))) continue;
     const sex = k.sex === 'f' ? 'f' : k.sex === 'm' ? 'm' : /[ая]$/i.test(n.split(' ')[0]) ? 'f' : 'm';
-    const data = cleanPerson({ n, s: S(k.s, 60) || par.data.s || '', pt: S(k.pt, 60), b: S(k.b, 40), sex, f: isF ? other : pid, mo: isF ? pid : other, fam: par.data.fam || [], note: 'Додано з анкети реєстрації (підтвердив власник).' });
+    const data = cleanPerson({ n, s: S(k.s, 60) || par.data.s || '', pt, b: S(k.b, 40), sex, f: isF ? other : pid, mo: isF ? pid : other, fam: par.data.fam || [], note: 'Додано з анкети реєстрації (підтвердив власник).' });
     const id = slugId(); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by);
     made.push(id); all.push({ id, data });
   }
@@ -110,10 +113,12 @@ export default handler(async (req, res, ctx, url) => {
       const f = await ok(c.f), mo = await ok(c.mo), sp = await ok(c.spouse);
       const par = f ? await db.get('persons', { eq: { id: f } }) : mo ? await db.get('persons', { eq: { id: mo } }) : null;
       const data = cleanPerson({ n: d.n, pt: d.pt, s: d.s, m: d.m, sex: d.sex, b: d.b, bp: d.bp, f, mo, fam: par?.data?.fam || [], note: '' });
-      pid = slugId();
+      const dd = await findDupes(data); // ця людина вже є в дереві — прив'язуємо до наявної картки, нову не створюємо
+      if (dd.length === 1) pid = dd[0].id;
+      else { pid = slugId();
       await db.insert('persons', { id: pid, data, created_by: me.id, updated_by: me.id });
-      await revision('person', pid, 'create', null, data, me.id);
-      if (sp) { const u = { id: 'u_' + pid, a: sp, b: pid, date: '', created_by: me.id }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, me.id); }
+      await revision('person', pid, 'create', null, data, me.id); }
+      if (sp && !dd.length) { const u = { id: 'u_' + pid, a: sp, b: pid, date: '', created_by: me.id }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, me.id); }
     }
     const [m] = await db.insert('members', { email: r.email, name: r.name, role, person_id: pid || null, pass_hash: r.pass_hash, created_by: me.id });
     await revision('member', m.id, 'create', null, { email: m.email, role: m.role, name: m.name, from: 'join' }, me.id);
