@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131507';
+const BUILD = '202610131511';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -246,7 +246,7 @@ function ppPaint() {
   const old = document.getElementById('pp'), id = S.ui.pp;
   document.querySelectorAll('.nd.sel').forEach(e => e.classList.remove('sel'));
   if (!id || !P[id]) { old?.remove(); document.body.classList.remove('pp-on'); return; }
-  const h = ppHtml(id); if (old) old.outerHTML = h; else $('#app').insertAdjacentHTML('beforeend', h);
+  const h = ppHtml(id); if (old) { old.outerHTML = h; document.getElementById('pp').classList.add('pp-still'); } else $('#app').insertAdjacentHTML('beforeend', h); // повторне малювання (вкладки) — без анімації появи, щоб не блимало
   document.body.classList.add('pp-on');
   if (innerWidth <= 820) sheetSwipe(document.getElementById('pp'), ppClose);
   document.querySelectorAll(`.nd[data-id="${id}"]`).forEach(e => e.classList.add('sel'));
