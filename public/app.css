@@ -1098,3 +1098,9 @@ th[data-act=dna-sort]{cursor:pointer}th[data-act=dna-sort].on{color:var(--wine)}
 @media (max-width:1180px) and (min-width:821px){.top .nav a{padding-left:5px!important;padding-right:5px!important;font-size:13.5px}.top .brand{font-size:20px}}
 @media (max-width:960px) and (min-width:821px){.top .nav a{padding-left:3px!important;padding-right:3px!important;font-size:12.5px}.top .brand{font-size:18px}}
 @media (max-width:960px) and (min-width:821px){.top .topw{min-width:0}.top .nav{min-width:0;overflow-x:auto;scrollbar-width:none}.top .nav::-webkit-scrollbar{display:none}}
+.hyp-h{flex-wrap:wrap}
+.hyp-pr{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+.hyp-pr i{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--rule);position:relative;overflow:hidden}
+.hyp-pr i::after{content:'';position:absolute;inset:0 auto 0 0;width:var(--w);background:currentColor}
+.pr-hi{color:var(--ok)}.pr-mid{color:#B08A3E}.pr-lo{color:var(--muted)}
+.hyp-h .hyp-v{order:3}

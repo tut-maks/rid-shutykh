@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131041';
+const BUILD = '202610131052';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2114,7 +2114,7 @@ function vHome() {
       <div class="hcard"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
     </div>
     <div class="hcol">
-      <div class="hcard"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const H = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin').slice(0, 3); return H.length ? `<ul class="wantl">${H.map(x => `<li><button class="wantc" data-act="hyp-open" data-id="${esc(x.id)}"><b>${esc(x.title)}</b><span class="small muted">${hypAns(x.id).length ? hypAns(x.id).length + ' відповід.' : 'ще без відповіді'}</span></button></li>`).join('')}</ul>` : ''; })()}</div>
+      <div class="hcard"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const H = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin').sort((a, b) => b.p - a.p).slice(0, 3); return H.length ? `<ul class="wantl">${H.map(x => `<li><button class="wantc" data-act="hyp-open" data-id="${esc(x.id)}"><b>${esc(x.title)}</b><span class="small muted">${hypAns(x.id).length ? hypAns(x.id).length + ' відповід.' : 'ще без відповіді'}</span></button></li>`).join('')}</ul>` : ''; })()}</div>
       <div class="hcard"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
       <div class="hcard"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}</div>
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
@@ -2208,15 +2208,15 @@ const hypSent = t => { // речення з «Є припущення» (і на
 };
 function hypItems() {
   const L = [], cur = loadText('hyps', true);
-  (cur?.items || []).forEach(x => L.push({ ...x, src: x.src || [], cat: x.kind === 'kin' ? 'kin' : 'hyp' }));
+  (cur?.items || []).forEach(x => L.push({ ...x, src: x.src || [], cat: x.kind === 'kin' ? 'kin' : 'hyp', p: x.p ?? 40 }));
   Object.values(P).forEach(p => {
-    if (p.hyp) L.push({ id: 'pt:' + p.id, cat: 'tree', title: `${full(p)} — місце в дереві не підтверджено`, text: 'Картка стоїть у дереві як гіпотеза: зв\'язок з батьками чи дітьми ще не підтверджено документами.', basis: '', people: [p.id] });
-    hypSent(p.note).forEach((s, i) => L.push({ id: 'pn:' + p.id + ':' + hHash(s), cat: 'card', title: full(p), text: s, people: [p.id] }));
+    if (p.hyp) L.push({ p: 42, id: 'pt:' + p.id, cat: 'tree', title: `${full(p)} — місце в дереві не підтверджено`, text: 'Картка стоїть у дереві як гіпотеза: зв\'язок з батьками чи дітьми ще не підтверджено документами.', basis: '', people: [p.id] });
+    hypSent(p.note).forEach((s, i) => L.push({ p: 40, id: 'pn:' + p.id + ':' + hHash(s), cat: 'card', title: full(p), text: s, people: [p.id] }));
   });
-  S.data.unions.forEach(u => { if (P[u.a] && P[u.b] && /не підтвердж/i.test(u.date || '')) L.push({ id: 'u:' + u.id, cat: 'tree', title: `${short(P[u.a])} і ${short(P[u.b])} — шлюб не підтверджено`, text: 'Спільні діти є, але запису про шлюб ще не знайдено.', people: [u.a, u.b] }); });
-  S.data.documents.filter(d => d.type !== 'map').forEach(d => hypSent(d.text).forEach(s => L.push({ id: 'pd:' + d.id + ':' + hHash(s), cat: 'card', title: d.title, text: s, docs: [d.id], people: (d.people || []).filter(x => P[x]).slice(0, 4) })));
+  S.data.unions.forEach(u => { if (P[u.a] && P[u.b] && /не підтвердж/i.test(u.date || '')) L.push({ p: 45, id: 'u:' + u.id, cat: 'tree', title: `${short(P[u.a])} і ${short(P[u.b])} — шлюб не підтверджено`, text: 'Спільні діти є, але запису про шлюб ще не знайдено.', people: [u.a, u.b] }); });
+  S.data.documents.filter(d => d.type !== 'map').forEach(d => hypSent(d.text).forEach(s => L.push({ p: 40, id: 'pd:' + d.id + ':' + hHash(s), cat: 'card', title: d.title, text: s, docs: [d.id], people: (d.people || []).filter(x => P[x]).slice(0, 4) })));
   const hist = loadText('history', true);
-  if (hist?.md) hist.md.split(/\n\s*\n/).forEach(par => { if (/Є припущення/.test(par) && !/^#/.test(par.trim())) hypSent(plainMd(par)).forEach(s => L.push({ id: 'ph:' + hHash(s), cat: 'hist', title: '«Історія роду»', text: s, people: [...par.matchAll(/\[\[p:([a-z0-9_]+)\|/gi)].map(m => m[1]).filter(x => P[x]).slice(0, 5) })); });
+  if (hist?.md) hist.md.split(/\n\s*\n/).forEach(par => { if (/Є припущення/.test(par) && !/^#/.test(par.trim())) hypSent(plainMd(par)).forEach(s => L.push({ p: 35, id: 'ph:' + hHash(s), cat: 'hist', title: '«Історія роду»', text: s, people: [...par.matchAll(/\[\[p:([a-z0-9_]+)\|/gi)].map(m => m[1]).filter(x => P[x]).slice(0, 5) })); });
   const seen = new Set(); return L.filter(x => !seen.has(x.id) && seen.add(x.id));
 }
 const HYPCAT = [['', 'Усі'], ['kin', 'Можлива рідня'], ['hyp', 'Наші припущення'], ['tree', 'У дереві'], ['card', 'У картках і документах'], ['hist', 'В «Історії роду»']];
@@ -2227,7 +2227,7 @@ const ansText = s => String(s.text).replace(/^\[(yes|no|add)\]\s*/, '');
 function hypCard(x) {
   const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0 }; A.forEach(s => c[verdOf(s)]++);
   return `<article class="hyp-c hc-${x.cat}">
-    <div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
+    <div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
     <h3>${esc(x.title)}</h3><p>${glossify(esc(x.text))}</p>
     ${x.basis ? `<p class="hyp-b"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
     ${(x.people || []).length ? `<div class="hyp-p">${x.people.filter(id => P[id]).map(mini).join('')}</div>` : ''}
@@ -2238,7 +2238,7 @@ function hypCard(x) {
 function vHyp() {
   const all = hypItems(), cat = S.ui.hypCat || '', q = (S.ui.hypQ || '').toLowerCase();
   const L = all.filter(x => (!cat || x.cat === cat) && (!q || [x.title, x.text, x.basis].join(' ').toLowerCase().includes(q)))
-    .sort((a, b) => ({ kin: 0, hyp: 1, tree: 2, card: 3, hist: 4 }[a.cat] - { kin: 0, hyp: 1, tree: 2, card: 3, hist: 4 }[b.cat]));
+    .sort((a, b) => (b.p - a.p) || ({ hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[a.cat] - { hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[b.cat])); // зверху — найімовірніші
   const n = k => all.filter(x => !k || x.cat === k).length;
   const intro = loadText('hyps', true)?.intro || 'Тут усе, що ще не підтверджено документами. Знаєте щось — натисніть «Щось знаю, можу доповнити».';
   return `<div class="lede"><h1>Припущення</h1><p class="small muted">${esc(intro)}</p></div>
