@@ -73,10 +73,13 @@ export default handler(async (req, res, ctx, url) => {
     return send(res, 200, { ok: true });
   }
 
-  const personId = String(url.searchParams.get('person') || '').slice(0, 60);
-  const person = await db.get('persons', { eq: { id: personId, deleted: false } });
-  if (!person) return fail(res, 404, 'not_found');
-  const pending = !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
+  // «Хто на фото?»: фото без картки (?ask=1 без person) — від редактора одразу видно всім, від інших чекає підтвердження власника
+  const ask = url.searchParams.get('ask') === '1' && !url.searchParams.get('person');
+  if (ask && (isAudio || mime === 'application/pdf')) return fail(res, 415, 'type');
+  const personId = ask ? '_ask' : String(url.searchParams.get('person') || '').slice(0, 60);
+  const person = ask ? null : await db.get('persons', { eq: { id: personId, deleted: false } });
+  if (!ask && !person) return fail(res, 404, 'not_found');
+  const pending = ask ? !can(me, 'editor') : !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
   const id = crypto.randomUUID();
   const path = `${isAudio ? 'voice' : 'photos'}/${personId}/${id}.${OK[mime]}`;
   await db.put(path, buf, mime);
@@ -85,7 +88,7 @@ export default handler(async (req, res, ctx, url) => {
   await revision('photo', id, 'create', null, { person_id: personId, caption, path }, me.id);
   if (pending) { const pd = await pendGet(); pd[id] = { by: me.id, at: new Date().toISOString(), person: personId }; await pendSet(pd, me.id); }
   // перше фото стає головним (крім тих, що чекають підтвердження)
-  if (!pending && !isAudio && !person.data.portrait && mime !== 'application/pdf') {
+  if (person && !pending && !isAudio && !person.data.portrait && mime !== 'application/pdf') {
     await db.update('persons', { eq: { id: personId } }, { data: { ...person.data, portrait: id }, version: person.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
   }
   track(me.id, ctx.sid, 'edit', 'upload', personId);

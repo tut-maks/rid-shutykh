@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131359';
+const BUILD = '202610131409';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1826,8 +1826,9 @@ function vKin() {
 const askList = () => Object.entries(CFG_().photoAsk || {}).map(([id, v]) => ({ ...v, ph: S.data.photos.find(x => x.id === id) })).filter(x => x.ph && !isVoice(x.ph)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 const hintsOf = id => S.data.stories.filter(s => s.target === 'photo:' + id);
 function askGrid(max) {
-  const L = askList(); if (!L.length) return `<p class="muted small">Поки немає фото, на яких треба когось упізнати.${canEdit() ? ' Відкрийте будь-яке фото → «⋯» → «Хто на фото? — попросити родичів».' : ''}</p>`;
-  return `<div class="askg">${L.slice(0, max || 999).map(x => `<button class="askc" data-act="ask-open" data-id="${x.ph.id}"><img src="${img('photo=' + x.ph.id, true)}" alt="" loading="lazy"><span><b>${esc(x.ph.caption || short(P[x.ph.person] || {}))}</b><i>${hintsOf(x.ph.id).length ? hintsOf(x.ph.id).length + ' підказ.' : 'ще ніхто не підказав'}</i></span></button>`).join('')}</div>`;
+  const L = askList(), addB = S.me ? `<button class="btn small askadd" data-act="ask-new">＋ Фото: хто на ньому?</button>` : '';
+  if (!L.length) return `${addB}<p class="muted small">Поки немає фото, на яких треба когось упізнати. Маєте старе фото й не знаєте, хто на ньому? Натисніть «＋ Фото: хто на ньому?» — родичі підкажуть.</p>`;
+  return `${addB}<div class="askg">${L.slice(0, max || 999).map(x => `<button class="askc" data-act="ask-open" data-id="${x.ph.id}"><img src="${img('photo=' + x.ph.id, true)}" alt="" loading="lazy"><span><b>${esc(x.ph.caption || (P[x.ph.person] ? short(P[x.ph.person]) : 'Хто це?'))}</b><i>${x.ph.pending ? 'чекає підтвердження · ' : ''}${hintsOf(x.ph.id).length ? hintsOf(x.ph.id).length + ' підказ.' : 'ще ніхто не підказав'}</i></span></button>`).join('')}</div>`;
 }
 function openAsk(id) {
   const ph = S.data.photos.find(x => x.id === id), a = (CFG_().photoAsk || {})[id]; if (!ph) return;
@@ -1839,6 +1840,29 @@ function openAsk(id) {
     <div class="sec" style="gap:8px"><textarea class="in" id="st-photo:${id}" placeholder="Напр.: «Друга зліва в другому ряду — баба Вівдя, поруч її сестра Маня. Фото приблизно 1955 р., Веприк»"></textarea>
     <div class="btns"><button class="btn" data-story="photo:${id}">Додати підказку</button>${canEdit() ? `<button class="btn line small" data-act="ask-off" data-id="${id}">Уже впізнали — прибрати з «Хто на фото?»</button>` : ''}<button class="btn line" data-act="close">Закрити</button><span class="msg" id="stm-photo:${id}"></span></div></div>`);
   S.ui.askOpen = id;
+}
+
+function openAskNew() {
+  modal(`<h2>Хто на фото?</h2><p class="small muted">Завантажте фото, на якому треба когось упізнати. Воно з'явиться на головній у розділі «Хто на фото?», і родичі зможуть написати, хто це${canEdit() ? '' : ' (після підтвердження Максимом)'}.</p>
+    <div class="sec" style="gap:10px">
+      <label class="f">Фото<input class="in" type="file" id="an-f" accept="image/*"></label>
+      <div class="ask-prev" id="an-p" hidden></div>
+      <label class="f">Що відомо про фото<textarea class="in" id="an-c" maxlength="500" placeholder="Напр.: «Фото з бабиного альбому, Веприк, десь 1950-ті. Хто ці люди? Чи це не сестри баби Вівді?»"></textarea></label>
+      <div class="btns"><button class="btn" data-act="ask-send">Завантажити й запитати</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="an-m"></span></div></div>`);
+  $('#an-f').onchange = e => { const f = e.target.files[0], p = $('#an-p'); if (!f) { p.hidden = true; return; } p.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; p.hidden = false; };
+}
+async function askSend(btn) {
+  const f = $('#an-f').files[0], m = $('#an-m'), cap = $('#an-c').value.trim();
+  if (!f) { m.className = 'msg err'; m.textContent = 'Оберіть фото.'; return; }
+  btn.disabled = true; m.className = 'msg'; m.textContent = 'Завантажую…';
+  try {
+    let full = await toJpeg(f, 2200, 0.86); if (full.size > 4e6) full = await toJpeg(f, 1600, 0.8); const thumb = await toJpeg(f, 420, 0.78);
+    const r = await api(`/api/upload?ask=1&caption=${encodeURIComponent(cap)}`, { raw: full });
+    await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
+    await api('/api/data', { body: { op: 'photo.ask', id: r.id, on: true, note: '' } });
+    await load(); closeLayer(); S.ui.keepScroll = true; render();
+    toast(r.pending ? 'Фото надіслано. Воно з\'явиться в «Хто на фото?» для всіх після підтвердження Максимом.' : 'Фото додано в «Хто на фото?» — родичі зможуть підказати.');
+  } catch (err) { btn.disabled = false; m.className = 'msg err'; m.textContent = errText(err); }
 }
 
 /* ── Голоси роду (аудіо) ── */
@@ -2203,7 +2227,9 @@ document.addEventListener('click', async e => {
     if (a === 'kin-swap') { const x = S.ui.kinA || pickVal('kin-a'), y = S.ui.kinB || pickVal('kin-b'); S.ui.kinA = y; S.ui.kinB = x; S.ui.keepScroll = true; render(); return; }
     if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
     if (a === 'ask-open') return openAsk(id);
-    if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: [ph.person] }); return; }
+    if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: P[ph.person] ? [ph.person] : [] }); return; }
+    if (a === 'ask-new') return openAskNew();
+    if (a === 'ask-send') return askSend(t);
     if (a === 'ask-off') { const r = await api('/api/data', { body: { op: 'photo.ask', id, on: false } }); S.data.cfg.photoAsk = r.photoAsk; closeLayer(); S.ui.keepScroll = true; render(); toast('Прибрано з «Хто на фото?»'); return; }
     if (a === 'v-rec') return openRec(id);
     if (a === 'rec-go') return recToggle();
