@@ -1210,3 +1210,4 @@ html.bk-full .bk-toc{position:fixed;bottom:calc(60px + env(safe-area-inset-botto
 /* Телефон: шторка «Людина у дереві» завжди однакової висоти — вкладки Життя/Родина/Джерела не змушують її стрибати */
 @media(max-width:820px){.pp{height:min(70dvh,calc(100dvh - 190px));max-height:none}}
 .pp.pp-still{animation:none!important}
+.qadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}.qadd .small.muted{width:100%}

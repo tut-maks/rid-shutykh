@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131511';
+const BUILD = '202610131624';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -711,6 +711,17 @@ function openEdit(p) {
       <div class="btns">${peopleList('mgpeople')}<input class="in" id="mg-p" list="mgpeople" placeholder="Друга картка…" autocomplete="off" style="flex:1;min-width:220px"><button class="btn line" data-act="merge">Об'єднати</button></div></details>` : ''}`);
   S.ui.editing = p.id;
 }
+// з тексту запитання («Чоловік Митрюк Іван Михайлович 1971, батько Соломії») — підставити ПІБ і рік у форму; решту людина перевіряє сама
+function qPrefill(text, kind) {
+  const t = String(text || ''); const W = "[А-ЯІЇЄҐ][а-яіїєґ'’ʼ-]+";
+  const m = t.match(new RegExp(`(${W})\\s+(${W})(?:\\s+(${W}(?:вич|вна|ич|івна|ївна)))?`));
+  const set = (id, v) => { const e = document.getElementById(id); if (e && v && !e.value) e.value = v; };
+  const skip = /^(Чоловік|Дружина|Син|Донька|Дочка|Батько|Мати|Брат|Сестра|Його|Її|Він|Вона)$/;
+  if (m) { let [, a, b2, c] = m; if (skip.test(a)) { const r = t.slice(t.indexOf(a) + a.length).match(new RegExp(`(${W})\\s+(${W})(?:\\s+(${W}))?`)); if (r) [, a, b2, c] = r; }
+    if (c && /(вич|вна|ич)$/.test(c)) { set('e-s', a); set('e-n', b2); set('e-pt', c); } else { set('e-n', a); set('e-s', b2); } }
+  const y = t.match(/\b(1[89]\d\d|20[0-2]\d)\b/); if (y) set('e-b', y[1]);
+  const note = document.getElementById('e-note'); if (note && !note.value) note.value = 'Зі слів родички (запитання на сайті): ' + t.trim();
+}
 function openAdd(kind, base) {
   const preset = {}; const link = {};
   const ttl = { father: 'Додати батька', mother: 'Додати матір', spouse: 'Додати чоловіка / дружину', child: 'Додати дитину', sibling: 'Додати брата чи сестру', new: 'Нова людина' }[kind];
@@ -795,6 +806,7 @@ function qItem(q) {
     ${edit ? `<div class="qedit">
       <div class="seg small">${Object.entries(QSTAT).map(([k, t]) => `<button type="button" class="${q.status === k ? 'on' : ''}" data-act="q-status" data-id="${q.id}" data-v="${k}">${t}</button>`).join('')}</div>
       <textarea class="in" id="qa-${q.id}" placeholder="Відповідь — її побачить автор запитання">${esc(q.answer)}</textarea>
+      ${p ? `<div class="qadd"><span class="small muted">Внести в дерево:</span><button class="btn small" data-act="q-add" data-rel="spouse" data-id="${q.id}">+ чоловік / дружина</button><button class="btn line small" data-act="q-add" data-rel="child" data-id="${q.id}">+ дитина</button><button class="btn line small" data-act="q-add" data-rel="father" data-id="${q.id}">+ батько</button><button class="btn line small" data-act="q-add" data-rel="mother" data-id="${q.id}">+ мати</button><button class="btn line small" data-act="q-add" data-rel="sibling" data-id="${q.id}">+ брат / сестра</button><a class="btn line small" href="${href('p', p.id)}">Відкрити картку</a></div>` : ''}
       <div class="btns"><button class="btn line small" data-act="q-answer" data-id="${q.id}">Зберегти відповідь</button>${isOwner() ? `<button class="btn line small" data-act="q-del" data-id="${q.id}">Видалити</button>` : ''}<span class="msg" id="qa-m-${q.id}"></span></div></div>`
     : mine && q.status === 'new' ? `<div class="btns"><button class="btn line small" data-act="q-del" data-id="${q.id}">Видалити</button></div>` : ''}
   </article>`;
@@ -848,6 +860,7 @@ async function qHandle(act, t, d) {
     } catch (err) { m.textContent = errText(err); t.disabled = false; }
     return true;
   }
+  if (act === 'q-add') { const q = (S.data.questions || []).find(x => x.id === t.dataset.id); if (!q || !P[q.person]) return; openAdd(t.dataset.rel, P[q.person]); qPrefill(q.text, t.dataset.rel); return true; }
   if (act === 'q-status' || act === 'q-answer') {
     const body = { op: 'q.update', id: d.id };
     if (act === 'q-status') body.status = d.v; else { body.answer = $('#qa-' + d.id).value; if (body.answer.trim() && qList().find(q => q.id === d.id)?.status === 'new') body.status = 'work'; }
