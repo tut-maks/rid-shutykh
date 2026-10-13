@@ -65,7 +65,7 @@ export default handler(async (req, res, ctx, url) => {
   const me = ctx.member;
   if (req.method === 'GET') {
     const tk = url?.searchParams?.get('text'); // великі тексти (історія роду, історія сіл) — окремо, щоб не важчало завантаження
-    if (tk) { if (!['history', 'villages'].includes(tk)) return fail(res, 400, 'bad'); const row = await db.get('settings', { eq: { key: 'text:' + tk } }).catch(() => null);
+    if (tk) { if (!['history', 'villages', 'hyps'].includes(tk)) return fail(res, 400, 'bad'); const row = await db.get('settings', { eq: { key: 'text:' + tk } }).catch(() => null);
       let text = row?.value || null;
       if (!text) try { // ще не імпортовано — віддаємо одразу з репозиторію
         const it = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'seed/import/manifest.json'), 'utf8')).find(x => x.kind === 'text' && x.id === tk); text = it?.value || null;
@@ -313,6 +313,7 @@ export default handler(async (req, res, ctx, url) => {
     let open = false;
     if (/^photo:/.test(target)) open = !!(await cfgGet('photo_ask'))[target.slice(6)];
     else if (/^want:/.test(target)) open = (await cfgGet('wanted')).some(x => x.id === target.slice(5));
+    else if (/^hyp:[\w:.-]{1,70}$/.test(target)) open = true; // «Припущення»: підтвердити, спростувати чи доповнити може кожен родич
     if (!open && !(await canAddTo(me, target))) return fail(res, 403, 'branch');
     const [s] = await db.insert('stories', { target, text, created_by: me.id });
     await revision('story', s.id, 'create', null, { target, text }, me.id);

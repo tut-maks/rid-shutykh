@@ -114,7 +114,7 @@ export default handler(async (req, res, _c, url) => {
         const data = cleanPerson(nd); await db.update('persons', { eq: { id: p.id } }, { data, version: p.version + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, by);
         out.push(key + ': ok');
       } else if (it.kind === 'text') { // великий текст сторінки (історія роду / історія сіл) у settings 'text:<k>'
-        const k = String(it.id || ''); if (!['history', 'villages'].includes(k)) { out.push(key + ': bad'); continue; }
+        const k = String(it.id || ''); if (!['history', 'villages', 'hyps'].includes(k)) { out.push(key + ': bad'); continue; }
         const cur = await db.get('settings', { eq: { key: 'text:' + k } }).catch(() => null);
         if (JSON.stringify(cur?.value) === JSON.stringify(it.value)) { out.push(key + ': вже є'); continue; }
         await db.upsert('settings', { key: 'text:' + k, value: it.value, updated_by: by, updated_at: new Date().toISOString() });
