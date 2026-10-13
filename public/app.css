@@ -1125,3 +1125,9 @@ th[data-act=dna-sort]{cursor:pointer}th[data-act=dna-sort].on{color:var(--wine)}
 .fammem .gen{margin-bottom:8px}.fammem .chips{display:flex;flex-wrap:wrap;gap:6px}
 @media(max-width:820px){.famchips,.qfilter,.mapbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none}}
 @media(max-width:820px){.pghead.stk .tabnote{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.famchips .chip,.famchips a,.famchips button{white-space:nowrap;flex:none;min-height:40px;padding-block:6px}.stk{padding-top:4px;padding-bottom:4px}}
+/* Припущення: вкладки й пошук — один акуратний рядок однакової висоти */
+.hypbar{flex-wrap:nowrap!important;gap:12px;overflow-x:auto;scrollbar-width:none}
+.hypbar .seg{flex:none;align-self:center}
+.hypbar .seg button{height:38px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;padding:0 12px;font-size:14px}
+.hypbar .search{flex:1 1 180px;min-width:160px;max-width:280px;height:40px;min-height:40px;padding:0 12px;font-size:14px;margin:0;box-sizing:border-box}
+@media(max-width:820px){.hypbar .search{font-size:16px;min-width:140px}}
