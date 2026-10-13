@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131103';
+const BUILD = '202610131106';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -197,6 +197,7 @@ function openSoc(p) {
   modal(`<h2>Зв'язок — ${esc(short(p))}</h2>
     <p class="small muted">Бачать лише родичі, які увійшли на сайт. Заповніть те, що є; порожні поля не показуються.</p>
     <div class="grid2 socf">${Object.entries(SOC).map(([k, [t, , im, ph]]) => `<label class="f"><span><span class="si s-${k}">${esc(SOC[k][1])}</span> ${esc(t)}</span><input class="in" id="sc-${k}" value="${esc(cur[k] || '')}" placeholder="${esc(ph)}" inputmode="${im}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>`).join('')}</div>
+    <label class="f">Де живе зараз (місто чи село)<input class="in" id="sc-lp" value="${esc(p.lp || '')}" placeholder="Напр.: Київ" autocomplete="address-level2"></label>
     <label class="f">ДНК-тест<select class="in" id="sc-dna"><option value="">не здавав(ла)</option>${['MyHeritage', 'FamilyTreeDNA', 'Ancestry', '23andMe', 'GEDmatch', 'інше'].map(c => `<option${p.dna === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
     <div class="btns"><button class="btn" data-act="soc-save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="scmsg"></span></div>`);
   S.ui.socFor = p.id;
@@ -562,6 +563,7 @@ function vPerson() {
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
       ${p.d ? `<dt>Смерть</dt><dd><span class="mono">${esc(p.d)}</span>${p.dp ? ' · ' + esc(p.dp) : ''}</dd>` : ''}
+      ${p.lp ? `<dt>${p.d ? 'Жив' + (p.sex === 'f' ? 'ла' : '') : 'Живе'}</dt><dd>${esc(p.lp)} <a class="small" href="#/geo" data-act="geo-k" data-k="${esc(placeKey(p.lp))}">на карті</a></dd>` : ''}
     </dl>
     ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
     ${(() => { const w = kinShort(S.me?.person_id, p.id); return w ? `<p class="kinme">Вам: <b>${esc(w)}</b> <a href="#" data-act="kin-go" data-id="${p.id}">як саме?</a></p>` : ''; })()}
@@ -650,7 +652,7 @@ const storyForm = target => `<div class="sec" style="gap:8px"><textarea class="i
 
 /* ───── Редагування людини ───── */
 function personForm(p, preset = {}) {
-  const v = Object.assign({ n: '', pt: '', s: '', m: '', sex: '', b: '', bp: '', d: '', dp: '', note: '', f: '', mo: '', hyp: false, fam: [] }, p || {}, preset);
+  const v = Object.assign({ n: '', pt: '', s: '', m: '', sex: '', b: '', bp: '', d: '', dp: '', lp: '', note: '', f: '', mo: '', hyp: false, fam: [] }, p || {}, preset);
   const opts = (sel, sex) => `<option value="">— невідомо —</option>` + Object.values(P).filter(x => !p || x.id !== p.id).filter(x => !sex || !x.sex || x.sex === sex).sort((a, b) => short(a).localeCompare(short(b), 'uk')).map(x => `<option value="${x.id}"${x.id === sel ? ' selected' : ''}>${esc(full(x))}${life(x) ? ' (' + esc(life(x)) + ')' : ''}</option>`).join('');
   return `<div class="grid2">
     <label class="f">Ім'я<input class="in" id="e-n" value="${esc(v.n)}"></label>
@@ -662,6 +664,7 @@ function personForm(p, preset = {}) {
     <label class="f">Місце народження<input class="in" id="e-bp" value="${esc(v.bp)}"></label>
     <label class="f">Смерть<input class="in" id="e-d" value="${esc(v.d)}"></label>
     <label class="f">Місце смерті / поховання<input class="in" id="e-dp" value="${esc(v.dp)}"></label>
+    <label class="f">Місце проживання (де живе або жив)<input class="in" id="e-lp" value="${esc(v.lp)}" placeholder="Напр.: Київ; Бровари; Вороньки"></label>
     <label class="f">Батько<select class="in" id="e-f">${opts(v.f, 'm')}</select></label>
     <label class="f">Мати<select class="in" id="e-mo">${opts(v.mo, 'f')}</select></label>
   </div>
@@ -671,7 +674,7 @@ function personForm(p, preset = {}) {
 }
 function readForm() {
   const g = id => ($('#e-' + id)?.value || '').trim();
-  return { n: g('n'), pt: g('pt'), s: g('s'), m: g('m'), sex: g('sex'), b: g('b'), bp: g('bp'), d: g('d'), dp: g('dp'), f: g('f'), mo: g('mo'), note: g('note'), hyp: !!$('#e-hyp')?.checked, fam: [...document.querySelectorAll('.e-fam:checked')].map(x => x.value) };
+  return { n: g('n'), pt: g('pt'), s: g('s'), m: g('m'), sex: g('sex'), b: g('b'), bp: g('bp'), d: g('d'), dp: g('dp'), lp: g('lp'), f: g('f'), mo: g('mo'), note: g('note'), hyp: !!$('#e-hyp')?.checked, fam: [...document.querySelectorAll('.e-fam:checked')].map(x => x.value) };
 }
 function modal(html) { $('#layer').innerHTML = `<div class="scrim" data-close-scrim><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; setTimeout(() => $('#layer .modal input, #layer .modal textarea')?.focus(), 30); }
 const closeLayer = () => { $('#layer').innerHTML = ''; document.body.classList.remove('noscroll'); };
@@ -1957,13 +1960,14 @@ const life_ = p => life(p);
 
 /* ── Карта роду в часі ── */
 const placeKey = s => String(s || '').split(',')[0].replace(/^(с\.|село|смт|м\.|місто|хутір|х\.)\s*/i, '').trim();
-const PLACE0 = { 'Вороньки': [50.684, 31.587], 'Веприк': [50.676, 31.615], 'Лідин': [50.698, 31.674] }; // OpenStreetMap (research/11)
+const PLACE0 = { 'Вороньки': [50.684, 31.587], 'Веприк': [50.676, 31.615], 'Лідин': [50.698, 31.674], 'Київ': [50.4501, 30.5234], 'Бровари': [50.511, 30.7909], 'Чернігів': [51.4982, 31.2893], 'Ніжин': [51.048, 31.8869], 'Бобровиця': [50.7469, 31.3886] }; // OpenStreetMap (research/11)
 const placeLL = k => (CFG_().places || {})[k] || PLACE0[k] || null;
 function geoEvents() {
   const E = [];
   Object.values(P).forEach(p => { const b = yN(p.b), d = yN(p.d);
     if (p.bp) E.push({ k: placeKey(p.bp), y: b, t: 'b', id: p.id });
-    if (p.dp) E.push({ k: placeKey(p.dp), y: d, t: 'd', id: p.id }); });
+    if (p.dp) E.push({ k: placeKey(p.dp), y: d, t: 'd', id: p.id });
+    if (p.lp) String(p.lp).split(/[;]/).map(x => placeKey(x)).filter(Boolean).forEach(k => E.push({ k, y: d || (isLiving(p) ? new Date().getFullYear() : null), t: 'l', id: p.id })); });
   S.data.documents.filter(x => x.type !== 'map' && x.place).forEach(x => E.push({ k: placeKey(x.place.replace(/\(.*?\)/g, '')), y: yN(x.date), t: 'doc', doc: x.id }));
   return E.filter(e => e.k);
 }
@@ -1971,7 +1975,7 @@ function vGeo() {
   const E = geoEvents(), ys = E.map(e => e.y).filter(Boolean), y0 = Math.min(...ys, 1780), y1 = new Date().getFullYear();
   const yr = S.ui.geoY || y1, win = S.ui.geoW || 'upto';
   const keys = [...new Set(E.map(e => e.k))], miss = keys.filter(k => !placeLL(k));
-  return `<div class="lede"><h1>Карта роду</h1><p class="small muted">Де народжувались і де спочили наші — з карток і архівних документів. Пересувайте повзунок років.</p></div>
+  return `<div class="lede"><h1>Карта роду</h1><p class="small muted">Де народжувались, жили й спочили наші — з карток і архівних документів. Пересувайте повзунок років.</p></div>
   <div class="geobar"><input type="range" id="geo-y" min="${y0}" max="${y1}" value="${yr}" aria-label="Рік"><b class="mono" id="geo-yl">${yr}</b>
     <div class="seg"><button data-act="geo-w" data-v="upto" class="${win === 'upto' ? 'on' : ''}">усе до цього року</button><button data-act="geo-w" data-v="dec" class="${win === 'dec' ? 'on' : ''}">лише ±10 років</button></div>
     <button class="btn line small" data-act="geo-play">▶ Програти історію</button></div>
@@ -2001,7 +2005,7 @@ function geoMount() {
     pins.innerHTML = Object.entries(by).map(([k, L]) => { const [la, lo] = placeLL(k), [wx, wy] = merc(la, lo), r = Math.min(46, 12 + Math.sqrt(L.length) * 5);
       return `<button class="gpin" data-act="geo-pin" data-k="${esc(k)}" style="left:${(wx - G.cx) * S2 + W() / 2}px;top:${(wy - G.cy) * S2 + H() / 2}px;width:${r * 2}px;height:${r * 2}px" title="${esc(k)}: ${L.length}"><b>${L.length}</b><span>${esc(k)}</span></button>`; }).join('');
     const gl = $('#geolist'); if (gl) { const k = S.ui.geoK && by[S.ui.geoK] ? S.ui.geoK : Object.keys(by).sort((a, b) => by[b].length - by[a].length)[0]; const L = (by[k] || []).slice().sort((a, b) => (a.y || 0) - (b.y || 0));
-      gl.innerHTML = k ? `<h3>${esc(k)} <span class="small muted">${L.length} подій ${win === 'upto' ? 'до ' + yr : 'у ' + (yr - 10) + '–' + (yr + 10)}</span></h3><ul class="evl">${L.slice(-40).reverse().map(e => `<li><span class="ev-d mono">${e.y || '—'}</span><span>${e.t === 'doc' ? `<a href="#" data-doc="${e.doc}">${esc(S.data.documents.find(d => d.id === e.doc)?.title || '')}</a>` : `${e.t === 'b' ? 'народи' + (P[e.id].sex === 'f' ? 'лася' : 'вся') : 'помер' + (P[e.id].sex === 'f' ? 'ла' : '') + ' / похован' + (P[e.id].sex === 'f' ? 'а' : 'ий')} ${pLink(e.id)}`}</span></li>`).join('')}</ul>` : '<p class="muted small">Немає подій у цей час.</p>'; }
+      gl.innerHTML = k ? `<h3>${esc(k)} <span class="small muted">${L.length} подій ${win === 'upto' ? 'до ' + yr : 'у ' + (yr - 10) + '–' + (yr + 10)}</span></h3><ul class="evl">${L.slice(-40).reverse().map(e => `<li><span class="ev-d mono">${e.y || '—'}</span><span>${e.t === 'doc' ? `<a href="#" data-doc="${e.doc}">${esc(S.data.documents.find(d => d.id === e.doc)?.title || '')}</a>` : `${e.t === 'l' ? (P[e.id].d ? 'жив' + (P[e.id].sex === 'f' ? 'ла' : '') : 'живе') : e.t === 'b' ? 'народи' + (P[e.id].sex === 'f' ? 'лася' : 'вся') : 'помер' + (P[e.id].sex === 'f' ? 'ла' : '') + ' / похован' + (P[e.id].sex === 'f' ? 'а' : 'ий')} ${pLink(e.id)}`}</span></li>`).join('')}</ul>` : '<p class="muted small">Немає подій у цей час.</p>'; }
   };
   G.paint = paint; paint();
   const pts_ = new Map(); let st = null, pin = null;
@@ -2196,6 +2200,7 @@ document.addEventListener('click', async e => {
       if (!au.src) { t.textContent = '…'; try { au.src = await voiceUrl(id); } catch { t.textContent = '!'; toast('Не вдалося відкрити запис'); return; } }
       au.hidden = false; t.hidden = true; au.play().catch(() => {}); ev('open', 'voice', 'photo:' + id); return;
     }
+    if (a === 'geo-k') { S.ui.geoK = t.dataset.k; S.ui.geoY = new Date().getFullYear(); if (S.ui.geo) S.ui.geo.cx = null; return; }
     if (a === 'geo-w') { S.ui.geoW = t.dataset.v; t.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === t)); S.ui.geo?.paint?.(); return; }
     if (a === 'geo-z') { const G = S.ui.geo; if (G) { G.z = Math.max(4, Math.min(17, G.z + +t.dataset.v)); G.paint(); } return; }
     if (a === 'geo-pin') { S.ui.geoK = t.dataset.k; S.ui.geo?.paint?.(); $('#geolist')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
@@ -2445,7 +2450,7 @@ document.addEventListener('click', async e => {
       const links = Object.keys(SOC).map(k => ({ t: k, u: ($('#sc-' + k)?.value || '').trim() })).filter(x => x.u);
       const m = $('#scmsg'); m.textContent = 'Зберігаю…'; m.className = 'msg';
       try {
-        const r = await api('/api/data', { body: { op: 'person.links', id: S.ui.socFor, links, dna: $('#sc-dna')?.value || '' } });
+        const r = await api('/api/data', { body: { op: 'person.links', id: S.ui.socFor, links, dna: $('#sc-dna')?.value || '', lp: ($('#sc-lp')?.value || '').trim() } });
         const bad = links.filter(x => !(r.person.links || []).some(y => y.t === x.t));
         await load(); render();
         if (bad.length) { openSoc(P[S.ui.socFor]); bad.forEach(x => { const i = $('#sc-' + x.t); if (i) { i.value = x.u; i.classList.add('bad'); } }); const mm = $('#scmsg'); mm.className = 'msg err'; mm.textContent = 'Не вдалося прочитати: ' + bad.map(x => SOC[x.t][0]).join(', ') + '. Перевірте посилання або номер.'; return; }

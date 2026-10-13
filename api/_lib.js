@@ -130,7 +130,7 @@ export function cleanPerson(d) {
   const o = {
     n: STR(d.n, 80), pt: STR(d.pt, 80), s: STR(d.s, 80), m: STR(d.m, 80),
     sex: ['m', 'f'].includes(d.sex) ? d.sex : '',
-    b: STR(d.b, 40), d: STR(d.d, 40), bp: STR(d.bp, 160), dp: STR(d.dp, 160),
+    b: STR(d.b, 40), d: STR(d.d, 40), bp: STR(d.bp, 160), dp: STR(d.dp, 160), lp: STR(d.lp, 160),
     note: STR(d.note, 8000), f: STR(d.f, 60), mo: STR(d.mo, 60),
     hyp: !!d.hyp, fam: Array.isArray(d.fam) ? d.fam.map(x => STR(x, 40)).filter(Boolean).slice(0, 10) : [],
   };

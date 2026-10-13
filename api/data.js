@@ -140,10 +140,11 @@ export default handler(async (req, res, ctx, url) => {
     if (!editor && me.person_id !== cur.id) return fail(res, 403, 'forbidden');
     const links = cleanLinks(body.links);
     const data = { ...cur.data }; if (links.length) data.links = links; else delete data.links;
+    if (body.hasOwnProperty('lp')) { const lp = S(body.lp, 160); if (lp) data.lp = lp; else delete data.lp; }
     if (body.hasOwnProperty('dna')) { if (DNA_CO.includes(body.dna)) data.dna = body.dna; else delete data.dna; }
     const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
     if (!row) return fail(res, 409, 'conflict');
-    await revision('person', cur.id, 'update', { links: cur.data.links || [], dna: cur.data.dna || '' }, { links, dna: data.dna || '' }, me.id);
+    await revision('person', cur.id, 'update', { links: cur.data.links || [], dna: cur.data.dna || '', lp: cur.data.lp || '' }, { links, dna: data.dna || '', lp: data.lp || '' }, me.id);
     return done({ person: { id: row.id, ...row.data, v: row.version, last: { by: me.id, at: row.updated_at, action: 'update' } } }, cur.id);
   }
   if (op === 'person.save') {
