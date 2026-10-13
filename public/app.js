@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610131436';
+const BUILD = '202610131439';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2216,11 +2216,11 @@ function vHome() {
     <div class="hcol">
       ${tgCard()}
       <div class="h-today">${todayCard()}</div>
-      <div class="hcard"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
-      <div class="hcard"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
+      <div class="hcard h-kin"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
+      <div class="hcard h-voice"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Відкрийте картку бабусі чи дідуся → «Записати спогад» і попросіть розповісти, як жили. Це найцінніше, що можна зберегти.</p>'}</div>
     </div>
     <div class="hcol">
-      <div class="hcard"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const H = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin').sort((a, b) => b.p - a.p).slice(0, 3); return H.length ? `<ul class="wantl">${H.map(x => `<li><button class="wantc" data-act="hyp-open" data-id="${esc(x.id)}"><b>${esc(x.title)}</b><span class="small muted">${hypAns(x.id).length ? hypAns(x.id).length + ' відповід.' : 'ще без відповіді'}</span></button></li>`).join('')}</ul>` : ''; })()}</div>
+      <div class="hcard h-hyp"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const H = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin').sort((a, b) => b.p - a.p).slice(0, 3); return H.length ? `<ul class="wantl">${H.map(x => `<li><button class="wantc" data-act="hyp-open" data-id="${esc(x.id)}"><b>${esc(x.title)}</b><span class="small muted">${hypAns(x.id).length ? hypAns(x.id).length + ' відповід.' : 'ще без відповіді'}</span></button></li>`).join('')}</ul>` : ''; })()}</div>
       <div class="hcard"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
       <div class="hcard h-ask"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}</div>
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>

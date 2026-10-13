@@ -1174,3 +1174,4 @@ html.bk-full .bk-toc{position:fixed;bottom:calc(60px + env(safe-area-inset-botto
   .hgrid .tgc{order:1}.hgrid .h-today{order:2}.hgrid .h-ask{order:3}
 }
 .h-today{display:grid}
+@media(max-width:900px){.hgrid .h-hyp{order:11}.hgrid .h-voice{order:12}.hgrid .hcol>:not(.tgc):not(.h-today):not(.h-ask):not(.h-hyp):not(.h-voice):not(.h-kin){order:13}.hgrid .hcol>.h-kin{order:10}}
