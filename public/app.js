@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610130700';
+const BUILD = '202610130706';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1479,7 +1479,7 @@ function vAdmin() {
     const rows = sortRows(st.members.map(m => { const c = st.cur[m.id] || {}, p = st.prev[m.id] || {}; return { id: m.id, name: names[m.id], role: m.role, time: c.time || 0, ptime: p.time || 0, opens: c.opens || 0, days: c.days || 0, sessions: c.sessions || 0, edits: c.edits || 0, last: c.last || '' }; }), 'time');
     const active = Object.values(st.cur).filter(x => x.time || x.opens).length, pactive = Object.values(st.prev).filter(x => x.time || x.opens).length;
     const viewsName = { tree: 'Дерево', p: 'Картки людей', person: 'Картки людей', families: 'Родини', fam: 'Родини', people: 'Покажчик', docs: 'Документи', admin: 'Панель власника' };
-    const views = {}; Object.entries(st.views || {}).forEach(([k, v]) => { const n = viewsName[k] || k; views[n] = (views[n] || 0) + v; });
+    const views = {}; Object.entries(st.views || {}).forEach(([k, v]) => { if (k === 'admin') return; const n = viewsName[k] || k; views[n] = (views[n] || 0) + v; });
     body = `<div class="bar1"><div class="seg">${PERIODS.map(([k, t]) => `<button aria-pressed="${a.period === k}" data-per="${k}">${t}</button>`).join('')}<button aria-pressed="${a.period === 'custom'}" data-per="custom">Свій</button></div>
       ${a.period === 'custom' ? `<input type="date" class="in" id="pf" value="${esc((a.from || '').slice(0, 10))}" style="width:auto"><input type="date" class="in" id="pt" value="${esc((a.to || '').slice(0, 10))}" style="width:auto"><button class="btn line small" data-act="per-apply">Показати</button>` : ''}
       <span class="small muted">порівняння з попереднім таким самим періодом</span></div>
