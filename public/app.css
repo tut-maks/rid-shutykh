@@ -458,10 +458,10 @@ main.wrap.wide{max-width:none;padding-inline:20px}
 
 /* рамка «наш запис» на скані */
 .pv-marks{position:absolute;pointer-events:none;transform-origin:center center}
-.pv-mark{position:absolute;border:3px solid #FF5A36;border-radius:4px;box-shadow:0 0 14px rgba(255,90,54,.7),inset 0 0 0 2000px rgba(255,210,63,.10);animation:pvMk 1.6s ease-in-out 2}
-.pv-mark.draft{border-style:dashed;box-shadow:none;animation:none}
-@keyframes pvMk{50%{border-color:#FFD23F}}
-.pv.zoomed .pv-mark{border-width:2px}
+.pv-mark{position:absolute;border:0;border-radius:6px;outline:2px solid #FF5A36;outline-offset:5px;box-shadow:0 0 0 5px transparent,0 0 12px 7px rgba(255,90,54,.28);animation:pvMk 1.6s ease-in-out 2}
+.pv-mark.draft{outline-style:dashed;outline-offset:0;box-shadow:none;animation:none}
+@keyframes pvMk{50%{outline-color:#FFD23F}}
+.pv.zoomed .pv-mark{outline-width:1.5px;outline-offset:3px}
 .pv-find{justify-self:start;background:#FF5A36;color:#fff;border:0;border-radius:20px;padding:9px 16px;font-size:15px;font-weight:600;cursor:pointer;min-height:40px}
 .pv-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#24201B;color:#EDE8DF;border:1px solid #3B352C;border-radius:10px;padding:8px 12px;font-size:14px;z-index:4}
 .pv-hint button{margin-left:8px;background:none;border:1px solid #6b6255;color:#EDE8DF;border-radius:6px;padding:4px 10px;cursor:pointer}
