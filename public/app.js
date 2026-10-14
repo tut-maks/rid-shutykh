@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610142014';
+const BUILD = '202610142109';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2151,7 +2151,11 @@ function vStats() {
   const nm = p => String(p.n || '').replace(/\s*\(.*?\)/g, '').trim();
   const sur = {}; F.forEach(p => { for (const x of [p.s, p.m].filter(Boolean)) { const k = x.split(/[\s/]/)[0]; (sur[k] ||= { n: 0, y: 9999, pl: new Set() }); sur[k].n++; const y = yN(p.b); if (y) sur[k].y = Math.min(sur[k].y, y); if (p.bp) sur[k].pl.add(p.bp.split(',')[0]); } });
   const life = F.map(p => ({ p, b: yN(p.b), d: yN(p.d) })).filter(x => x.b && x.d && x.d >= x.b).map(x => ({ ...x, a: x.d - x.b }));
-  const cent = {}; life.forEach(x => { const c = Math.floor(x.b / 100) + 1; (cent[c] ||= []).push(x.a); });
+  // точний вік (за повними датами, якщо є) — діти до 5 років окремо, у середній вік не входять
+  const dOf = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? new Date(+m[3], m[2] - 1, +m[1]) : null; };
+  const ageX = x => { const b = dOf(x.p.b), d = dOf(x.p.d); return b && d && d >= b ? (d - b) / (365.25 * 864e5) : x.a; };
+  const cent = {}; life.forEach(x => { const c = Math.floor(x.b / 100) + 1, g = (cent[c] ||= { a: [], k: 0 }); if (ageX(x) < 5) g.k++; else g.a.push(x.a); });
+  const kidsAll = Object.values(cent).reduce((n, g) => n + g.k, 0);
   const kids = F.map(p => ({ p, k: (KIDS[p.id] || []).length })).filter(x => x.k).sort((a, b) => b.k - a.k);
   const places = cnt(F.map(p => p.bp && p.bp.split(',')[0].trim()));
   return `<div class="lede"><h1>Цифри роду</h1><p class="small muted">Усе пораховано з карток дерева — що більше внесемо, то точніше.</p></div>
@@ -2167,7 +2171,8 @@ function vStats() {
     <div class="sec"><h3>Найчастіші імена</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Чоловічі')}${sortTh(1, 'Скільки', 1)}</tr></thead><tbody>${cnt(F.filter(p => p.sex === 'm').map(nm)).slice(0, 15).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div>
       <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Жіночі')}${sortTh(1, 'Скільки', 1)}</tr></thead><tbody>${cnt(F.filter(p => p.sex === 'f').map(nm)).slice(0, 15).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Найдовше прожили</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки життя')}${sortTh(2, 'Вік', 1)}</tr></thead><tbody>${life.sort((a, b) => b.a - a.a).slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)}</td><td class="mono">${x.b}–${x.d}</td><td class="mono">${x.a}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Немає</td></tr>'}</tbody></table></div>
-      ${Object.keys(cent).length ? `<p class="small muted">Середній вік (за відомими датами): ${Object.entries(cent).map(([c, a]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${Math.round(a.reduce((x, y) => x + y, 0) / a.length)} р. (${a.length} люд.)`).join('; ')}. Діти, що померли малими, теж враховані.</p>` : ''}</div>
+      ${Object.keys(cent).length ? `<p class="small muted">Середній вік (за відомими датами, без дітей, що померли до 5 років): ${Object.entries(cent).map(([c, g]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${g.a.length ? Math.round(g.a.reduce((x, y) => x + y, 0) / g.a.length) + ' р. (' + g.a.length + ' люд.)' : '—'}`).join('; ')}.</p>
+      ${kidsAll ? `<p class="small muted">Померли до 5 років: ${Object.entries(cent).filter(([, g]) => g.k).map(([c, g]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${g.k} ${g.k % 10 === 1 && g.k % 100 !== 11 ? 'дитина' : g.k % 10 >= 2 && g.k % 10 <= 4 && (g.k % 100 < 12 || g.k % 100 > 14) ? 'дитини' : 'дітей'}, це ${Math.round(g.k / (g.k + g.a.length) * 100)}% усіх, чиї роки життя відомі`).join('; ')}.</p>` : ''}` : ''}</div>
     <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
   </div>`;
