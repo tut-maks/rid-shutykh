@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610142117';
+const BUILD = '202610142214';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -135,9 +135,24 @@ function ridMentions(id) {
   const t = loadText('history'); if (!t || !t.md) return [];
   return t.md.split(/\n\s*\n/).filter(par => par.includes(`[[p:${id}|`) && !/^#/.test(par.trim()) && !/^\s*-\s/.test(par)).slice(0, 4);
 }
+/* опис людини починається з народження (вимога власника: усе по хронології) */
+function birthPara(p, docs) {
+  if (/^\s*(Народи|Нар\.|Хрещен)/i.test(p.note || '')) return '';
+  const nm = String(p.n || '').replace(/\s*\(.*?\)/g, '').trim().slice(0, 3).toLowerCase();
+  const bd = docs.find(d => { const w = (String(d.title || '').match(/^(?:Народження|Хрещення)[:\s]+([^\s,(]+)/) || [])[1]; return w && nm && w.toLowerCase().slice(0, 3) === nm; });
+  const m = String(p.b || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/), y = String(p.b || '').match(/\d{4}/);
+  const bs = String(p.b || '').trim(), rg = bs.match(/(\d{4})\s*[–-]\s*(\d{4})/);
+  const when = m ? `${+m[1]} ${MONTHS_G[m[2] - 1]} ${m[3]} року` : rg ? `приблизно в ${rg[1]}–${rg[2]} роках` : /^\d{4}$/.test(bs) ? `${bs} року` : y ? `близько ${y[0]} року` : '';
+  const par = [p.f, p.mo].filter(x => x && P[x]);
+  if (!when && !par.length && !bd) return '';
+  const v = p.sex === 'f' ? 'Народилася' : p.sex === 'm' ? 'Народився' : 'Народження:';
+  const t = [when || p.bp ? `${v}${when ? ' ' + when : ''}${p.bp ? ` (${esc(p.bp)})` : ''}.` : '', par.length ? `${par.length > 1 ? 'Батьки' : P[par[0]].sex === 'f' ? 'Мати' : 'Батько'} — ${par.map(pLink).join(' і ')}.` : '', bd ? `<a href="#" class="doclink" data-doc="${bd.id}">${esc(bd.title.match(/^Хрещення/) ? 'Запис про хрещення' : 'Запис про народження')}</a>` : ''].filter(Boolean).join(' ');
+  return t ? `<p class="about birth-p">${t}</p>` : '';
+}
+const docYear = d => +((String(d.date || d.title || '').match(/\d{4}/) || ['9999'])[0]);
 function aboutMore(p, docs) {
   const plain = t => esc(String(t || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2'));
-  const ds = docs.filter(d => d.text || d.line).slice(0, 8);
+  const ds = docs.filter(d => d.text || d.line).slice().sort((a, b) => docYear(a) - docYear(b)).slice(0, 8);
   const rid = ridMentions(p.id);
   return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date ? ` <span class="muted small mono">${esc(d.date)}</span>` : ''}<p>${glossify(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' ')))}</p></div>`).join('')}</div>` : ''}
     ${rid.length ? `<div class="abt-g"><h4>З «Історії роду»</h4>${rid.map(x => `<p>${glossify(plain(x))}</p>`).join('')}<a class="small" href="#/families">Читати всю історію →</a></div>` : ''}`;
@@ -654,6 +669,7 @@ function vPerson() {
   <div class="sec" style="align-content:start;gap:30px">
     <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Уточнити / запитати</button></span></h3>
       ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
+      ${birthPara(p, docs)}
       ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : ''}
       ${aboutMore(p, docs)}
       ${!p.note && !docs.length && !ridMentions(p.id).length ? `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>` : ''}
