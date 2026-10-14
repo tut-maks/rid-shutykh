@@ -161,7 +161,7 @@ export default handler(async (req, res, ctx, url) => {
       if (cur.data.root) data.root = true;
       if (cur.data.portrait && !body.data.hasOwnProperty('portrait')) data.portrait = cur.data.portrait;
       // поля, яких немає у формі редагування, не губити (джерела, соцмережі)
-      for (const k of ['src', 'links', 'dna']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
+      for (const k of ['src', 'links', 'dna', 'pc']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
       const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
       if (!row) return fail(res, 409, 'conflict');
       await revision('person', cur.id, 'update', cur.data, data, me.id);
@@ -215,7 +215,7 @@ export default handler(async (req, res, ctx, url) => {
     const cur = await db.get('persons', { eq: { id: S(body.id, 60), deleted: false } });
     const ph = await db.get('photos', { eq: { id: S(body.photo, 60), deleted: false } });
     if (!cur || !ph || (ph.person_id !== cur.id && !((await cfgGet('photo_people')) || {})[ph.id]?.includes(cur.id))) return fail(res, 404, 'not_found'); // своє фото або фото, де людину позначено
-    const nd = { ...cur.data, portrait: ph.id };
+    const nd = cleanPerson({ ...cur.data, portrait: ph.id, pc: body.pc && typeof body.pc === 'object' ? { ...body.pc, id: ph.id } : null });
     const [row] = await db.update('persons', { eq: { id: cur.id } }, { data: nd, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
     await revision('person', cur.id, 'update', cur.data, nd, me.id);
     return done({ person: { id: row.id, ...row.data, v: row.version } }, cur.id);

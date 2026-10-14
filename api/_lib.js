@@ -135,6 +135,11 @@ export function cleanPerson(d) {
     hyp: !!d.hyp, fam: Array.isArray(d.fam) ? d.fam.map(x => STR(x, 40)).filter(Boolean).slice(0, 10) : [],
   };
   if (d.portrait) o.portrait = STR(d.portrait, 60);
+  if (d.portrait && d.pc && typeof d.pc === 'object') { // кадр обличчя на головному фото: частки зображення, квадрат
+    const n = v => Math.round(Math.max(0, Math.min(1, Number(v) || 0)) * 1e4) / 1e4;
+    const pc = { id: STR(d.pc.id, 60), x: n(d.pc.x), y: n(d.pc.y), s: n(d.pc.s), r: Math.round(Math.max(0.05, Math.min(20, Number(d.pc.r) || 1)) * 1e4) / 1e4 };
+    if (pc.id === o.portrait && pc.s >= 0.02) o.pc = pc;
+  }
   if (Array.isArray(d.src)) o.src = d.src.slice(0, 30).map(s => ({ t: STR(s?.t, 120), u: STR(s?.u, 300) })).filter(s => /^https?:\/\/[^\s<>"']+$/.test(s.u)); // джерела: будь-який сайт (і старі http-адреси, напр. сайти шкіл)
   if (d.root) o.root = true;
   const ln = cleanLinks(d.links); if (ln.length) o.links = ln;
