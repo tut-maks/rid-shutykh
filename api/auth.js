@@ -6,6 +6,7 @@ const pub = m => ({ id: m.id, name: m.name, email: m.email, role: m.role, person
 const normEmail = e => String(e || '').trim().toLowerCase().slice(0, 200);
 const strong = p => typeof p === 'string' && p.length >= 8 && p.length <= 200;
 
+const TEASER = { v: null, at: 0 }; // кеш цифр для гостей (10 хв)
 export default handler(async (req, res, _ctx, url) => {
   const a = url.searchParams.get('a');
 
@@ -69,6 +70,32 @@ export default handler(async (req, res, _ctx, url) => {
     return send(res, 200, { member: pub(m) });
   }
 
+  /* ── Для гостя без входу: лише загальні цифри й «силует» родоводу (без імен, дат і фото) ── */
+  if (a === 'teaser') {
+    const ip = clientIp(req);
+    if (await tooMany('ip:' + ip, 60, 15)) return fail(res, 429, 'too_many');
+    if (!TEASER.v || Date.now() - TEASER.at > 10 * 60 * 1000) {
+      const [ps, docs, phs] = await Promise.all([
+        db.list('persons', { eq: { deleted: false }, select: 'id,data' }),
+        db.list('documents', { select: 'id' }),
+        db.list('photos', { eq: { deleted: false }, select: 'id,mime' }),
+      ]);
+      const P = Object.fromEntries(ps.map(p => [p.id, p.data || {}]));
+      const yr = s => { const m = /(1[5-9]\d\d|20\d\d)/.exec(String(s || '')); return m ? +m[1] : null; };
+      const oldest = Math.min(...ps.map(p => yr(p.data?.b)).filter(Boolean));
+      const root = ps.find(p => p.data?.root)?.id;
+      // предки «кореня» по поколіннях: скільки відомо з можливих 2^g
+      const gens = []; let cur = root ? [root] : [];
+      for (let g = 0; g < 10 && cur.length; g++) { gens.push(cur.length); const nx = []; for (const id of cur) for (const k of ['f', 'mo']) if (P[id]?.[k] && P[P[id][k]]) nx.push(P[id][k]); cur = nx; }
+      const fams = new Set(ps.flatMap(p => p.data?.fam || []));
+      TEASER.v = { people: ps.length, docs: docs.length, photos: phs.filter(x => !/^audio/.test(x.mime || '')).length, voices: phs.filter(x => /^audio/.test(x.mime || '')).length, oldest: isFinite(oldest) ? oldest : null, gens, fams: fams.size };
+      TEASER.at = Date.now();
+    }
+    const cfg = await joinCfg();
+    res.setHeader('Cache-Control', 'no-store');
+    return send(res, 200, { ...TEASER.v, open: !!cfg?.on });
+  }
+
   /* ── Самостійна реєстрація за посиланням ?join=<код> ── */
   if (a === 'join') {
     const ip = clientIp(req);
@@ -81,11 +108,13 @@ export default handler(async (req, res, _ctx, url) => {
     const b = await readJSON(req, 30_000); const ip = clientIp(req);
     if (await tooMany('ip:' + ip, 30, 15) || await tooMany('reg:' + ip, 5, 60)) return fail(res, 429, 'too_many');
     const cfg = await joinCfg();
-    if (!cfg || !cfg.on || !safeEq(b.c, cfg.code)) { await attempt('ip:' + ip); return fail(res, 404, 'invalid_join'); }
+    const viaLink = !!b.c; // без коду — з головної сторінки (коли реєстрацію увімкнено); заявку все одно підтверджує власник
+    if (!cfg || !cfg.on || (viaLink && !safeEq(b.c, cfg.code))) { await attempt('ip:' + ip); return fail(res, 404, 'invalid_join'); }
     const e = normEmail(b.email);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return fail(res, 400, 'email');
     if (!strong(b.password)) return fail(res, 400, 'weak');
     const data = cleanJoin(b.data || {});
+    if (!viaLink) data.via = 'site';
     if (!data.n || !data.s) return fail(res, 400, 'name');
     if (!data.father && !data.mother) return fail(res, 400, 'parents');
     await attempt('reg:' + ip);
