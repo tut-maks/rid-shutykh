@@ -1302,3 +1302,6 @@ html{touch-action:manipulation}
 @media(max-width:820px){.tz-row i{width:4px;height:4px}.tz-row{gap:1px}.tz-row:last-child i{width:10px;height:10px}}
 
 .war-n{display:flex;flex-wrap:wrap;gap:8px 18px;margin:6px 0}.war-n span{font-size:14px}.war-n b{font-family:var(--f-display);font-size:24px;margin-right:4px}.war-kil{color:var(--wine)}.war-mis{color:#8a6d1f}
+
+.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px;align-items:start}.term{padding:10px 0;border-top:1px solid var(--line,#e5ded3)}.term b{font-family:var(--f-display);font-size:16px}.term p{margin:4px 0}
+@media(max-width:820px){.terms{grid-template-columns:1fr}}
