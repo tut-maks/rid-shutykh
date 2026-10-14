@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610142214';
+const BUILD = '202610142217';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -650,6 +650,7 @@ function vPerson() {
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
       ${p.d ? `<dt>Смерть</dt><dd><span class="mono">${esc(p.d)}</span>${p.dp ? ' · ' + esc(p.dp) : ''}</dd>` : ''}
+      ${p.war ? `<dt>Війна</dt><dd>${{ ww1: 'Перша світова', ww2: 'Друга світова', other: 'воював' }[p.war.w]} — ${esc({ ret: p.sex === 'f' ? 'повернулася' : 'повернувся', kil: p.sex === 'f' ? 'загинула' : 'загинув', mis: p.sex === 'f' ? 'пропала безвісти' : 'пропав безвісти', unk: 'доля невідома' }[p.war.f])}${p.war.h ? ' <span class="small muted">(Є припущення)</span>' : ''}</dd>` : ''}
       ${p.lp ? `<dt>${p.d ? 'Жив' + (p.sex === 'f' ? 'ла' : '') : 'Живе'}</dt><dd>${esc(p.lp)} <a class="small" href="#/geo" data-act="geo-k" data-k="${esc(placeKey(p.lp))}">на карті</a></dd>` : ''}
     </dl>
     ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
@@ -754,6 +755,8 @@ function personForm(p, preset = {}) {
     <label class="f">Смерть<input class="in" id="e-d" value="${esc(v.d)}"></label>
     <label class="f">Місце смерті / поховання<input class="in" id="e-dp" value="${esc(v.dp)}"></label>
     <label class="f">Місце проживання (де живе або жив)<input class="in" id="e-lp" value="${esc(v.lp)}" placeholder="Напр.: Київ; Бровари; Вороньки"></label>
+    <label class="f">Війна<select class="in" id="e-ww"><option value="">не воював / невідомо</option>${[['ww1', 'Перша світова'], ['ww2', 'Друга світова'], ['other', 'інша війна']].map(([k, t]) => `<option value="${k}"${v.war?.w === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    <label class="f">Доля на війні<select class="in" id="e-wf">${[['ret', 'повернувся'], ['kil', 'загинув'], ['mis', 'пропав безвісти'], ['unk', 'невідомо']].map(([k, t]) => `<option value="${k}"${(v.war?.f || 'unk') === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
     <label class="f">Батько<select class="in" id="e-f">${opts(v.f, 'm')}</select></label>
     <label class="f">Мати<select class="in" id="e-mo">${opts(v.mo, 'f')}</select></label>
   </div>
@@ -763,7 +766,7 @@ function personForm(p, preset = {}) {
 }
 function readForm() {
   const g = id => ($('#e-' + id)?.value || '').trim();
-  return { n: g('n'), pt: g('pt'), s: g('s'), m: g('m'), sex: g('sex'), b: g('b'), bp: g('bp'), d: g('d'), dp: g('dp'), lp: g('lp'), f: g('f'), mo: g('mo'), note: g('note'), hyp: !!$('#e-hyp')?.checked, fam: [...document.querySelectorAll('.e-fam:checked')].map(x => x.value) };
+  return { n: g('n'), pt: g('pt'), s: g('s'), m: g('m'), sex: g('sex'), b: g('b'), bp: g('bp'), d: g('d'), dp: g('dp'), lp: g('lp'), f: g('f'), mo: g('mo'), note: g('note'), hyp: !!$('#e-hyp')?.checked, fam: [...document.querySelectorAll('.e-fam:checked')].map(x => x.value), war: $('#e-ww')?.value ? { w: $('#e-ww').value, f: $('#e-wf')?.value || 'unk', ...(P[S.arg]?.war?.h ? { h: true } : {}) } : null };
 }
 function modal(html) { $('#layer').innerHTML = `<div class="scrim" data-close-scrim><div class="modal" role="dialog" aria-modal="true"><button type="button" class="mx" data-act="close" aria-label="Закрити" title="Закрити (Esc)">×</button>${html}</div></div>`; if (matchMedia('(hover:hover)').matches) setTimeout(() => $('#layer .modal input:not([type=file]), #layer .modal textarea')?.focus(), 30); }
 const closeLayer = () => { $('#layer').innerHTML = ''; document.body.classList.remove('noscroll'); };
@@ -2191,6 +2194,14 @@ function vStats() {
     <div class="sec"><h3>Найдовше прожили</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки життя')}${sortTh(2, 'Вік', 1)}</tr></thead><tbody>${life.sort((a, b) => b.a - a.a).slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)}</td><td class="mono">${x.b}–${x.d}</td><td class="mono">${x.a}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Немає</td></tr>'}</tbody></table></div>
       ${Object.keys(cent).length ? `<p class="small muted">Середній вік (за відомими датами, без дітей, що померли до 5 років): ${Object.entries(cent).map(([c, g]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${g.a.length ? Math.round(g.a.reduce((x, y) => x + y, 0) / g.a.length) + ' р. (' + g.a.length + ' люд.)' : '—'}`).join('; ')}.</p>
       ${kidsAll ? `<p class="small muted">Померли до 5 років: ${Object.entries(cent).filter(([, g]) => g.k).map(([c, g]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${g.k} ${g.k % 10 === 1 && g.k % 100 !== 11 ? 'дитина' : g.k % 10 >= 2 && g.k % 10 <= 4 && (g.k % 100 < 12 || g.k % 100 > 14) ? 'дитини' : 'дітей'}, це ${Math.round(g.k / (g.k + g.a.length) * 100)}% усіх, чиї роки життя відомі`).join('; ')}.</p>` : ''}` : ''}</div>
+    ${(() => { const WN = { ww1: 'Перша світова', ww2: 'Друга світова', other: 'Інша' }, FN = { ret: 'повернувся', kil: 'загинув', mis: 'пропав безвісти', unk: 'невідомо' };
+      const W = F.filter(p => p.war); if (!W.length) return '';
+      const c = k => W.filter(p => p.war.f === k).length, fw = (p, k) => p.sex === 'f' ? FN[k].replace(/вся$/, 'лася').replace(/ув$/, 'ула').replace(/ав /, 'ала ') : FN[k];
+      const ws = [...new Set(W.map(p => p.war.w))];
+      return `<div class="sec war-st"><h3>Війни</h3><p class="small muted">Хто з роду воював (за базами «Пам'ять народу», ОБД, списками військкоматів).${ws.length > 1 ? ' ' + ws.map(w => `${WN[w]}: ${W.filter(p => p.war.w === w).length}`).join(', ') + '.' : ''}</p>
+        <div class="war-n"><span><b>${W.length}</b> воювали</span><span><b>${c('kil')}</b> загинули</span><span><b>${c('mis')}</b> пропали безвісти</span><span><b>${c('ret')}</b> повернулися</span>${c('unk') ? `<span><b>${c('unk')}</b> доля невідома</span>` : ''}</div>
+        <p class="small muted">Не повернулися ${c('kil') + c('mis')} з ${W.length} (${Math.round((c('kil') + c('mis')) / W.length * 100)}%).${W.some(p => p.war.h) ? ' * — що це саме наш родич, поки «Є припущення».' : ''}</p>
+        <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Війна')}${sortTh(3, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life(p))}</td><td class="small">${WN[p.war.w]}</td><td class="small war-${p.war.f}">${fw(p, p.war.f)}</td></tr>`).join('')}</tbody></table></div></div>`; })()}
     <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
   </div>`;

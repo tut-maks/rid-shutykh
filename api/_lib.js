@@ -144,6 +144,7 @@ export function cleanPerson(d) {
   if (d.root) o.root = true;
   const ln = cleanLinks(d.links); if (ln.length) o.links = ln;
   if (typeof d.dna === 'string' && d.dna) o.dna = STR(d.dna, 30);
+  if (d.war && typeof d.war === 'object' && ['ww1', 'ww2', 'other'].includes(d.war.w)) o.war = { w: d.war.w, f: ['ret', 'kil', 'mis', 'unk'].includes(d.war.f) ? d.war.f : 'unk', ...(d.war.h ? { h: true } : {}) }; // участь у війні: яка, доля, h — припущення
   return o;
 }
 
