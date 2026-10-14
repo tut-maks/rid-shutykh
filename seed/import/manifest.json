@@ -17024,5 +17024,100 @@
     "dariia_mi13"
    ]
   }
+ },
+ {
+  "kind": "person",
+  "id": "kuzma_lev",
+  "key": "person-kuzma_lev",
+  "data": {
+   "n": "Кузьма",
+   "pt": "Іванович",
+   "s": "Левченко",
+   "sex": "m",
+   "bp": "Веприк",
+   "fam": [
+    "krasnovyd"
+   ],
+   "note": "Батько Феодори (1895) — так записаний у її метриці: «собственник Косма Иванов Левченко». Є припущення, що він народився 1.11.1849 у Веприку в Івана Івановича Левченка й Анни Матвіївни (метрика є серед документів, але зв'язок не доведено)."
+  }
+ },
+ {
+  "kind": "person",
+  "id": "yevdokia_nlev",
+  "key": "person-yevdokia_nlev",
+  "spouseOf": "kuzma_lev",
+  "data": {
+   "n": "Євдокія",
+   "pt": "Несторівна",
+   "s": "Левченко",
+   "sex": "f",
+   "fam": [
+    "krasnovyd"
+   ],
+   "note": "Мати Феодори (1895) — за її метрикою."
+  }
+ },
+ {
+  "kind": "person",
+  "id": "feodora_lev",
+  "key": "person-feodora_lev",
+  "data": {
+   "n": "Феодора",
+   "pt": "Кузьмівна",
+   "s": "Левченко",
+   "sex": "f",
+   "b": "07.09.1895",
+   "bp": "Веприк",
+   "f": "kuzma_lev",
+   "mo": "yevdokia_nlev",
+   "fam": [
+    "krasnovyd"
+   ],
+   "hyp": true,
+   "note": "Народилася 7.09.1895 у Веприку (метрика на картці); хрещені — Євфросинія Яківна і Яків Трохимович Левченки. Є припущення, що вона — мати Пархома (Пахомія, 15.05.1916): у його метриці мати — «Феодора Косьмина Левченко, девица», Веприк, а інших Феодор Кузьмівн Левченко такого віку в покажчику метрик Чернігівщини немає. Ймовірність висока, але прямого документа, що це та сама людина, поки немає."
+  }
+ },
+ {
+  "kind": "personpatch",
+  "person": "parkhom",
+  "key": "pp-parkhom-mo-feodora",
+  "set": {
+   "mo": "feodora_lev"
+  }
+ },
+ {
+  "key": "lk2-fsfeodora1895",
+  "kind": "docpatch",
+  "id": "fsfeodora1895",
+  "data": {
+   "people": [
+    "yakiv_lev",
+    "feodora_lev",
+    "kuzma_lev",
+    "yevdokia_nlev"
+   ]
+  }
+ },
+ {
+  "key": "lk2-fsparkhom1916",
+  "kind": "docpatch",
+  "id": "fsparkhom1916",
+  "data": {
+   "people": [
+    "parkhom",
+    "feodora_lev"
+   ]
+  }
+ },
+ {
+  "key": "lk2-fsparkhom1916c",
+  "kind": "docpatch",
+  "id": "fsparkhom1916c",
+  "data": {
+   "people": [
+    "parkhom",
+    "feodora_lev"
+   ]
+  }
  }
 ]
