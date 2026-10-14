@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610142109';
+const BUILD = '202610142117';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -463,7 +463,9 @@ function vAll(tabs) {
   const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
   // батьки → діти: товстіша лінія; сусідні родини в одному ряду — кожна на своїй висоті, щоб лінії не зливалися в одну
   const FL = Object.entries(fam).map(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
-    const px = two ? (cx(ps[0]) + cx(ps[1])) / 2 : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]); const xs = kids.map(cx);
+    /* батьки стоять далеко (між ними чужі картки) — лінія до дітей іде від кільця біля правого з батьків, а не з середини, яка може припасти на чужу картку */
+    const [pa, pb] = two && cx(ps[0]) > cx(ps[1]) ? [ps[1], ps[0]] : ps, far = two && L.N[pb].x - (L.N[pa].x + T2.W) > T2.GX + 30;
+    const px = two ? (far ? L.N[pb].x - 13 : (cx(pa) + cx(pb)) / 2) : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]); const xs = kids.map(cx);
     return { kids, px, py, xs, x1: Math.min(px, ...xs), x2: Math.max(px, ...xs), row: L.N[kids[0]].r }; });
   const LANE = 14, rowsF = {}; FL.forEach(o => (rowsF[o.row] ||= []).push(o));
   Object.values(rowsF).forEach(list => { const ends = []; list.sort((a, b) => a.x1 - b.x1).forEach(o => { let i = ends.findIndex(e => e < o.x1 - 10); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = o.x2; o.lane = i; }); list.forEach(o => { o.n = ends.length; }); });
