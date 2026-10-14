@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610132123';
+const BUILD = '202610141223';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -421,6 +421,20 @@ function layoutTD(center) {
     const k = extra.length, rightTaken = A.n.some(x => x.r === o.r && Math.abs(x.x - (o.x + P2)) < 1 && (SPOUSES[id] || []).some(y => y.id === x.id));
     if (!rightTaken) { A.n.forEach(x => { if (x.x > o.x) x.x += k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
     else { A.n.forEach(x => { if (x.x < o.x) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
+  // батьки й рідня подружжя (невістки, зяті, свати): кнопка «▲» над карткою; розгорнуті — ставимо над людиною, решту дерева розсуваємо
+  const upHidden = id => { const p = P[id]; return !!p && [p.f, p.mo].some(x => x && P[x] && !seen.has(x)); };
+  A.n.slice().forEach(o0 => { const id = o0.id; if (id === center || !upHidden(id)) return;
+    if (!EXP[id] && !f.allOpen) { (hid[id] ||= {}).up = true; return; }
+    const o = A.n.find(x => x.id === id); const keep = SIBX[id]; if (keep === undefined) SIBX[id] = 0;
+    const Ub = up(id, o.r, 'C'); if (keep === undefined) delete SIBX[id];
+    Ub.n = Ub.n.filter(n => n.id !== id); if (!Ub.n.length) return; shift(Ub, o.x);
+    const rowsU = [...new Set(Ub.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
+    const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
+    let off = 0; for (const r of rowsU) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Ub.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
+    shift(Ub, off);
+    let d = 0; for (const r of rowsU) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Ub.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
+    if (d > 0) right.forEach(n => n.x += d);
+    Ub.n.forEach(n => add(A, n.id, n.x, n.r)); });
   if (!f.allOpen) A.n.forEach(o => { if (o.id !== center && !KX[o.id] && hasHidden(o.id) && !(KIDS[o.id] || []).some(k => seen.has(k))) /* хтось із дітей уже в дереві — решту відкриває «+N» біля нього */ (hid[o.id] ||= {}).kids = (KIDS[o.id] || []).filter(k => !seen.has(k)).length; });
   const rows = [...new Set(A.n.map(o => o.r))].sort((a, b) => b - a); const ri = Object.fromEntries(rows.map((r, i) => [r, i]));
   const minX = Math.min(...A.n.map(o => o.x)), maxX = Math.max(...A.n.map(o => o.x));
