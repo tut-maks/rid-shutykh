@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610142219';
+const BUILD = '202610142222';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2201,7 +2201,7 @@ function vStats() {
       return `<div class="sec war-st"><h3>Війни</h3><p class="small muted">Хто з роду воював (за базами «Пам'ять народу», ОБД, списками військкоматів).${ws.length > 1 ? ' ' + ws.map(w => `${WN[w]}: ${W.filter(p => p.war.w === w).length}`).join(', ') + '.' : ''}</p>
         <div class="war-n"><span><b>${W.length}</b> воювали</span><span><b>${c('kil')}</b> загинули</span><span><b>${c('mis')}</b> пропали безвісти</span><span><b>${c('ret')}</b> повернулися</span>${c('unk') ? `<span><b>${c('unk')}</b> доля невідома</span>` : ''}</div>
         <p class="small muted">Не повернулися ${c('kil') + c('mis')} з ${W.length} (${Math.round((c('kil') + c('mis')) / W.length * 100)}%).${W.some(p => p.war.h) ? ' * — що це саме наш родич, поки «Є припущення».' : ''}</p>
-        <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Війна')}${sortTh(3, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life(p))}</td><td class="small">${WN[p.war.w]}</td><td class="small war-${p.war.f}">${fw(p, p.war.f)}</td></tr>`).join('')}</tbody></table></div></div>`; })()}
+        <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Війна')}${sortTh(3, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life_(p))}</td><td class="small">${WN[p.war.w]}</td><td class="small war-${p.war.f}">${fw(p, p.war.f)}</td></tr>`).join('')}</tbody></table></div></div>`; })()}
     <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
   </div>`;
