@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610141223';
+const BUILD = '202610141250';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -370,15 +370,15 @@ function layoutTD(center) {
   const seen = new Set();
   const sibs = c => { const p = P[c]; const ps = [p.f, p.mo].filter(x => x && P[x]); if (!ps.length) return [c]; return [...new Set(ps.flatMap(x => KIDS[x] || []))].filter(x => x === c || !seen.has(x)).sort(sortS); };
   const EXP = S.ui.exp ||= {}; const SIBX = S.ui.sibx ||= {}; const DS = S.ui.dsib = {}; const DEF = innerWidth < 820 ? 3 : 4; const hid = S.ui.hid = {};
-  function up(c, r, side) { // блок предків людини c (c у x=0, ряд r)
+  function up(c, r, side, lim) { // блок предків людини c (c у x=0, ряд r); lim — з якого ряду ховати предків (коли відкрита рідня дружини/чоловіка)
     const B = mk(); const all = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
     const dflt = !SIBX[c] && !f.allOpen && SIBX[c] !== 0 && r === 0; const g = (SIBX[c] || f.allOpen || dflt) ? all : [c]; if (dflt && all.length > 1) DS[c] = 1; /* відкриті одразу лише брати й сестри центральної людини; решта — кнопкою ▸N */ if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
     let order = g.filter(x => x !== c); order = side === 'L' ? [...order, c] : side === 'R' ? [c, ...order] : g;
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
     const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
-    if ((fa || mo) && r >= DEF && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
+    if ((fa || mo) && (r >= DEF || (lim && r >= lim)) && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
     if (fa || mo) {
-      let F = fa ? up(fa, r + 1, mo ? 'L' : 'C') : null; let M = mo ? up(mo, r + 1, fa ? 'R' : 'C') : null;
+      let F = fa ? up(fa, r + 1, mo ? 'L' : 'C', lim) : null; let M = mo ? up(mo, r + 1, fa ? 'R' : 'C', lim) : null;
       let mid;
       if (F && M) { shift(M, sep(F, M)); const fx = F.n.find(o => o.id === fa).x, mx = M.n.find(o => o.id === mo).x; merge(F, M); mid = (fx + mx) / 2; shift(F, -mid); merge(B, F); }
       else { const X = F || M; const id = fa || mo; shift(X, -X.n.find(o => o.id === id).x); merge(B, X); }
@@ -393,7 +393,7 @@ function layoutTD(center) {
     if (X) merge(B, X); return B;
   }
   seen.add(center);
-  const A = S.ui.tmode === 'desc' ? (() => { const B = mk(); add(B, center, 0, 0); return B; })() : up(center, 0, (SPOUSES[center] || []).some(x => P[x.id]) ? 'L' : 'C'); /* є подружжя праворуч — брати й сестри ліворуч, щоб не накладались */ const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
+  const A = S.ui.tmode === 'desc' ? (() => { const B = mk(); add(B, center, 0, 0); return B; })() : up(center, 0, (SPOUSES[center] || []).some(x => P[x.id]) ? 'L' : 'C', (SPOUSES[center] || []).some(x => EXP[x.id] && P[x.id]) ? 1 : 0); /* відкрита рідня дружини/чоловіка — власні предки центру згортаються до батьків, щоб гілки не переплітались (розгорнути знову — ▲) */ /* є подружжя праворуч — брати й сестри ліворуч, щоб не накладались */ const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
   D.n.forEach(o => add(A, o.id, o.x, o.r));
   // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
   const KX = S.ui.kidx ||= {};
@@ -593,7 +593,7 @@ function vpMount() {
   const fb = vp.querySelector('[data-full]'); if (fb) fb.onclick = () => { S.ui.full = !S.ui.full; vp.classList.toggle('full', S.ui.full); document.body.classList.toggle('noscroll', S.ui.full); requestAnimationFrame(() => apply()); };
   vp.querySelectorAll('.tg').forEach(b => b.onclick = ev2 => { ev2.stopPropagation(); const id = b.dataset.exp || b.dataset.sibx || b.dataset.kidx || b.dataset.coll || b.dataset.spx; const el = st.querySelector(`[data-id="${id}"]`);
     S.ui.anchor = el ? { id, sx: V.x + el.offsetLeft * V.s, sy: V.y + el.offsetTop * V.s } : null;
-    if (b.dataset.spx) { (S.ui.spx ||= {})[id] = !(S.ui.spx || {})[id]; } else if (b.dataset.exp) S.ui.exp[id] = 1; else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { const w = b.dataset.cw; if (w === 'up') delete S.ui.exp[id]; else if (w === 'kid') delete (S.ui.kidx || {})[id]; else S.ui.sibx[id] = 0; }
+    if (b.dataset.spx) { (S.ui.spx ||= {})[id] = !(S.ui.spx || {})[id]; } else if (b.dataset.exp) { S.ui.exp[id] = 1; const c0 = treeCenter(); if ((SPOUSES[c0] || []).some(x => x.id === id)) { const st0 = [P[c0]?.f, P[c0]?.mo]; while (st0.length) { const a0 = st0.pop(); if (!a0 || !P[a0]) continue; delete S.ui.exp[a0]; st0.push(P[a0].f, P[a0].mo); } } } else if (b.dataset.sibx) S.ui.sibx[id] = 1; else if (b.dataset.kidx) (S.ui.kidx ||= {})[id] = 1; else { const w = b.dataset.cw; if (w === 'up') delete S.ui.exp[id]; else if (w === 'kid') delete (S.ui.kidx || {})[id]; else S.ui.sibx[id] = 0; }
     render(); });
   vp.onwheel = e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top); };
   vp.querySelector('[data-zoom-in]').onclick = () => zoomAt(1.25, vp.clientWidth / 2, vp.clientHeight / 2);
