@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610141250';
+const BUILD = '202610141638';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -466,6 +466,10 @@ function vAll(tabs) {
   Object.values(rowsF).forEach(list => { const ends = []; list.sort((a, b) => a.x1 - b.x1).forEach(o => { let i = ends.findIndex(e => e < o.x1 - 10); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = o.x2; o.lane = i; }); list.forEach(o => { o.n = ends.length; }); });
   FL.forEach(o => { const ty = top(o.kids[0]), by = ty - T2.GY / 2 + (o.lane - (o.n - 1) / 2) * Math.min(LANE, 64 / Math.max(1, o.n - 1));
     lines += `<path d="M${o.px} ${o.py}V${by}M${o.x1} ${by}H${o.x2}${o.xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc"/>`; });
+  // брати й сестри, чиїх батьків у дереві не показано (відкриті кнопкою ▸N): з'єднуємо їх «дужкою» над карткою, щоб було видно, що це одна родина
+  const SG = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && P[x]); if (!ps.length || ps.some(x => V.has(x))) return; (SG[ps.sort().join('|') + '@' + L.N[id].r] ||= []).push(id); });
+  Object.values(SG).forEach(ks => { if (ks.length < 2) return; const xs = ks.map(cx), ty = top(ks[0]), by = ty - T2.GY / 2 + 6;
+    lines += `<path d="M${Math.min(...xs)} ${by}H${Math.max(...xs)}${xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc sibl"/>`; });
   const q = (f.q || '').trim().toLowerCase();
   const anc = new Set(); (function up(id) { if (!id || anc.has(id) || !P[id]) return; anc.add(id); up(P[id].f); up(P[id].mo); })(center);
   const desc = new Set(); (function dn(id) { (KIDS[id] || []).forEach(k => { if (!desc.has(k)) { desc.add(k); dn(k); } }); })(center);
