@@ -16684,5 +16684,345 @@
     }
    ]
   }
+ },
+ {
+  "kind": "person",
+  "id": "pelageia_mvd",
+  "key": "person-pelageia_mvd",
+  "data": {
+   "n": "Пелагія",
+   "pt": "Михайлівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "fam": [
+    "semena"
+   ],
+   "note": "Дружина Семена Федоровича Вдовинця — так записана в метриках їхніх дітей (1902–1919, Вороньки). Дівоче прізвище поки невідоме."
+  },
+  "spouseOf": "semen_vd"
+ },
+ {
+  "kind": "person",
+  "id": "olena_svd",
+  "key": "person-olena_svd",
+  "data": {
+   "n": "Олена",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "06.11.1902",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1902",
+  "kind": "docpatch",
+  "id": "vdsk1902",
+  "data": {
+   "people": [
+    "semen_vd",
+    "olena_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "volodymyr_svd",
+  "key": "person-volodymyr_svd",
+  "data": {
+   "n": "Володимир",
+   "pt": "Семенович",
+   "s": "Вдовинець",
+   "sex": "m",
+   "b": "21.06.1905",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1905",
+  "kind": "docpatch",
+  "id": "vdsk1905",
+  "data": {
+   "people": [
+    "semen_vd",
+    "pelagia_f",
+    "volodymyr_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "vira_svd",
+  "key": "person-vira_svd",
+  "data": {
+   "n": "Віра",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "25.12.1907",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1907",
+  "kind": "docpatch",
+  "id": "vdsk1907",
+  "data": {
+   "people": [
+    "semen_vd",
+    "pelagia_f",
+    "vira_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "nadiia_svd",
+  "key": "person-nadiia_svd",
+  "data": {
+   "n": "Надія",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "19.04.1910",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1910",
+  "kind": "docpatch",
+  "id": "vdsk1910",
+  "data": {
+   "people": [
+    "semen_vd",
+    "pelagia_f",
+    "nadiia_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "liubov_svd",
+  "key": "person-liubov_svd",
+  "data": {
+   "n": "Любов",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "13.11.1912",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1912",
+  "kind": "docpatch",
+  "id": "vdsk1912",
+  "data": {
+   "people": [
+    "semen_vd",
+    "liubov_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "sofiia_svd",
+  "key": "person-sofiia_svd",
+  "data": {
+   "n": "Софія",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "28.10.1914",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1914",
+  "kind": "docpatch",
+  "id": "vdsk1914",
+  "data": {
+   "people": [
+    "semen_vd",
+    "pelagia_f",
+    "sofiia_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "anna_svd",
+  "key": "person-anna_svd",
+  "data": {
+   "n": "Анна",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "06.09.1916",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1916",
+  "kind": "docpatch",
+  "id": "vdsk1916",
+  "data": {
+   "people": [
+    "semen_vd",
+    "anna_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "mariia_svd",
+  "key": "person-mariia_svd",
+  "data": {
+   "n": "Марія",
+   "pt": "Семенівна",
+   "s": "Вдовинець",
+   "sex": "f",
+   "b": "07.02.1919",
+   "bp": "Вороньки",
+   "f": "semen_vd",
+   "mo": "pelageia_mvd",
+   "fam": [
+    "semena"
+   ],
+   "note": "Народження — метрична книга Вороньків (скан і посилання — у документах картки). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-vdsk1919",
+  "kind": "docpatch",
+  "id": "vdsk1919",
+  "data": {
+   "people": [
+    "semen_vd",
+    "mariia_svd",
+    "pelageia_mvd"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "olha_lpsh",
+  "key": "person-olha_lpsh",
+  "data": {
+   "n": "Ольга",
+   "pt": "Луківна",
+   "s": "Шута",
+   "sex": "f",
+   "note": "Дружина Пилипа Микитовича Шутого — так записана в метриці сина Якова (1902)."
+  },
+  "spouseOf": "fylymon"
+ },
+ {
+  "kind": "person",
+  "id": "yakiv_psh",
+  "key": "person-yakiv_psh",
+  "data": {
+   "n": "Яків",
+   "pt": "Пилипович",
+   "s": "Шутий",
+   "sex": "m",
+   "b": "08.10.1902",
+   "bp": "Вороньки",
+   "f": "fylymon",
+   "mo": "olha_lpsh",
+   "note": "Народження — метрика 1902 р. (документ на картці). Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-d1902",
+  "kind": "docpatch",
+  "id": "d1902",
+  "data": {
+   "people": [
+    "fylymon",
+    "yakiv_psh",
+    "olha_lpsh"
+   ]
+  }
+ },
+ {
+  "kind": "person",
+  "id": "dariia_mi13",
+  "key": "person-dariia_mi13",
+  "data": {
+   "n": "Дарія",
+   "pt": "Максимівна",
+   "s": "Шута",
+   "sex": "f",
+   "b": "15.03.1913",
+   "bp": "хутір Сердюків",
+   "f": "maksym_iv",
+   "mo": "vassa_h",
+   "fam": [
+    "lidyn"
+   ],
+   "note": "Народилася 15 березня 1913 р. (хрещена 16-го) у Максима Івановича Шутого й Васси Марківни з хутора Сердюків — метрика на картці. Подальша доля поки невідома."
+  }
+ },
+ {
+  "key": "lk2-sc6xq3b363",
+  "kind": "docpatch",
+  "id": "sc6xq3b363",
+  "data": {
+   "people": [
+    "maksym_iv",
+    "vassa_h",
+    "dariia_mi13"
+   ]
+  }
  }
 ]
