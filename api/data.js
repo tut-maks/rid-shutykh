@@ -214,7 +214,7 @@ export default handler(async (req, res, ctx, url) => {
     if (!editor) return fail(res, 403, 'forbidden');
     const cur = await db.get('persons', { eq: { id: S(body.id, 60), deleted: false } });
     const ph = await db.get('photos', { eq: { id: S(body.photo, 60), deleted: false } });
-    if (!cur || !ph || ph.person_id !== cur.id) return fail(res, 404, 'not_found');
+    if (!cur || !ph || (ph.person_id !== cur.id && !((await cfgGet('photo_people')) || {})[ph.id]?.includes(cur.id))) return fail(res, 404, 'not_found'); // своє фото або фото, де людину позначено
     const nd = { ...cur.data, portrait: ph.id };
     const [row] = await db.update('persons', { eq: { id: cur.id } }, { data: nd, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
     await revision('person', cur.id, 'update', cur.data, nd, me.id);
@@ -314,7 +314,16 @@ export default handler(async (req, res, ctx, url) => {
     const keep = ids.filter(x => ok.has(x) && x !== p.person_id);
     const before = await cfgGet('photo_people'), v = { ...before };
     if (keep.length) v[p.id] = keep; else delete v[p.id];
-    await cfgSet('photo_people', v, me.id, before); return done({ photoPeople: v }, 'photo:' + p.id);
+    await cfgSet('photo_people', v, me.id, before);
+    // позначеним людям без головного фото це фото стає головним (як перше фото в картці)
+    const persons = []; const pend = (await pendGet()) || {};
+    if (!pend[p.id] && /^image\//.test(p.mime || 'image/')) for (const pid of keep) {
+      const cur = await db.get('persons', { eq: { id: pid, deleted: false } }); if (!cur || cur.data.portrait) continue;
+      const nd = { ...cur.data, portrait: p.id };
+      const [row] = await db.update('persons', { eq: { id: cur.id } }, { data: nd, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
+      await revision('person', cur.id, 'update', cur.data, nd, me.id); persons.push({ id: row.id, ...row.data, v: row.version });
+    }
+    return done({ photoPeople: v, persons }, 'photo:' + p.id);
   }
   if (op === 'photo.caption') {
     const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');

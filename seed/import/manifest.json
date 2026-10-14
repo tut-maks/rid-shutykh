@@ -12649,5 +12649,21 @@
   "data": {
    "title": "Народження Марії Вдовинець, дочки Семена Федоровича (07.02.1919)"
   }
+ },
+ {
+  "kind": "personpatch",
+  "person": "halyna_g",
+  "key": "pp-portrait-halyna_g",
+  "set": {
+   "portrait": "eaf930ab-5581-49db-8291-66d816ab532f"
+  }
+ },
+ {
+  "kind": "personpatch",
+  "person": "yevdokia_h",
+  "key": "pp-portrait-yevdokia_h",
+  "set": {
+   "portrait": "eaf930ab-5581-49db-8291-66d816ab532f"
+  }
  }
 ]

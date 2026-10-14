@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610141638';
+const BUILD = '202610141840';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2584,7 +2584,7 @@ document.addEventListener('click', async e => {
     }
     if (d.delstory) { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'точно видалити?'; return; } await api('/api/data', { body: { op: 'story.delete', id: d.delstory } }); S.data.stories = S.data.stories.filter(s => s.id !== d.delstory); S.ui.keepScroll = true; render(); return; }
     if (d.unlink) { await api('/api/data', { body: { op: 'union.remove', id: d.unlink } }); S.data.unions = S.data.unions.filter(u => u.id !== d.unlink); index(); openEdit(P[S.ui.editing]); return; }
-    if (d.portrait) { const x = S.data.photos.find(y => y.id === d.portrait); const r = await api('/api/data', { body: { op: 'person.portrait', id: x.person, photo: x.id } }); Object.assign(P[x.person], r.person); closeLayer(); S.ui.keepScroll = true; render(); toast('Головне фото змінено'); return; }
+    if (d.portrait) { const x = S.data.photos.find(y => y.id === d.portrait); const pid = S.view === 'p' && P[S.arg] && tagsOf(x.id).includes(S.arg) ? S.arg : x.person; /* позначена на фото людина — головне фото їй, а не автору картки */ const r = await api('/api/data', { body: { op: 'person.portrait', id: pid, photo: x.id } }); Object.assign(P[pid], r.person); closeLayer(); S.ui.keepScroll = true; render(); toast('Головне фото змінено'); return; }
     if (d.delphoto) { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити?'; return; } await api('/api/data', { body: { op: 'photo.delete', id: d.delphoto } }); S.data.photos = S.data.photos.filter(x => x.id !== d.delphoto); closeLayer(); S.ui.keepScroll = true; render(); return; }
     if (d.famedit) { const f = FAM[d.famedit]; modal(`<h2>${esc(f.title)}</h2><p class="small muted">Абзаци розділяйте порожнім рядком. Жирний текст: **так**.</p><textarea class="in" id="fe" style="min-height:300px">${esc(htmlToText(f.story || ''))}</textarea><div class="btns"><button class="btn" data-act="famsave">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="emsg"></span></div>`); S.ui.famEditing = f.id; return; }
     if (d.atab) { S.admin.tab = d.atab; S.admin.err = null; render(); return loadAdmin(); }
@@ -2761,7 +2761,7 @@ function photoTag(ids, k, personId, opt = {}) {
   $('#tg-save').onclick = async () => { const b = $('#tg-save'), m = $('#tg-m'); b.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
     try { if (opt.done && !sel.length && $('#tg-c').value.trim() === (x.caption || '').trim()) { b.disabled = false; m.className = 'msg err'; m.textContent = 'Напишіть, хто на фото, або оберіть людину з дерева'; return; }
       const c = $('#tg-c').value.trim(); if (c !== (x.caption || '')) { await api('/api/data', { body: { op: 'photo.caption', id, caption: c } }); x.caption = c; }
-      const others = sel.filter(y => y !== x.person); if (others.join() !== tagsOf(id).join()) { const r = await api('/api/data', { body: { op: 'photo.people', id, people: others } }); S.data.cfg.photoPeople = r.photoPeople; }
+      const others = sel.filter(y => y !== x.person); if (others.join() !== tagsOf(id).join()) { const r = await api('/api/data', { body: { op: 'photo.people', id, people: others } }); S.data.cfg.photoPeople = r.photoPeople; (r.persons || []).forEach(q => { if (P[q.id]) Object.assign(P[q.id], q); }); }
       if (opt.done) await opt.done(sel);
       closeLayer(); if (opt.reopen) { S.ui.keepScroll = true; render(); openPhoto(id); toast(sel.length ? 'Збережено: ' + sel.map(y => short(P[y])).join(', ') : 'Збережено'); return; } S.ui.keepScroll = true; render(); if (k + 1 < ids.length) photoTag(ids, k + 1, personId, opt); else toast(opt.done ? (sel.length ? `Готово: фото тепер на картці — ${sel.map(y => short(P[y])).join(', ')}` : 'Готово') : 'Збережено'); }
     catch (err) { b.disabled = false; m.className = 'msg err'; m.textContent = errText(err); } };
