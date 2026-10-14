@@ -1269,3 +1269,6 @@ html{touch-action:manipulation}
 }
 /* Телефон: свайп по книзі лише гортає сторінки — сайт під ним не їздить угору-вниз (книга вже вміщається в екран) */
 @media (max-width:820px){.bk-stage,.bk-stage *{touch-action:pinch-zoom}.bk-stage button,.bk-stage a{touch-action:manipulation}}
+/* аватар у бічній панелі: після закриття фото (Esc) фокус повертається на кнопку — без кільця з відступом, щоб фото не «з'їжджало» в обідку */
+.pp-av:focus,.pp-av:focus-visible{outline:none!important}
+.pp-av:focus-visible .av{box-shadow:0 0 0 2px var(--wine)}
