@@ -37800,5 +37800,20 @@
    ],
    "note": "Син [[p:mariia_aper|Марії (Марусі) Антонівни Перчети]] від другого шлюбу — за словами Інни Коломієць (16.10.2026), для неї — «дядько Сергій». Ім'я батька, прізвище й рік народження поки невідомі."
   }
+ },
+ {
+  "key": "aud37-u-anton19-anna-del",
+  "kind": "unionpatch",
+  "a": "anton_per19",
+  "b": "anna_yaper",
+  "del": true
+ },
+ {
+  "key": "aud37-u-anton-anna-add",
+  "kind": "unionpatch",
+  "a": "anton_per",
+  "b": "anna_yaper",
+  "add": true,
+  "date": "шлюб не підтверджено"
  }
 ]

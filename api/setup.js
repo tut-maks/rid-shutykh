@@ -138,7 +138,11 @@ export default handler(async (req, res, _c, url) => {
         await revision('document', d.id, 'update', Object.fromEntries(Object.keys(patch).map(k => [k, d.data[k] ?? null])), patch, by);
         out.push(key + ': ok');
       } else if (it.kind === 'unionpatch') { // підпис зв'язку двох людей (напр. «шлюб не підтверджено»)
-        const us = await db.list('unions', { eq: { deleted: false } }); const u = us.find(x => (x.a === it.a && x.b === it.b) || (x.a === it.b && x.b === it.a)); if (!u) { out.push(key + ': no union'); continue; }
+        const us = await db.list('unions', { eq: { deleted: false } }); const u = us.find(x => (x.a === it.a && x.b === it.b) || (x.a === it.b && x.b === it.a));
+        if (it.del) { if (!u) { out.push(key + ': вже є'); continue; } await db.update('unions', { eq: { id: u.id } }, { deleted: true }); await revision('union', u.id, 'delete', u, null, by); out.push(key + ': ok'); continue; } // прибрати помилковий зв'язок
+        if (!u && it.add) { const [pa, pb] = await Promise.all([db.get('persons', { eq: { id: String(it.a) } }), db.get('persons', { eq: { id: String(it.b) } })]); if (!pa || !pb) { out.push(key + ': no person'); continue; }
+          const nu = { id: 'u_' + String(it.a).slice(0, 28) + '_' + String(it.b).slice(0, 28), a: String(it.a), b: String(it.b), date: String(it.date || '').slice(0, 60), created_by: by }; await db.insert('unions', nu); await revision('union', nu.id, 'create', null, nu, by); out.push(key + ': ok'); continue; } // новий зв'язок між наявними картками
+        if (!u) { out.push(key + ': no union'); continue; }
         const date = String(it.date ?? u.date ?? '').slice(0, 60); if (u.date === date) { out.push(key + ': вже є'); continue; }
         await db.update('unions', { eq: { id: u.id } }, { date }); await revision('union', u.id, 'update', { date: u.date }, { date }, by); out.push(key + ': ok');
       } else if (it.kind === 'familypatch') {
