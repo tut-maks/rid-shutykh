@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610152026';
+const BUILD = '202610152029';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -805,6 +805,30 @@ function qPrefill(text, kind) {
   const y = t.match(/\b(1[89]\d\d|20[0-2]\d)\b/); if (y) set('e-b', y[1]);
   const note = document.getElementById('e-note'); if (note && !note.value) note.value = 'Зі слів родички (запитання на сайті): ' + t.trim();
 }
+// «Вже є на сайті»: спершу зареєстровані родичі, яких ще не прив'язано, потім пошук по всіх картках
+function linkCands(kind, base) {
+  const by = y => +((String(y || '').match(/\d{4}/) || [0])[0]);
+  const ok = p => {
+    if (p.id === base.id || p.id === base.f || p.id === base.mo) return false;
+    if (kind === 'child') { if (base.sex === 'f' ? p.mo : p.f) return false; if (by(base.b) && by(p.b) && by(p.b) < by(base.b) + 12) return false; }
+    if (kind === 'father' && p.sex === 'f') return false; if (kind === 'mother' && p.sex === 'm') return false;
+    if ((kind === 'father' || kind === 'mother') && by(base.b) && by(p.b) && by(p.b) > by(base.b) - 12) return false;
+    if (kind === 'spouse' && (SPOUSES[base.id] || []).some(x => x.id === p.id)) return false;
+    if (kind === 'sibling' && (p.f || p.mo)) return false;
+    return true;
+  };
+  const acc = new Set(S.data.accounts || []);
+  const L = Object.values(P).filter(ok);
+  return [...L.filter(p => acc.has(p.id)), ...L.filter(p => !acc.has(p.id) && !p.f && !p.mo && (p.last?.action === 'create'))].slice(0, 8);
+}
+function pickExisting(kind, base) {
+  const c = linkCands(kind, base), acc = new Set(S.data.accounts || []);
+  return `<div class="pickex"><b>Ця людина вже є на сайті?</b> <span class="small muted">Оберіть — і її буде прив'язано (нова картка не потрібна).</span>
+    ${c.length ? `<div class="chips">${c.map(p => `<button type="button" class="chip" data-act="lk-pick" data-v="${esc(plabel(p))}">${acc.has(p.id) ? '👤 ' : ''}${esc(plabel(p))}</button>`).join('')}</div>` : ''}
+    <div class="btns"><input class="in" id="lk-p" list="lkpeople" placeholder="Почніть вводити ім'я…" autocomplete="off" style="flex:1;min-width:200px"><button class="btn" data-act="lk-do" data-kind="${kind}" data-base="${base.id}">Прив'язати</button></div>
+    ${peopleList('lkpeople')}<span class="msg" id="lkmsg"></span>
+    <p class="small muted" style="margin:8px 0 0">${c.some(p => acc.has(p.id)) ? '👤 — уже зареєстровані на сайті. ' : ''}Немає в списку — заповніть нову картку нижче.</p></div>`;
+}
 function openAdd(kind, base) {
   const preset = {}; const link = {};
   const ttl = { father: 'Додати батька', mother: 'Додати матір', spouse: 'Додати чоловіка / дружину', child: 'Додати дитину', sibling: 'Додати брата чи сестру', new: 'Нова людина' }[kind];
@@ -813,7 +837,7 @@ function openAdd(kind, base) {
   if (kind === 'spouse') { preset.sex = base.sex === 'm' ? 'f' : base.sex === 'f' ? 'm' : ''; link.spouseOf = base.id; preset.fam = base.fam; }
   if (kind === 'child') { const sp = SPOUSES[base.id] || []; if (base.sex === 'f') { preset.mo = base.id; if (sp.length === 1) preset.f = sp[0].id; } else { preset.f = base.id; if (sp.length === 1) preset.mo = sp[0].id; } preset.s = base.sex === 'f' ? (P[preset.f]?.s || base.s) : base.s; preset.fam = base.fam; }
   if (kind === 'sibling') { preset.f = base.f; preset.mo = base.mo; preset.s = base.s; preset.fam = base.fam; }
-  modal(`<h2>${ttl}${base ? ' — ' + esc(short(base)) : ''}</h2>${personForm(null, preset)}
+  modal(`<h2>${ttl}${base ? ' — ' + esc(short(base)) : ''}</h2>${base && kind !== 'new' ? pickExisting(kind, base) : ''}${personForm(null, preset)}
     <div class="btns"><button class="btn" data-act="create">Створити картку</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="emsg"></span></div>`);
   S.ui.adding = { link };
 }
@@ -2867,6 +2891,16 @@ document.addEventListener('click', async e => {
       await load(); if (S.ui.pp === drop) S.ui.pp = keep; if (S.view === 'p') location.hash = href('p', keep); render(); toast('Картки об\'єднано'); return;
     }
     if (act === 'dup-no') { t.disabled = true; const r = await api('/api/data', { body: { op: 'dup.no', a: t.dataset.a, b: t.dataset.b } }); S.data.cfg.notDup = r.notDup; render(); if (S.ui.pp) ppPaint(); toast('Добре, більше не питатиму'); return; }
+    if (act === 'lk-pick') { $('#lk-p').value = d.v; return; }
+    if (act === 'lk-do') {
+      const m = $('#lkmsg'), other = personByLabel($('#lk-p').value);
+      if (!other) { m.className = 'msg err'; m.textContent = 'Оберіть людину зі списку-підказки.'; return; }
+      if (t.disabled) return; t.disabled = true;
+      try { if (d.kind === 'spouse') await api('/api/data', { body: { op: 'union.add', a: d.base, b: other, date: '' } });
+        else await api('/api/data', { body: { op: 'person.link', kind: d.kind, base: d.base, other } }); }
+      catch (e2) { t.disabled = false; m.className = 'msg err'; m.textContent = e2.message === 'has_parent' ? 'У цієї людини вже вказано іншого батька чи матір — змініть це в її картці.' : errText(e2); return; }
+      await load(); closeLayer(); S.ui.keepScroll = true; render(); toast('Прив\'язано'); return;
+    }
     if (act === 'save' || act === 'create') {
       if (t.disabled) return; t.disabled = true; // захист від подвійного натискання
       const data = readForm(); const m = $('#emsg'); m.textContent = 'Зберігаю…'; m.className = 'msg';

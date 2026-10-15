@@ -68,7 +68,7 @@ async function relMake(rel, by) {
     if (x.id) {
       const p = await get(x.id); if (!p) return '';
       const set = {}; if (f && !p.data.f) set.f = f; if (mo && !p.data.mo) set.mo = mo;
-      if (Object.keys(set).length) { const data = { ...p.data, ...set }; await db.update('persons', { eq: { id: p.id } }, { data, updated_by: by }); await revision('person', p.id, 'update', p.data, data, by); }
+      if (Object.keys(set).length) { const data = { ...p.data, ...set }; await db.update('persons', { eq: { id: p.id } }, { data, updated_by: by, version: (p.version || 1) + 1, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, by); }
       return p.id;
     }
     if (!x.make) return '';
@@ -90,7 +90,7 @@ async function relMake(rel, by) {
 async function linkParents(pid, rel, by) { // прив'язати картку до батьків з rel (лише порожні поля)
   const rr = await relMake(rel, by); const p = await db.get('persons', { eq: { id: pid, deleted: false } }); if (!p) return rr;
   const set = {}; if (rr.f && !p.data.f && rr.f !== pid) set.f = rr.f; if (rr.mo && !p.data.mo && rr.mo !== pid) set.mo = rr.mo;
-  if (Object.keys(set).length) { const data = { ...p.data, ...set }; if (!(data.fam || []).length) { const pp = await db.get('persons', { eq: { id: set.f || set.mo } }); if (pp?.data?.fam?.length) data.fam = pp.data.fam; } await db.update('persons', { eq: { id: pid } }, { data, updated_by: by }); await revision('person', pid, 'update', p.data, data, by); }
+  if (Object.keys(set).length) { const data = { ...p.data, ...set }; if (!(data.fam || []).length) { const pp = await db.get('persons', { eq: { id: set.f || set.mo } }); if (pp?.data?.fam?.length) data.fam = pp.data.fam; } await db.update('persons', { eq: { id: pid } }, { data, updated_by: by, version: (p.version || 1) + 1, updated_at: new Date().toISOString() }); await revision('person', pid, 'update', p.data, data, by); }
   return rr;
 }
 

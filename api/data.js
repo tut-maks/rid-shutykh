@@ -222,6 +222,26 @@ export default handler(async (req, res, ctx, url) => {
   }
 
   /* ── подружжя ── */
+  if (op === 'person.link') { // прив'язати НАЯВНУ картку як батька / матір / дитину / брата чи сестру (лише порожні поля)
+    if (!editor) return fail(res, 403, 'forbidden');
+    const kind = S(body.kind, 20), bid = S(body.base, 60), oid = S(body.other, 60);
+    if (!bid || !oid || bid === oid || !['father', 'mother', 'child', 'sibling'].includes(kind)) return fail(res, 400, 'bad');
+    const base = await db.get('persons', { eq: { id: bid, deleted: false } }), oth = await db.get('persons', { eq: { id: oid, deleted: false } });
+    if (!base || !oth) return fail(res, 404, 'not_found');
+    let tgt, set = {};
+    if (kind === 'father') { tgt = base; set.f = oid; }
+    else if (kind === 'mother') { tgt = base; set.mo = oid; }
+    else if (kind === 'child') { tgt = oth; const isF = base.data.sex === 'f' || (base.data.sex !== 'm' && oth.data.f && !oth.data.mo); set[isF ? 'mo' : 'f'] = bid;
+      const us = (await db.list('unions', { eq: { deleted: false } })).filter(u => u.a === bid || u.b === bid);
+      if (us.length === 1) { const sp = us[0].a === bid ? us[0].b : us[0].a; const k2 = isF ? 'f' : 'mo'; if (!oth.data[k2] && sp !== oid) set[k2] = sp; } }
+    else { tgt = oth; if (base.data.f) set.f = base.data.f; if (base.data.mo) set.mo = base.data.mo; }
+    const ch = {}; for (const [k, v] of Object.entries(set)) { if (!v || v === tgt.id) continue; if (tgt.data[k] && tgt.data[k] !== v) { if (kind !== 'child' || k === (base.data.sex === 'f' ? 'mo' : 'f')) return fail(res, 409, 'has_parent'); continue; } if (!tgt.data[k]) ch[k] = v; }
+    if (!Object.keys(ch).length) return done({ ok: true, same: true }, tgt.id);
+    const data = { ...tgt.data, ...ch }; if (!(data.fam || []).length) data.fam = base.data.fam || [];
+    await db.update('persons', { eq: { id: tgt.id } }, { data, updated_by: me.id, version: (tgt.version || 1) + 1, updated_at: new Date().toISOString() });
+    await revision('person', tgt.id, 'update', tgt.data, data, me.id);
+    return done({ ok: true }, tgt.id);
+  }
   if (op === 'union.add') {
     if (!editor) return fail(res, 403, 'forbidden');
     const a = S(body.a, 60), b = S(body.b, 60);
