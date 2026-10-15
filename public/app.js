@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610152029';
+const BUILD = '202610152155';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1701,6 +1701,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label><button class="pv-mi" data-pv="mkdraw">Обвести наш запис рамкою</button><button class="pv-mi" data-pv="mkclear">Прибрати рамки з цієї сторінки</button>` : ''}
       ${docId && isOwner() ? `<button class="pv-mi danger" data-pv="docdel">Видалити документ з сайту</button>` : ''}
       ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button><button class="pv-mi" data-phask="${photoId || ''}">${(CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'}</button>` : ''}
+      ${photoId && canEdit() ? `<a class="pv-mi" href="${img('photo=' + photoId)}&dl=1" download>⬇ Завантажити оригінал</a>` : ''}
       ${canPhoto ? `<button class="pv-mi" data-pv="who">👥 Хто на фото — позначити людей</button><button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}
     </div>
     <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false"><div class="pv-marks" aria-hidden="true"></div><div class="pv-hint" hidden>Проведіть по скану, щоб обвести запис. <button data-pv="mkcancel">Скасувати</button></div>` : '<p class="pv-empty">Скан ще не додано.</p>'}
@@ -1893,7 +1894,7 @@ function chartDaily(daily, from, to) {
 function sortRows(rows, key) { const k = S.admin.sort || key; const dir = S.admin.dir || -1; return rows.sort((a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * dir); }
 function phPendBlock(list) {
   if (!list?.length) return '';
-  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : ''}</b><br>${esc(x.caption || '')}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
+  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : ''}</b><br>${esc(x.caption || '')}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${isVoice(x) ? '' : `<a class="btn line small" href="${img('photo=' + x.id)}&dl=1" download>⬇ Оригінал</a>`}${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
 }
 function vAdmin() {
   if (!isOwner()) return '<p>Немає доступу.</p>';
@@ -2123,7 +2124,7 @@ async function askSend(btn) {
   if (!f) { m.className = 'msg err'; m.textContent = 'Оберіть фото.'; return; }
   btn.disabled = true; m.className = 'msg'; m.textContent = 'Завантажую…';
   try {
-    let full = await toJpeg(f, 2200, 0.86); if (full.size > 4e6) full = await toJpeg(f, 1600, 0.8); const thumb = await toJpeg(f, 420, 0.78);
+    const full = await bestPhoto(f); const thumb = await toJpeg(f, 420, 0.78);
     const r = await api(`/api/upload?ask=1&caption=${encodeURIComponent(cap)}`, { raw: full });
     await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
     await api('/api/data', { body: { op: 'photo.ask', id: r.id, on: true, note: '' } });
@@ -2960,6 +2961,12 @@ const htmlToText = h => h.replace(/<\/p>\s*<p>/g, '\n\n').replace(/<b>(.*?)<\/b>
 const textToHtml = t => t.trim().split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</p>`).join('\n');
 
 /* ───── Завантаження фото: зменшуємо в браузері, далі — на сервер ───── */
+// Фото зберігаємо якомога ближче до оригіналу: якщо файл JPEG/PNG/WebP і до 4 МБ — як є; інакше — найкраща якість, що вміщається в 4 МБ.
+async function bestPhoto(f) {
+  if (/^image\/(jpeg|png|webp)$/.test(f.type) && f.size <= 4e6) return f;
+  for (const [mx, q] of [[6000, 0.92], [4800, 0.9], [4000, 0.88], [3200, 0.86], [2400, 0.84], [1600, 0.8]]) { const b = await toJpeg(f, mx, q); if (b.size <= 4e6) return b; }
+  throw new Error('too_large');
+}
 function toJpeg(file, max, q) {
   return new Promise((ok, bad) => {
     const u = URL.createObjectURL(file); const im = new Image();
@@ -2975,7 +2982,7 @@ async function upload(personId, files) {
       m.className = 'msg'; m.textContent = `Завантажую ${n + 1} з ${files.length}…`;
       let full, thumb = null;
       if (f.type === 'application/pdf') { if (f.size > 4e6) throw new Error('too_large'); full = f; }
-      else { full = await toJpeg(f, 2200, 0.86); if (full.size > 4e6) full = await toJpeg(f, 1600, 0.8); thumb = await toJpeg(f, 420, 0.78); }
+      else { full = await bestPhoto(f); thumb = await toJpeg(f, 420, 0.78); }
       const r = await api(`/api/upload?person=${encodeURIComponent(personId)}&caption=${encodeURIComponent(prompt2())}`, { raw: full });
       if (thumb) await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
       if (r.pending) pend = true; n++; if (f.type !== 'application/pdf') (upload.ids ||= []).push(r.id);

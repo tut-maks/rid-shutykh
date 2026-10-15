@@ -358,6 +358,7 @@ body.noscroll{overflow:hidden}
 .pv-mi{background:none;border:0;color:#EDE8DF;text-align:left;padding:11px 12px;border-radius:6px;cursor:pointer;font-size:15px}
 .pv-mi:hover{background:rgba(255,255,255,.08)}
 .pv-mi.danger{color:#F0A08E}
+a.pv-mi{text-decoration:none;display:block}
 .pv-stage{position:relative;overflow:hidden;display:grid;place-items:center;touch-action:none;cursor:default;min-height:0}
 .pv-img{cursor:zoom-in}
 .pv-img{position:absolute;inset:0;margin:auto;max-width:calc(100% - 32px);max-height:calc(100% - 16px);object-fit:contain;transform-origin:center center;box-shadow:0 10px 50px rgba(0,0,0,.5);will-change:transform;-webkit-user-drag:none}

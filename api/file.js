@@ -29,6 +29,7 @@ export default handler(async (req, res, _c, url) => {
   res.setHeader('content-type', mime);
   res.setHeader('cache-control', immutable ? 'private, max-age=2592000, immutable' : 'private, max-age=86400, stale-while-revalidate=604800');
   res.setHeader('x-content-type-options', 'nosniff');
-  res.setHeader('content-disposition', 'inline');
+  const ext = { 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' }[mime] || 'jpg';
+  res.setHeader('content-disposition', url.searchParams.get('dl') === '1' && !thumb ? `attachment; filename="${(target || 'file').replace(/[^a-z0-9_-]/gi, '-')}.${ext}"` : 'inline');
   res.end(buf);
 }, { auth: false });
