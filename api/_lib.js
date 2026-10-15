@@ -218,3 +218,10 @@ export function cleanJoin(d = {}) {
 /* Фото, які родич додав не до своєї гілки, чекають підтвердження власника: settings 'photo_pending' = {photoId: {by, at, person}} */
 export async function pendGet() { try { const r = await db.get('settings', { eq: { key: 'photo_pending' } }); return r?.value || {}; } catch { return {}; } }
 export async function pendSet(v, by) { await db.upsert('settings', { key: 'photo_pending', value: v, updated_by: by ?? null, updated_at: new Date().toISOString() }); }
+
+/* Версії фото (оброблене замість сирого, обрізане, розрізане): settings 'photo_ver' = {photoId: {orig, origThumb, origMime, by, at, from?}}.
+   orig — шлях до першого (сирого) файлу, назавжди; photos.path — поточна оброблена версія. from — з якого фото вирізано. Автор фото (created_by) не змінюється. */
+export async function verGet() { try { const r = await db.get('settings', { eq: { key: 'photo_ver' } }); return r?.value || {}; } catch { return {}; } }
+export async function verSet(v, by) { await db.upsert('settings', { key: 'photo_ver', value: v, updated_by: by ?? null, updated_at: new Date().toISOString() }); }
+// Що бачить браузер: лише хто й коли обробив, чи є оригінал і з якого фото вирізано — без шляхів до файлів
+export const verOut = x => x ? { by: x.by || null, at: x.at || null, ...(x.orig ? { orig: true } : {}), ...(x.from ? { from: x.from } : {}) } : null;

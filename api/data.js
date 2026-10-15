@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './_db.js';
 import { findDupes, mergePersons, notDup, pairKey } from './_merge.js';
-import { handler, send, fail, readJSON, can, revision, track, cleanPerson, cleanLinks, slugId, canAddTo, pendGet, pendSet, joinCfg } from './_lib.js';
+import { handler, send, fail, readJSON, can, revision, track, cleanPerson, cleanLinks, slugId, canAddTo, pendGet, pendSet, joinCfg, verGet, verOut } from './_lib.js';
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
@@ -40,7 +40,7 @@ async function bootstrap(ctx) {
     if (!can(ctx.member, 'editor')) f.eq.created_by = ctx.member.id;
     questions = (await db.list('questions', f)).map(qOut);
   } catch { qReady = false; }
-  const [pend, cfg, jc] = await Promise.all([pendGet(), cfgAll(), joinCfg(false).catch(() => null)]); const isOwn = can(ctx.member, 'owner');
+  const [pend, cfg, jc, pver] = await Promise.all([pendGet(), cfgAll(), joinCfg(false).catch(() => null), verGet()]); const isOwn = can(ctx.member, 'owner');
   const photosV = photos.filter(p => !pend[p.id] || isOwn || p.created_by === ctx.member.id); // чужі непідтверджені фото не показуємо
   let joinPending = 0;
   if (can(ctx.member, 'owner')) { try { joinPending = (await db.list('join_requests', { eq: { status: 'pending' }, select: 'id' })).length; } catch {} }
@@ -52,7 +52,7 @@ async function bootstrap(ctx) {
     unions: unions.map(u => ({ id: u.id, a: u.a, b: u.b, date: u.date || '' })),
     families: families.map(f => ({ id: f.id, ...f.data })),
     documents: documents.map(d => ({ id: d.id, ...d.data, pages: (d.data.pages || []).length })),
-    photos: photosV.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at, ...(pend[p.id] ? { pending: true } : {}) })),
+    photos: photosV.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at, ...(pend[p.id] ? { pending: true } : {}), ...(pver[p.id] ? { ver: verOut(pver[p.id]) } : {}) })),
     photoPending: isOwn ? photosV.filter(p => pend[p.id]).length : 0,
     stories: stories.map(s => ({ id: s.id, target: s.target, text: s.text, by: s.created_by, at: s.created_at })),
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),

@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { db } from './_db.js';
 import { findDupes, mergePersons } from './_merge.js';
-import { handler, send, fail, readJSON, env, safeEq, hashPass, createSession, who, can, tooMany, attempt, clientIp, revision, cleanPerson } from './_lib.js';
+import { handler, send, fail, readJSON, env, safeEq, hashPass, createSession, who, can, tooMany, attempt, clientIp, revision, cleanPerson, verGet } from './_lib.js';
 
 const ROOT = process.cwd();
 
@@ -78,7 +78,7 @@ export default handler(async (req, res, _c, url) => {
       if (it.kind === 'photo') {
         const person = await db.get('persons', { eq: { id: String(it.person), deleted: false } }); if (!person) { out.push(key + ': no person'); continue; }
         const p = `photos/${person.id}/imp-${key}.jpg`;
-        if ((await db.list('photos', { eq: { path: p }, limit: 1 })).length) { out.push(key + ': вже є'); continue; }
+        if ((await db.list('photos', { eq: { path: p }, limit: 1 })).length || Object.values(await verGet()).some(v => v?.orig === p)) { out.push(key + ': вже є'); continue; } // фото могли замінити обробленою версією — тоді імпортований файл лишився як оригінал
         const buf = read(it.file); if (!buf) { out.push(key + ': no file'); continue; }
         await db.put(p, buf, 'image/jpeg'); let thumb = null; const tb = read(it.thumb); if (tb) { thumb = p.replace(/\.jpg$/, '-t.jpg'); await db.put(thumb, tb, 'image/jpeg'); }
         const [ph] = await db.insert('photos', { person_id: person.id, path: p, thumb, caption: String(it.caption || '').slice(0, 500), mime: 'image/jpeg', size: buf.length, created_by: by });
@@ -87,7 +87,9 @@ export default handler(async (req, res, _c, url) => {
         out.push(key + ': ok');
       } else if (it.kind === 'photodel') { // прибрати фото, яке колись додав імпорт (напр. замінили обрізаним)
         const p = `photos/${String(it.person)}/imp-${String(it.of).replace(/[^a-z0-9_-]/gi, '')}.jpg`;
-        const [ph] = await db.list('photos', { eq: { path: p, deleted: false }, limit: 1 }); if (!ph) { out.push(key + ': вже є'); continue; }
+        let [ph] = await db.list('photos', { eq: { path: p, deleted: false }, limit: 1 });
+        if (!ph) { const vid = Object.entries(await verGet()).find(([, v]) => v?.orig === p)?.[0]; if (vid) ph = await db.get('photos', { eq: { id: vid, deleted: false } }); } // замінене обробленою версією
+        if (!ph) { out.push(key + ': вже є'); continue; }
         await db.update('photos', { eq: { id: ph.id } }, { deleted: true }); await revision('photo', ph.id, 'delete', { path: p }, null, by);
         out.push(key + ': ok');
       } else if (it.kind === 'person') { // нова картка з фіксованим id (повторно не створюється)

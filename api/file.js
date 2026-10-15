@@ -1,7 +1,7 @@
 // Файли віддає лише сервер і лише тим, хто увійшов. Прямих посилань на сховище немає.
-// GET /api/file?doc=<id>&page=<n>[&thumb=1]  |  GET /api/file?photo=<id>[&thumb=1]
+// GET /api/file?doc=<id>&page=<n>[&thumb=1]  |  GET /api/file?photo=<id>[&thumb=1][&v=orig]  (v=orig — початковий файл до обробки, якщо фото замінювали)
 import { db } from './_db.js';
-import { handler, fail, track, who, can, pendGet } from './_lib.js';
+import { handler, fail, track, who, can, pendGet, verGet } from './_lib.js';
 
 export default handler(async (req, res, _c, url) => {
   // перевірка входу і пошук файлу — одночасно (на одну затримку менше); без входу файл не віддається
@@ -20,6 +20,7 @@ export default handler(async (req, res, _c, url) => {
     const p = row; if (!p) return fail(res, 404, 'not_found');
     if (!can(ctx.member, 'owner') && p.created_by !== ctx.member.id) { const pd = await pendGet(); if (pd[p.id]) return fail(res, 404, 'not_found'); } // ще не підтверджене
     path = thumb && p.thumb ? p.thumb : p.path; mime = thumb && p.thumb ? 'image/jpeg' : (p.mime || 'image/jpeg'); target = 'photo:' + p.id; immutable = false; // фото може чекати підтвердження — без «immutable»
+    if (url.searchParams.get('v') === 'orig') { const v = (await verGet())[p.id]; if (v?.orig) { path = thumb && v.origThumb ? v.origThumb : v.orig; mime = thumb && v.origThumb ? 'image/jpeg' : (v.origMime || 'image/jpeg'); target = 'photo:' + p.id + '-original'; } }
   }
 
   const buf = await (await import('./_db.js')).db.read(path);

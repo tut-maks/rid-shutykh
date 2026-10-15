@@ -1,9 +1,12 @@
 // Завантаження фото й документів — лише через сервер.
 // POST /api/upload?person=<id>&kind=full|thumb&caption=...  тіло — сам файл (до 4 МБ; браузер зменшує фото перед відправкою).
 // Спершу надсилається повний файл (відповідь: {id}), потім мініатюра з &photo=<id>&kind=thumb.
+// Оброблена версія (редактор і власник): POST ?replace=<photoId> — новий файл замість поточного, перший (сирий) файл зберігається як оригінал;
+//   мініатюра — ?kind=thumb&replace=<photoId>. Автор, підпис, людина й позначки не змінюються.
+// Розрізати фото (редактор і власник): POST ?splitFrom=<photoId> — частина стає новим фото з тим самим автором і людиною; мініатюра — ?kind=thumb&photo=<newId>.
 import crypto from 'node:crypto';
 import { db } from './_db.js';
-import { handler, send, fail, readRaw, revision, track, can, canAddTo, pendGet, pendSet } from './_lib.js';
+import { handler, send, fail, readRaw, revision, track, can, canAddTo, pendGet, pendSet, verGet, verSet } from './_lib.js';
 
 const OK = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/wav': 'wav' };
 function sniff(b) {
@@ -64,9 +67,53 @@ export default handler(async (req, res, ctx, url) => {
     return send(res, 200, { id: docId, page: n });
   }
 
+  const isImg = /^image\//.test(mime);
+  const replaceId = url.searchParams.get('replace'), splitId = url.searchParams.get('splitFrom');
+  if (replaceId != null || splitId != null) {
+    if (!can(me, 'editor')) return fail(res, 403, 'forbidden');
+    if (!isImg) return fail(res, 415, 'type');
+    const src = await db.get('photos', { eq: { id: String(replaceId ?? splitId).slice(0, 60), deleted: false } });
+    if (!src || !/^image\//.test(src.mime || 'image/jpeg')) return fail(res, 404, 'not_found');
+    const now = new Date().toISOString();
+    const dir = src.path.replace(/[^/]+$/, ''); // та сама тека, що й у джерела
+    if (replaceId != null && kind === 'thumb') { // мініатюра обробленої версії
+      const ver = await verGet(); const v = ver[src.id];
+      if (!v?.orig || src.path === v.orig || mime !== 'image/jpeg' || buf.length > 400_000) return fail(res, 400, 'bad');
+      const path = src.path.replace(/\.[a-z]+$/, '') + '-t.jpg';
+      await db.put(path, buf, mime);
+      await db.update('photos', { eq: { id: src.id } }, { thumb: path });
+      return send(res, 200, { ok: true });
+    }
+    if (kind === 'thumb') return fail(res, 400, 'bad');
+    if (replaceId != null) {
+      const ver = await verGet(); const v = ver[src.id] || {};
+      const path = `${dir}${src.id}-v${crypto.randomBytes(4).toString('hex')}.${OK[mime]}`;
+      await db.put(path, buf, mime);
+      // перший раз — поточний файл стає оригіналом; далі оригінал не чіпаємо, міняється лише оброблена версія
+      const nv = { ...v, ...(v.orig ? {} : { orig: src.path, origThumb: src.thumb || null, origMime: src.mime || 'image/jpeg' }), by: me.id, at: now };
+      await db.update('photos', { eq: { id: src.id } }, { path, thumb: null, mime, size: buf.length });
+      ver[src.id] = nv; await verSet(ver, me.id);
+      await revision('photo', src.id, 'replace', { path: src.path, thumb: src.thumb || null, mime: src.mime }, { path, mime }, me.id);
+      track(me.id, ctx.sid, 'edit', 'upload', 'photo:' + src.id);
+      return send(res, 200, { id: src.id, mime, ver: { by: me.id, at: now, orig: true, ...(nv.from ? { from: nv.from } : {}) } });
+    }
+    // розрізати: частина — нове фото; автор — той, хто додав початкове фото
+    const id = crypto.randomUUID();
+    const path = `${dir}${id}.${OK[mime]}`;
+    await db.put(path, buf, mime);
+    const caption = ((src.caption || '').trim() + ' (частина)').trim().slice(0, 500);
+    await db.insert('photos', { id, person_id: src.person_id, path, caption, mime, size: buf.length, created_by: src.created_by });
+    await revision('photo', id, 'create', null, { person_id: src.person_id, caption, path, from: src.id }, me.id);
+    const pd = await pendGet(); const pending = !!pd[src.id];
+    if (pending) { pd[id] = { ...pd[src.id], at: now }; await pendSet(pd, me.id); }
+    const ver = await verGet(); ver[id] = { from: src.id, by: me.id, at: now }; await verSet(ver, me.id);
+    track(me.id, ctx.sid, 'edit', 'upload', 'photo:' + id);
+    return send(res, 200, { id, mime, pending });
+  }
+
   if (kind === 'thumb') {
     const p = await db.get('photos', { eq: { id: String(url.searchParams.get('photo') || '').slice(0, 60), deleted: false } });
-    if (!p || p.created_by !== me.id || p.thumb || mime !== 'image/jpeg' || buf.length > 400_000) return fail(res, 400, 'bad');
+    if (!p || !(p.created_by === me.id || can(me, 'editor')) || p.thumb || mime !== 'image/jpeg' || buf.length > 400_000) return fail(res, 400, 'bad'); // редактор — і для частин розрізаного фото (автор там інший)
     const path = p.path.replace(/\.[a-z]+$/, '') + '-t.jpg';
     await db.put(path, buf, mime);
     await db.update('photos', { eq: { id: p.id } }, { thumb: path });

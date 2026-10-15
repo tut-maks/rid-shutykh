@@ -2,7 +2,7 @@
 // /api/admin?a=members|invite|reset|member|revoke|stats|log|revisions|revert
 import { db } from './_db.js';
 import { findDupes } from './_merge.js';
-import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId, hashPass, pendGet, pendSet } from './_lib.js';
+import { handler, send, fail, readJSON, sha, token, revision, joinCfg, cleanPerson, slugId, hashPass, pendGet, pendSet, verGet, verSet, verOut } from './_lib.js';
 
 const day = 864e5;
 const iso = d => new Date(d).toISOString();
@@ -104,7 +104,8 @@ export default handler(async (req, res, ctx, url) => {
     const pd = await pendGet(); const ids = Object.keys(pd); if (!ids.length) return send(res, 200, { photos: [] });
     const rows = await db.list('photos', { in: { id: ids }, eq: { deleted: false } });
     const mem = await db.list('members', { select: 'id,name' }); const nm = Object.fromEntries(mem.map(m => [m.id, m.name || 'Родич']));
-    return send(res, 200, { photos: rows.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: nm[p.created_by] || 'Родич', at: p.created_at })) });
+    const pver = await verGet();
+    return send(res, 200, { photos: rows.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: nm[p.created_by] || 'Родич', at: p.created_at, ...(pver[p.id] ? { ver: verOut(pver[p.id]) } : {}) })) });
   }
   if (a === 'photo_ok') {
     const body = await readJSON(req, 2000); const id = String(body.id || '').slice(0, 60);
@@ -347,6 +348,13 @@ export default handler(async (req, res, ctx, url) => {
     } else if (r.entity === 'union' && r.action === 'update') { // повернути попередню дату шлюбу
       await db.update('unions', { eq: { id: r.entity_id } }, { date: r.before?.date || '' });
       await revision('union', r.entity_id, 'restore', r.after, r.before, me.id);
+    } else if (r.entity === 'photo' && r.action === 'replace' && r.before?.path) { // повернути попередню версію фото (оригінал лишається оригіналом)
+      const cur = await db.get('photos', { eq: { id: r.entity_id } }); if (!cur) return fail(res, 404, 'not_found');
+      await db.update('photos', { eq: { id: cur.id } }, { path: r.before.path, thumb: r.before.thumb || null, mime: r.before.mime || cur.mime });
+      const pver = await verGet(); const v = pver[cur.id];
+      if (v?.orig === r.before.path) { if (v.from) pver[cur.id] = { from: v.from, by: v.by, at: v.at }; else delete pver[cur.id]; } else if (v) pver[cur.id] = { ...v, by: me.id, at: now }; // повернулись до сирого — позначку «оброблено» знімаємо
+      await verSet(pver, me.id);
+      await revision('photo', cur.id, 'restore', { path: cur.path }, r.before, me.id);
     } else if (['union', 'story', 'photo'].includes(r.entity)) {
       const table = { union: 'unions', story: 'stories', photo: 'photos' }[r.entity];
       await db.update(table, { eq: { id: r.entity_id } }, { deleted: r.action === 'create' });

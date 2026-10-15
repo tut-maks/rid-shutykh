@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610152201';
+const BUILD = '202610152227';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -46,6 +46,7 @@ function index() {
   d.unions.forEach(u => { if (P[u.a] && P[u.b]) { (SPOUSES[u.a] ||= []).push({ id: u.b, date: u.date, u: u.id }); (SPOUSES[u.b] ||= []).push({ id: u.a, date: u.date, u: u.id }); } });
   Object.values(KIDS).forEach(l => l.sort(byBirth));
   d.families.forEach(f => { FAM[f.id] = f; });
+  PVER = {}; d.photos.forEach(x => { if (x.ver?.orig && x.ver.at) PVER[x.id] = Date.parse(x.ver.at).toString(36); });
   // покоління відносно Максима: батьки +1, діти −1, подружжя — те саме
   GEN = {}; const r = rootId(); if (r) { GEN[r] = 0; const q = [r]; while (q.length) { const id = q.shift(), g = GEN[id], p = P[id];
     const step = (x, v) => { if (x && P[x] && GEN[x] === undefined) { GEN[x] = v; q.push(x); } };
@@ -65,7 +66,8 @@ const ucU = s => /не підтвердж/i.test(s?.date || ''); // зв'язо�
 const ucLabel = (pid, s) => { const kids = (KIDS[pid] || []).filter(k => P[k] && [P[k].f, P[k].mo].includes(s.id)); const o = P[s.id]; const role = o?.sex === 'f' ? 'мати' : 'батько';
   return kids.length ? `${role} ${kids.map(k => (P[k].sex === 'f' ? 'доньки ' : 'сина ') + genN(String(P[k].n || '').replace(/\s*\(.*?\)/, ''))).join(', ')}, шлюб не підтверджено` : 'шлюб не підтверджено'; };
 const srcSite = u => /familysearch\.org/.test(u) ? 'FamilySearch' : /pamyat-naroda\.ru/.test(u) ? '«Память народа» (документи Другої світової)' : /obd-memorial/.test(u) ? 'ОБД «Мемориал»' : (String(u).match(/^https?:\/\/(?:www\.)?([^/]+)/) || [])[1] || '';
-const img = (q, thumb) => `/api/file?${q}${thumb ? '&thumb=1' : ''}`;
+const img = (q, thumb) => { const m = /^photo=([^&]+)/.exec(q), r = m && PVER[decodeURIComponent(m[1])]; return `/api/file?${q}${thumb ? '&thumb=1' : ''}${r ? '&r=' + r : ''}`; }; // r — фото замінили обробленою версією: нова адреса, щоб браузер не показував старе з кешу
+let PVER = {};
 const portrait = p => p.portrait ? img('photo=' + encodeURIComponent(p.portrait), true) : null;
 const pcOf = p => p.pc && p.pc.id === p.portrait && p.pc.s > 0 ? p.pc : null; // кадр обличчя для головного фото
 const pcStyle = c => c ? ` class="pcrop" style="width:${(100 / c.s).toFixed(3)}%!important;height:auto!important;left:${(-c.x / c.s * 100).toFixed(3)}%;top:${(-c.y * c.r / c.s * 100).toFixed(3)}%"` : '';
@@ -1688,7 +1690,7 @@ function vDocs() {
 function unzoomPage() { const vv = window.visualViewport; if (!vv || vv.scale <= 1.01) return; const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = m.content; m.content = c.replace(/,?\s*maximum-scale=[\d.]+/, '') + ',maximum-scale=1.0001'; setTimeout(() => { m.content = c; }, 60); }
 const pvPeople = ids => ids.filter(x => P[x]).map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('');
 function viewer({ title, pages, line, text, src, people, photoId, docId, marks, items, startAt }) {
-  const canPhoto = !!(items ? items.some(x => x.photoId) : photoId); let i = startAt || 0, sc = 1, tx = 0, ty = 0, mk = (marks || []).slice(), draw = null;
+  const canPhoto = !!(items ? items.some(x => x.photoId) : photoId); let i = startAt || 0, sc = 1, tx = 0, ty = 0, mk = (marks || []).slice(), draw = null, cut = null, vOrig = false;
   const L = $('#layer');
   document.body.classList.add('noscroll'); unzoomPage();
   const who_ = (people || []).filter(x => P[x]);
@@ -1701,15 +1703,17 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       ${docId && canEdit() ? `<label class="pv-mi">+ Додати сторінку<input type="file" accept="image/*" multiple data-docpage="${docId}" hidden></label><button class="pv-mi" data-pv="mkdraw">Обвести наш запис рамкою</button><button class="pv-mi" data-pv="mkclear">Прибрати рамки з цієї сторінки</button>` : ''}
       ${docId && isOwner() ? `<button class="pv-mi danger" data-pv="docdel">Видалити документ з сайту</button>` : ''}
       ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button><button class="pv-mi" data-phask="${photoId || ''}">${(CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'}</button>` : ''}
-      ${photoId && canEdit() ? `<a class="pv-mi" href="${img('photo=' + photoId)}&dl=1" download>⬇ Завантажити оригінал</a>` : ''}
+      ${photoId && canEdit() ? `<a class="pv-mi" data-pvdl href="${img('photo=' + photoId)}${verOf(photoId)?.orig ? '&v=orig' : ''}&dl=1" download>⬇ Завантажити оригінал</a>` : ''}
+      ${canPhoto && canEdit() ? `<label class="pv-mi pv-ed">🖼 Замінити на оброблену версію<input type="file" accept="image/jpeg,image/png,image/webp" data-pvrep hidden></label><button class="pv-mi pv-ed" data-pv="rotl">⟲ Повернути ліворуч</button><button class="pv-mi pv-ed" data-pv="rotr">⟳ Повернути праворуч</button><button class="pv-mi pv-ed" data-pv="crop">✂ Обрізати</button><button class="pv-mi pv-ed" data-pv="split">Розрізати на окремі фото</button>` : ''}
       ${canPhoto ? `<button class="pv-mi" data-pv="who">👥 Хто на фото — позначити людей</button><button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}
     </div>
-    <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false"><div class="pv-marks" aria-hidden="true"></div><div class="pv-hint" hidden>Проведіть по скану, щоб обвести запис. <button data-pv="mkcancel">Скасувати</button></div>` : '<p class="pv-empty">Скан ще не додано.</p>'}
+    <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false"><div class="pv-marks" aria-hidden="true"></div><div class="pv-hint" hidden>Проведіть по скану, щоб обвести запис. <button data-pv="mkcancel">Скасувати</button></div><div class="pv-cut" hidden></div>` : '<p class="pv-empty">Скан ще не додано.</p>'}
       ${pages.length > 1 ? `<button class="pv-nav prev" data-pv="prev" aria-label="Попередня">${ICO.l}</button><button class="pv-nav next" data-pv="next" aria-label="Наступна">${ICO.r}</button>` : ''}
       <div class="pv-load"></div></div>
     <div class="pv-cap">
       <button class="pv-find" data-pv="tomark" hidden>⌕ Показати наш запис</button>
       ${line || text ? glossify((line ? `<div class="pv-line">${esc(line)}</div>` : '') + (text ? `<div class="pv-text">${esc(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
+      <div class="pv-verl" hidden></div>
       <div class="pv-people">${pvPeople(who_)}</div>${canPhoto ? `<button class="pv-who" data-pv="who"${photoId || items ? '' : ' hidden'}>👥 Хто на фото? — позначити людей</button>` : ''}
       ${canPhoto ? `<div class="pv-capedit" hidden><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Хто на фото, рік, звідки"><button class="btn small" data-pv="capsave">Зберегти</button></div>` : ''}
     </div></div>`;
@@ -1718,7 +1722,8 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
   // Рамки «наш запис»: шар точно над зображенням, з тим самим масштабом і зсувом
   const pageMarks = () => mk.filter(m => (m.p || 0) === i);
   const placeMarks = () => { if (!im || !mkEl) return; Object.assign(mkEl.style, { left: im.offsetLeft + 'px', top: im.offsetTop + 'px', width: im.offsetWidth + 'px', height: im.offsetHeight + 'px' });
-    mkEl.innerHTML = pageMarks().map(m => `<div class="pv-mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></div>`).join('') + (draw?.box ? `<div class="pv-mark draft" style="left:${draw.box.x * 100}%;top:${draw.box.y * 100}%;width:${draw.box.w * 100}%;height:${draw.box.h * 100}%"></div>` : '');
+    mkEl.innerHTML = pageMarks().map(m => `<div class="pv-mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></div>`).join('') + (draw?.box ? `<div class="pv-mark draft" style="left:${draw.box.x * 100}%;top:${draw.box.y * 100}%;width:${draw.box.w * 100}%;height:${draw.box.h * 100}%"></div>` : '')
+      + (cut ? [...(cut.mode === 'crop' && cut.box ? [] : cut.boxes), ...(cut.box ? [cut.box] : [])].map((m, k) => `<div class="pv-mark draft cut${cut.mode === 'crop' ? ' dim' : ''}" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%">${cut.mode === 'split' ? `<span>${k + 1}</span>` : ''}</div>`).join('') : '');
     const fb = root.querySelector('.pv-find'); if (fb) fb.hidden = !pageMarks().length; };
   const toMark = () => { const m = pageMarks()[0]; if (!m || !im) return; const W = im.offsetWidth, H = im.offsetHeight, r = stage.getBoundingClientRect();
     sc = Math.min(6, Math.max(1.6, Math.min(r.width * 0.9 / (m.w * W), r.height * 0.6 / (m.h * H)))); tx = -((m.x + m.w / 2) - 0.5) * W * sc; ty = -((m.y + m.h / 2) - 0.5) * H * sc; clamp(); apply(true); };
@@ -1729,13 +1734,30 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     ns = Math.min(6, Math.max(1, ns)); const k = ns / sc; tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k; sc = ns; if (sc <= 1.01) { sc = 1; tx = ty = 0; } clamp(); apply(anim);
   };
   const rel = (x, y) => { const r = stage.getBoundingClientRect(); return [x - r.left - r.width / 2, y - r.top - r.height / 2]; };
+  // Версії фото: рядок «оброблено: хто, коли» + перемикач «Оригінал / Оброблене»; «вирізано з фото від …»
+  const curId = () => items ? (items[i]?.id || null) : photoId;
+  const verLine = () => { const el = root.querySelector('.pv-verl'); if (!el) return; const id = curId(), v = verOf(id); el.hidden = !v; if (!v) { el.innerHTML = ''; return; }
+    const src = v.from ? S.data.photos.find(y => y.id === v.from) : null;
+    el.innerHTML = [v.from ? `вирізано з фото${src ? ' від ' + esc(dayOf(src.at)) : ''}` : '', v.orig ? `оброблено: ${esc(who(v.by))}, ${esc(dayOf(v.at))} <button type="button" class="pv-vt" data-pv="vorig" aria-pressed="${vOrig}">${vOrig ? 'Показати оброблене' : 'Показати оригінал'}</button>` : ''].filter(Boolean).join(' · ');
+    if (vOrig && v.orig) el.insertAdjacentHTML('afterbegin', '<b>Оригінал.</b> '); };
+  const cutBar = () => { const el = root.querySelector('.pv-cut'); if (!el) return; el.hidden = !cut; if (!cut) return; const n = cut.boxes.length;
+    el.innerHTML = cut.mode === 'crop' ? `<span>${n ? 'Можна обвести інакше — рамка заміниться.' : 'Обведіть рамкою частину, яку треба залишити.'}</span><span class="pv-cutb">${n ? '<button class="ok" data-pv="cutsave">Зберегти обрізане</button>' : ''}<button data-pv="cutcancel">Скасувати</button></span>`
+      : `<span>${n ? `Обведено: ${n}. Обведіть ще або створіть фото.` : 'Обведіть рамкою кожне фото, яке треба зробити окремим.'}</span><span class="pv-cutb">${n ? `<button class="ok" data-pv="cutsave">Створити ${n} фото</button><button data-pv="cutundo">Прибрати останню</button>` : ''}<button data-pv="cutcancel">Скасувати</button></span>`; };
+  const cutEnd = () => { cut = null; root.classList.remove('drawing'); cutBar(); placeMarks(); };
+  const busy = (on, t) => { root.classList.toggle('loading', on); root.querySelectorAll('.pv-cut button,[data-pv=more]').forEach(b => { b.disabled = on; }); if (t) toast(t); };
+  // після заміни — оновлюємо дані й відкриваємо те саме фото знову (з новою адресою)
+  const reopen = async (id, msg) => { close(); await load(); S.ui.keepScroll = true; render(); openPhoto(id, S.ui.phCtx); if (msg) toast(msg); };
+  const doReplace = async (id, blob, msg) => { busy(true, 'Зберігаю…'); try { await photoReplace(id, blob); await reopen(id, msg); } catch (err) { busy(false); toast(errText(err)); } };
+  root.querySelector('[data-pvrep]')?.addEventListener('change', async e => { const f = e.target.files?.[0]; e.target.value = ''; menu.hidden = true; const id = photoId; if (!f || !id) return; doReplace(id, f, 'Оброблену версію збережено. Оригінал лишився — «Показати оригінал».'); });
   const show = () => {
     if (!im) return; sc = 1; tx = ty = 0; apply(false);
     root.classList.add('loading'); im.onload = () => root.classList.remove('loading'); im.onerror = () => root.classList.remove('loading');
     im.onload = () => { root.classList.remove('loading'); placeMarks(); }; placeMarks();
     if (items) { const it = items[i] || {}; photoId = it.photoId || null; title = it.title || ''; root.querySelector('.pv-t b').textContent = title; const tEl = root.querySelector('.pv-text'); if (tEl) tEl.textContent = it.text || '';
+      root.querySelectorAll('.pv-ed').forEach(b => { b.hidden = !photoId; }); { const dl = root.querySelector('[data-pvdl]'); if (dl) { dl.hidden = !photoId; if (photoId) dl.href = img('photo=' + photoId) + (verOf(photoId)?.orig ? '&v=orig' : '') + '&dl=1'; } }
       root.querySelectorAll('[data-portrait],[data-delphoto]').forEach(b => { if ('portrait' in b.dataset) b.dataset.portrait = photoId || ''; else b.dataset.delphoto = photoId || ''; b.hidden = !photoId; }); root.querySelectorAll('[data-phask]').forEach(b => { b.dataset.phask = photoId || ''; b.hidden = !photoId; b.textContent = (CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'; }); root.querySelectorAll('[data-pv=cap],[data-pv=who]').forEach(b => { b.hidden = !photoId; }); const pp_ = root.querySelector('.pv-people'); if (pp_ && it.people) pp_.innerHTML = pvPeople(it.people);
       const ci = root.querySelector('#cap-in'); if (ci) ci.value = it.caption || ''; const ce = root.querySelector('.pv-capedit'); if (ce) ce.hidden = true; }
+    vOrig = false; verLine();
     im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `${i + 1} / ${pages.length}`;
     if (pages.length > 1) { new Image().src = pages[(i + 1) % pages.length]; new Image().src = pages[(i - 1 + pages.length) % pages.length]; } // сусідні вантажаться заздалегідь
   };
@@ -1756,7 +1778,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
   };
   const onRs = () => placeMarks(); window.addEventListener('resize', onRs);
   const close = () => { document.body.classList.remove('noscroll'); document.removeEventListener('keydown', key, true); window.removeEventListener('resize', onRs); closeLayer(); };
-  const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.target.tagName === 'INPUT') return; if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); if (e.key === '+' || e.key === '=') zoomTo(sc * 1.5, 0, 0); if (e.key === '-') zoomTo(sc / 1.5, 0, 0); };
+  const key = e => { if (!L.contains(root)) { document.removeEventListener('keydown', key, true); return; } if (e.target.tagName === 'INPUT') return; if (e.key === 'Escape' && cut) { e.stopPropagation(); cutEnd(); return; } if (e.key === 'Escape') { e.stopPropagation(); close(); } if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); if (e.key === '+' || e.key === '=') zoomTo(sc * 1.5, 0, 0); if (e.key === '-') zoomTo(sc / 1.5, 0, 0); };
   document.addEventListener('keydown', key, true);
 
   // Кнопки
@@ -1774,6 +1796,19 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     if (a === 'mkcancel') { draw = null; root.classList.remove('drawing'); root.querySelector('.pv-hint').hidden = true; placeMarks(); return; }
     if (a === 'mkclear') { menu.hidden = true; mk = mk.filter(m => (m.p || 0) !== i); return saveMarks(); }
     if (a === 'more') { menu.hidden = !menu.hidden; return; }
+    if (a === 'vorig') { const id = curId(); if (!id || !im) return; vOrig = !vOrig; im.src = vOrig ? img('photo=' + id + '&v=orig') : pages[i]; verLine(); return; }
+    if (a === 'rotl' || a === 'rotr') { menu.hidden = true; const id = photoId; if (!id) return; busy(true, 'Повертаю…'); try { const bm = await photoBitmap(id); const c = document.createElement('canvas'); c.width = bm.height; c.height = bm.width; const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate((a === 'rotr' ? 1 : -1) * Math.PI / 2); g.drawImage(bm, -bm.width / 2, -bm.height / 2); bm.close?.(); await doReplace(id, await canvasJpeg(c), 'Фото повернуто. Оригінал лишився.'); } catch (err) { busy(false); toast(errText(err)); } return; }
+    if (a === 'crop' || a === 'split') { menu.hidden = true; if (!photoId || !im) return; if (vOrig) { vOrig = false; im.src = pages[i]; verLine(); } zoomTo(1, 0, 0, false); cut = { mode: a, boxes: [], box: null, a: null }; root.classList.add('drawing'); cutBar(); placeMarks(); return; }
+    if (a === 'cutcancel') return cutEnd();
+    if (a === 'cutundo') { if (cut) { cut.boxes.pop(); cutBar(); placeMarks(); } return; }
+    if (a === 'cutsave') { if (!cut?.boxes.length || !photoId) return; const id = photoId, mode = cut.mode, boxes = cut.boxes.slice(); busy(true, mode === 'crop' ? 'Обрізаю…' : 'Створюю фото…');
+      try { const bm = await photoBitmap(id);
+        if (mode === 'crop') { await doReplace(id, await canvasJpeg(cropCanvas(bm, boxes[0])), 'Фото обрізано. Оригінал лишився.'); bm.close?.(); return; }
+        const src = S.data.photos.find(y => y.id === id), ids = [];
+        for (const b of boxes) { const blob = await canvasJpeg(cropCanvas(bm, b)); const full = await bestPhoto(blob); const r = await api(`/api/upload?splitFrom=${encodeURIComponent(id)}`, { raw: full }); await api(`/api/upload?kind=thumb&photo=${encodeURIComponent(r.id)}`, { raw: await toJpeg(blob, 420, 0.78) }).catch(() => {}); ids.push(r.id); }
+        bm.close?.(); cut = null; close(); await load(); S.ui.keepScroll = true; render(); toast(`Створено фото: ${ids.length}. Автор — той, хто додав початкове фото.`);
+        photoTag(ids, 0, src?.person || null, { title: 'Що на цій частині?' });
+      } catch (err) { busy(false); toast(errText(err)); } return; }
     if (a === 'who') { const id = photoId; if (!id) return; const x = S.data.photos.find(y => y.id === id); close(); photoTag([id], 0, P[x?.person] ? x.person : null, { reopen: true }); return; }
     if (a === 'cap') { menu.hidden = true; const c = root.querySelector('.pv-capedit'); c.hidden = false; c.querySelector('input').focus(); return; }
     if (a === 'capsave') { try { const v = $('#cap-in').value; await api('/api/data', { body: { op: 'photo.caption', id: photoId, caption: v } }); const x = S.data.photos.find(y => y.id === photoId); if (x) x.caption = v; if (items?.[i]) items[i].caption = v; root.querySelector('.pv-t b').textContent = v || title; root.querySelector('.pv-capedit').hidden = true; toast('Підпис збережено'); } catch (err) { toast(errText(err)); } }
@@ -1786,12 +1821,14 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
   stage.addEventListener('pointerdown', e => {
     if (e.target.closest('button')) return;
     if (draw) { e.preventDefault(); stage.setPointerCapture?.(e.pointerId); draw.a = frac(e); draw.box = null; return; }
+    if (cut) { if (e.target.closest('.pv-cut')) return; e.preventDefault(); stage.setPointerCapture?.(e.pointerId); cut.a = frac(e); cut.box = null; return; }
     pts.set(e.pointerId, [e.clientX, e.clientY]); stage.setPointerCapture?.(e.pointerId);
     if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, tx, ty, t: Date.now() }; moved = false; }
     if (pts.size === 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; pinch = { d: Math.hypot(x2 - x1, y2 - y1), sc, c: rel((x1 + x2) / 2, (y1 + y2) / 2), tx, ty }; moved = true; }
   });
   stage.addEventListener('pointermove', e => {
     if (draw) { if (!draw.a) return; const [x, y] = frac(e), [x0, y0] = draw.a; draw.box = { x: Math.min(x, x0), y: Math.min(y, y0), w: Math.abs(x - x0), h: Math.abs(y - y0) }; placeMarks(); return; }
+    if (cut) { if (!cut.a) return; const [x, y] = frac(e), [x0, y0] = cut.a; cut.box = { x: Math.min(x, x0), y: Math.min(y, y0), w: Math.abs(x - x0), h: Math.abs(y - y0) }; placeMarks(); return; }
     if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && pts.size >= 2) { const [[x1, y1], [x2, y2]] = [...pts.values()]; const ns = Math.min(6, Math.max(1, pinch.sc * Math.hypot(x2 - x1, y2 - y1) / pinch.d)); const k = ns / pinch.sc; const c = rel((x1 + x2) / 2, (y1 + y2) / 2); tx = c[0] - (pinch.c[0] - pinch.tx) * k; ty = c[1] - (pinch.c[1] - pinch.ty) * k; sc = ns; clamp(); apply(false); return; }
     if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y;
@@ -1800,6 +1837,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     else { setT(Math.abs(dy) > Math.abs(dx) ? `translateY(${Math.max(0, dy)}px)` : `translateX(${pages.length > 1 ? dx : dx / 4}px)`, false); root.style.backgroundColor = `rgba(14,12,10,${Math.abs(dy) > Math.abs(dx) ? Math.max(.35, 1 - Math.max(0, dy) / 500) : 1})`; }
   });
   const up = e => {
+    if (cut) { if (!cut.a) return; const b = cut.box; cut.a = null; cut.box = null; if (b && b.w > 0.02 && b.h > 0.02) { if (cut.mode === 'crop') cut.boxes = [b]; else cut.boxes.push(b); } cutBar(); placeMarks(); return; }
     if (draw) { if (!draw.a) return; const b = draw.box; draw.a = null; if (b && b.w > 0.01 && b.h > 0.005) { mk.push({ p: i, ...b }); draw = null; root.classList.remove('drawing'); root.querySelector('.pv-hint').hidden = true; saveMarks(); } return; }
     if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
     if (pinch) { if (pts.size < 2) { pinch = null; if (sc <= 1.01) zoomTo(1, 0, 0); start = null; } return; }
@@ -1862,7 +1900,7 @@ function openPhoto(id, pctx) { const x = S.data.photos.find(y => y.id === id) ||
   const ctx = [pctx, S.view === 'p' ? S.arg : null].find(z => z && P[z] && photoOf(x, z)) || x.person; // фото саме цієї людини (власні + де її позначено)
   S.ui.phCtx = ctx;
   const list = S.data.photos.filter(y => photoOf(y, ctx) && y.mime !== 'application/pdf' && !isVoice(y)), k = Math.max(0, list.findIndex(y => y.id === id));
-  const items = list.map(y => ({ photoId: (canEdit() || y.by === S.me.id) ? y.id : null, title: y.caption || short(P[y.person] || {}), caption: y.caption || '', people: [y.person, ...tagsOf(y.id)].filter(z => P[z]), text: `Додав(ла): ${who(y.by)}, ${when(y.at)}` }));
+  const items = list.map(y => ({ id: y.id, photoId: (canEdit() || y.by === S.me.id) ? y.id : null, title: y.caption || short(P[y.person] || {}), caption: y.caption || '', people: [y.person, ...tagsOf(y.id)].filter(z => P[z]), text: `Додав(ла): ${who(y.by)}, ${when(y.at)}` }));
   viewer({ title: items[k].title, pages: list.map(y => img('photo=' + y.id)), text: items[k].text, people: [x.person, ...tagsOf(x.id)].filter(y => P[y]), photoId: items[k].photoId, items, startAt: k }); }
 
 /* ───── Власнику: аналітика, доступи, історія ───── */
@@ -1894,7 +1932,7 @@ function chartDaily(daily, from, to) {
 function sortRows(rows, key) { const k = S.admin.sort || key; const dir = S.admin.dir || -1; return rows.sort((a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * dir); }
 function phPendBlock(list) {
   if (!list?.length) return '';
-  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : x.person === '_ask' ? '«Хто на фото?» — без картки' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) : ''}</b>${x.person === '_ask' ? '<br><small class="muted">Автор не знає, хто на фото, і просить родичів упізнати. Після «Показати всім» фото з\'явиться на Головній у «Хто на фото?»; людей можна позначити, відкривши фото → «⋯» → «Хто на фото».</small>' : ''}<br>${esc(x.caption || '') || '<i class="muted">без підпису</i>'}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${isVoice(x) ? '' : `<a class="btn line small" href="${img('photo=' + x.id)}&dl=1" download>⬇ Оригінал</a>`}${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
+  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : x.person === '_ask' ? '«Хто на фото?» — без картки' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) : ''}</b>${x.person === '_ask' ? '<br><small class="muted">Автор не знає, хто на фото, і просить родичів упізнати. Після «Показати всім» фото з\'явиться на Головній у «Хто на фото?»; людей можна позначити, відкривши фото → «⋯» → «Хто на фото».</small>' : ''}<br>${esc(x.caption || '') || '<i class="muted">без підпису</i>'}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${isVoice(x) ? '' : `<a class="btn line small" href="${img('photo=' + x.id)}${x.ver?.orig ? '&v=orig' : ''}&dl=1" download>⬇ Оригінал</a>`}${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
 }
 function vAdmin() {
   if (!isOwner()) return '<p>Немає доступу.</p>';
@@ -1952,7 +1990,7 @@ function vAdmin() {
   return `<div class="pghead"><h1 title="Аналітика, доступи родичів та історія змін.">Власнику</h1>${tabs}</div>${body}`;
 }
 const ENT = { person: 'Картка', union: 'Подружжя', family: 'Родина', story: 'Спогад', photo: 'Фото', member: 'Доступ', seed: 'Імпорт', question: 'Запитання' };
-const ACT = { create: 'створено', update: 'змінено', delete: 'видалено', restore: 'відкат', invite: 'запрошення', reset: 'новий пароль' };
+const ACT = { create: 'створено', replace: 'замінено обробленою версією', update: 'змінено', delete: 'видалено', restore: 'відкат', invite: 'запрошення', reset: 'новий пароль' };
 const FIELD = { n: "ім'я", pt: 'по батькові', s: 'прізвище', m: 'дівоче', b: 'народження', d: 'смерть', bp: 'місце народження', dp: 'місце смерті', note: 'опис', f: 'батько', mo: 'мати', sex: 'стать', hyp: 'гіпотеза', fam: 'гілки', portrait: 'головне фото', story: 'історія', text: 'текст', caption: 'підпис', status: 'стан', answer: 'відповідь' };
 function diff(b, a) {
   if (!b || !a || typeof b !== 'object') return '';
@@ -2962,6 +3000,17 @@ const textToHtml = t => t.trim().split(/\n\s*\n/).map(p => `<p>${esc(p).replace(
 
 /* ───── Завантаження фото: зменшуємо в браузері, далі — на сервер ───── */
 // Фото зберігаємо якомога ближче до оригіналу: якщо файл JPEG/PNG/WebP і до 4 МБ — як є; інакше — найкраща якість, що вміщається в 4 МБ.
+/* Версії фото (редактор і власник): оброблене замість сирого, поворот, обрізка, розрізання. Оригінал сервер зберігає сам, автор фото не змінюється. */
+const verOf = id => id ? (S.data?.photos.find(y => y.id === id)?.ver || (S.admin?.pph || []).find(y => y.id === id)?.ver || null) : null;
+const dayOf = t => t ? new Date(t).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+async function photoBitmap(id) { const r = await fetch(img('photo=' + id), { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error('http_' + r.status); return createImageBitmap(await r.blob()); }
+function cropCanvas(bm, b) { const W = bm.width, H = bm.height, x = Math.round(b.x * W), y = Math.round(b.y * H), w = Math.max(1, Math.round(b.w * W)), h = Math.max(1, Math.round(b.h * H)); const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(bm, x, y, w, h, 0, 0, w, h); return c; }
+const canvasJpeg = (c, q = 0.93) => new Promise((ok, bad) => c.toBlob(b => b ? ok(b) : bad(new Error('type')), 'image/jpeg', q));
+async function photoReplace(id, blob) {
+  const full = await bestPhoto(blob), thumb = await toJpeg(blob, 420, 0.78);
+  await api(`/api/upload?replace=${encodeURIComponent(id)}`, { raw: full });
+  await api(`/api/upload?kind=thumb&replace=${encodeURIComponent(id)}`, { raw: thumb }).catch(() => {});
+}
 async function bestPhoto(f) {
   if (/^image\/(jpeg|png|webp)$/.test(f.type) && f.size <= 4e6) return f;
   for (const [mx, q] of [[6000, 0.92], [4800, 0.9], [4000, 0.88], [3200, 0.86], [2400, 0.84], [1600, 0.8]]) { const b = await toJpeg(f, mx, q); if (b.size <= 4e6) return b; }
