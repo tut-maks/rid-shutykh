@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610151320';
+const BUILD = '202610152019';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -154,7 +154,7 @@ function aboutMore(p, docs) {
   const plain = t => esc(String(t || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2'));
   const ds = docs.filter(d => d.text || d.line).slice().sort((a, b) => docYear(a) - docYear(b)).slice(0, 8);
   const rid = ridMentions(p.id);
-  return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date ? ` <span class="muted small mono">${esc(d.date)}</span>` : ''}<p>${glossify(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' ')))}</p></div>`).join('')}</div>` : ''}
+  return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date ? ` <span class="muted small mono">${esc(d.date)}</span>` : ''}<p>${glossify(mdLinks(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' '))))}</p></div>`).join('')}</div>` : ''}
     ${rid.length ? `<div class="abt-g"><h4>З «Історії роду»</h4>${rid.map(x => `<p>${glossify(plain(x))}</p>`).join('')}<a class="small" href="#/families">Читати всю історію →</a></div>` : ''}`;
 }
 
@@ -262,7 +262,7 @@ function ppHtml(id) {
   const grp = (t, ids) => ids.length ? `<div class="pp-g"><h4>${t}</h4>${ids.map(row).join('')}</div>` : '';
   const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
-    ${(() => { const t = p.note || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
+    ${(() => { const t = (p.note || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1') || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
     ${docs.length ? `<div class="pp-g"><h4>${docs.length > 1 ? 'Джерела' : 'Джерело'}</h4>${docs.slice(0, 4).map(docRow).join('')}${docs.length > 4 ? `<button type="button" class="btn line small" data-act="pp-tab" data-v="src">Усі джерела (${docs.length})</button>` : ''}</div>` : ''}`;
   const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.filter(x => !ucU(x)).map(x => x.id).filter(x => P[x])) + sp.filter(x => ucU(x) && P[x.id]).map(x => grp(esc(ucLabel(p.id, x).replace(/^./, c => c.toUpperCase())), [x.id])).join('') + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
   const src = docs.length ? docs.map(docRow).join('') : '<p class="muted">Документів поки немає.</p>';
@@ -672,7 +672,7 @@ function vPerson() {
     <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Уточнити / запитати</button></span></h3>
       ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
       ${birthPara(p, docs)}
-      ${p.note ? `<div class="about">${glossify(esc(p.note))}</div>` : ''}
+      ${p.note ? `<div class="about">${glossify(mdLinks(esc(p.note)))}</div>` : ''}
       ${aboutMore(p, docs)}
       ${!p.note && !docs.length && !ridMentions(p.id).length ? `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>` : ''}
       ${qAboutHtml(p.id)}
@@ -2592,7 +2592,7 @@ function hypCard(x) {
   const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0 }; A.forEach(s => c[verdOf(s)]++);
   return `<article class="hyp-c hc-${x.cat}">
     <div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
-    <h3>${esc(x.title)}</h3><p>${glossify(esc(x.text))}</p>
+    <h3>${esc(x.title)}</h3><p>${glossify(mdLinks(esc(x.text)))}</p>
     ${x.basis ? `<p class="hyp-b"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
     ${(x.people || []).length ? `<div class="hyp-p">${x.people.filter(id => P[id]).map(mini).join('')}</div>` : ''}
     ${(x.docs || []).length || (x.src || []).length ? `<div class="hyp-s">${(x.docs || []).filter(id => S.data.documents.some(d => d.id === id)).map(id => `<a href="#" data-doc="${id}">📄 ${esc(S.data.documents.find(d => d.id === id).title)}</a>`).join('')}${(x.src || []).map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">↗ ${esc(s.name)}</a>`).join('')}</div>` : ''}
@@ -2613,7 +2613,7 @@ function vHyp() {
 function openHyp(id) {
   const x = hypItems().find(h => h.id === id); if (!x) return;
   const A = hypAns(id);
-  modal(`<h2>${esc(x.title)}</h2><p>${glossify(esc(x.text))}</p>${x.basis ? `<p class="small muted"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
+  modal(`<h2>${esc(x.title)}</h2><p>${glossify(mdLinks(esc(x.text)))}</p>${x.basis ? `<p class="small muted"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
     <h3>Що кажуть родичі</h3>${A.length ? `<div class="hyp-ans">${A.map(s => `<div class="story"><div><b class="v-${verdOf(s)}">${VERD[verdOf(s)][0]} ${VERD[verdOf(s)][1]}</b><br>${glossify(esc(ansText(s)))}</div><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted small">Ще ніхто не відповів. Будьте першим!</p>'}
     <div class="sec" style="gap:8px">
       <div class="verd">${Object.entries(VERD).map(([k, [ic, t]]) => `<label class="vd vd-${k}"><input type="radio" name="hyp-v" value="${k}"${k === 'add' ? ' checked' : ''}> <span>${ic} ${t}</span></label>`).join('')}</div>
