@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610150645';
+const BUILD = '202610150709';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -151,7 +151,7 @@ function birthPara(p, docs) {
 }
 const docYear = d => +((String(d.date || d.title || '').match(/\d{4}/) || ['9999'])[0]);
 function aboutMore(p, docs) {
-  const plain = t => esc(String(t || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2'));
+  const plain = t => esc(String(t || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2'));
   const ds = docs.filter(d => d.text || d.line).slice().sort((a, b) => docYear(a) - docYear(b)).slice(0, 8);
   const rid = ridMentions(p.id);
   return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date ? ` <span class="muted small mono">${esc(d.date)}</span>` : ''}<p>${glossify(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' ')))}</p></div>`).join('')}</div>` : ''}
@@ -262,7 +262,7 @@ function ppHtml(id) {
   const grp = (t, ids) => ids.length ? `<div class="pp-g"><h4>${t}</h4>${ids.map(row).join('')}</div>` : '';
   const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
-    ${(() => { const t = p.note || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
+    ${(() => { const t = p.note || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
     ${docs.length ? `<div class="pp-g"><h4>${docs.length > 1 ? 'Джерела' : 'Джерело'}</h4>${docs.slice(0, 4).map(docRow).join('')}${docs.length > 4 ? `<button type="button" class="btn line small" data-act="pp-tab" data-v="src">Усі джерела (${docs.length})</button>` : ''}</div>` : ''}`;
   const fam = grp('Батьки', par) + grp('Чоловік / дружина', sp.filter(x => !ucU(x)).map(x => x.id).filter(x => P[x])) + sp.filter(x => ucU(x) && P[x.id]).map(x => grp(esc(ucLabel(p.id, x).replace(/^./, c => c.toUpperCase())), [x.id])).join('') + grp('Діти', ch) + grp('Брати й сестри', sib) || '<p class="muted">Родичів поки не додано.</p>';
   const src = docs.length ? docs.map(docRow).join('') : '<p class="muted">Документів поки немає.</p>';
@@ -1175,7 +1175,7 @@ async function syncNow() { // нові матеріали з репозитор�
   return ok;
 }
 function mdLinks(h) { // [[p:id|Ім'я]] → посилання на картку; [[d:id|текст]] → відкрити документ
-  return h.replace(/\[\[([pd]):([a-z0-9_]+)\|([^\]]+)\]\]/gi, (m, t, id, label) => t === 'p' ? (P[id] ? `<a href="${href('p', id)}">${label}</a>` : label) : (S.data.documents.some(d => d.id === id) ? `<a href="#" class="doclink" data-doc="${id}">${label}</a>` : label));
+  return h.replace(/\[\[([pd]):([a-z0-9_-]+)\|([^\]]+)\]\]/gi, (m, t, id, label) => t === 'p' ? (P[id] ? `<a href="${href('p', id)}">${label}</a>` : label) : (S.data.documents.some(d => d.id === id) ? `<a href="#" class="doclink" data-doc="${id}">${label}</a>` : label));
 }
 function md(src) {
   const inl = t => mdLinks(esc(t).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>'));
@@ -2564,7 +2564,7 @@ document.addEventListener('click', async e => {
 
 /* ═════════ Припущення: усе, що ще не підтверджено (13.10) ═════════ */
 const hHash = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
-const plainMd = t => String(t || '').replace(/\[\[[pd]:[a-z0-9_]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1').replace(/^#+\s*/gm, '');
+const plainMd = t => String(t || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1').replace(/^#+\s*/gm, '');
 const hypSent = t => { // речення з «Є припущення» (і наступне, якщо воно пояснює)
   const out = []; const S_ = String(t || '').split(/(?<=[.!?])\s+/);
   S_.forEach((s, i) => { if (/Є припущення|не підтвердж|не перевірено/i.test(s)) out.push(s + (S_[i + 1] && !/Є припущення/.test(S_[i + 1]) && S_[i + 1].length < 220 ? ' ' + S_[i + 1] : '')); });
@@ -2580,7 +2580,7 @@ function hypItems() {
   S.data.unions.forEach(u => { if (P[u.a] && P[u.b] && /не підтвердж/i.test(u.date || '')) L.push({ p: 45, id: 'u:' + u.id, cat: 'tree', title: `${short(P[u.a])} і ${short(P[u.b])} — шлюб не підтверджено`, text: 'Спільні діти є, але запису про шлюб ще не знайдено.', people: [u.a, u.b] }); });
   S.data.documents.filter(d => d.type !== 'map').forEach(d => hypSent(d.text).forEach(s => L.push({ p: 40, id: 'pd:' + d.id + ':' + hHash(s), cat: 'card', title: d.title, text: s, docs: [d.id], people: (d.people || []).filter(x => P[x]).slice(0, 4) })));
   const hist = loadText('history', true);
-  if (hist?.md) hist.md.split(/\n\s*\n/).forEach(par => { if (/Є припущення/.test(par) && !/^#/.test(par.trim())) hypSent(plainMd(par)).forEach(s => L.push({ p: 35, id: 'ph:' + hHash(s), cat: 'hist', title: '«Історія роду»', text: s, people: [...par.matchAll(/\[\[p:([a-z0-9_]+)\|/gi)].map(m => m[1]).filter(x => P[x]).slice(0, 5) })); });
+  if (hist?.md) hist.md.split(/\n\s*\n/).forEach(par => { if (/Є припущення/.test(par) && !/^#/.test(par.trim())) hypSent(plainMd(par)).forEach(s => L.push({ p: 35, id: 'ph:' + hHash(s), cat: 'hist', title: '«Історія роду»', text: s, people: [...par.matchAll(/\[\[p:([a-z0-9_-]+)\|/gi)].map(m => m[1]).filter(x => P[x]).slice(0, 5) })); });
   const seen = new Set(); return L.filter(x => !seen.has(x.id) && seen.add(x.id));
 }
 const HYPCAT = [['', 'Усі'], ['kin', 'Можлива рідня'], ['hyp', 'Наші припущення'], ['tree', 'У дереві'], ['card', 'У картках і документах'], ['hist', 'В «Історії роду»']];
