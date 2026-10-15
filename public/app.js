@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610150709';
+const BUILD = '202610151320';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -25,7 +25,7 @@ async function api(path, opts = {}) {
   if (!r.ok) { const e = new Error(j.error || 'http_' + r.status); e.status = r.status; e.data = j; throw e; }
   return j;
 }
-const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.', empty: 'Напишіть кілька слів.', pending: 'Вашу заявку ще розглядають. Максим відкриє доступ найближчим часом — тоді увійдете з цією поштою й паролем.', exists_login: 'З цією поштою вже є доступ — просто увійдіть.', parents: 'Вкажіть хоча б батька або матір — так ми знайдемо вас у дереві.', invalid_join: 'Посилання для реєстрації недійсне або вимкнене. Попросіть у Максима нове.', bad_person: 'Такої картки немає в дереві.', about: 'Вкажіть, кого шукаємо: ім\'я, роки, село.', too_many_q: 'У вас уже багато нових запитань — зачекайте відповіді на них.' };
+const ERR = { wrong: 'Невірна пошта або пароль.', too_many: 'Забагато спроб. Зачекайте 15 хвилин.', weak: 'Пароль має бути не коротший за 8 символів.', invalid: 'Посилання недійсне або вже використане. Попросіть Максима надіслати нове.', conflict: 'Хтось щойно змінив цю картку. Оновіть сторінку й спробуйте ще раз.', forbidden: 'У вас немає прав на цю дію.', exists: 'Людина з такою поштою вже має доступ.', email: 'Перевірте адресу пошти.', too_large: 'Файл завеликий (до 4 МБ).', type: 'Підходять фото JPG, PNG, WEBP або PDF.', token: 'Невірний код налаштування.', name: 'Вкажіть хоча б ім\'я або прізвище.', branch: 'Доповнювати можна лише свою гілку: себе, батьків, дітей, братів і сестер.', empty: 'Напишіть кілька слів.', pending: 'Вашу заявку ще розглядають. Щоб швидше — напишіть Максиму, що ви зареєструвалися. Щойно він прийме заявку, увійдете з цією поштою й паролем.', exists_login: 'З цією поштою вже є доступ — просто увійдіть.', parents: 'Вкажіть хоча б батька або матір — так ми знайдемо вас у дереві.', invalid_join: 'Посилання для реєстрації недійсне або вимкнене. Попросіть у Максима нове.', bad_person: 'Такої картки немає в дереві.', about: 'Вкажіть, кого шукаємо: ім\'я, роки, село.', too_many_q: 'У вас уже багато нових запитань — зачекайте відповіді на них.' };
 const errText = e => ERR[e.message] || 'Не вдалося. Спробуйте ще раз.';
 function toastUndo(t, fn) { const d = document.createElement('div'); d.className = 'toast tundo'; d.innerHTML = `<span>${esc(t)}</span><button type="button">Скасувати</button>`; d.querySelector('button').onclick = () => { d.remove(); fn(); }; document.body.appendChild(d); setTimeout(() => d.remove(), 8000); }
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
@@ -1010,7 +1010,7 @@ function vRegister() {
     <p class="small muted" style="margin:0;text-align:center">Дані бачить лише Максим. <a href="#" data-act="to-login">Вже маєте доступ? Увійти</a></p>
   </form></div></div>`;
 }
-const regDone = () => gate(`<div class="sec" style="text-align:center"><p style="margin:0"><b>Дякуємо! Заявку надіслано.</b></p><p class="muted" style="margin:0">Максим перевірить, хто ви в дереві, і відкриє доступ. Після цього входьте з вашою поштою й паролем на цьому ж сайті.</p><button class="btn line" data-act="to-login">До входу</button></div>`);
+const regDone = () => gate(`<div class="sec" style="text-align:center"><p style="margin:0"><b>Дякуємо! Заявку надіслано.</b></p><p class="muted" style="margin:0">Максим перевірить, хто ви в дереві, і відкриє доступ. Після цього входьте з вашою поштою й паролем на цьому ж сайті.</p><p style="margin:0;padding:10px 12px;border:1px solid var(--wine);border-radius:10px"><b>Щоб доступ відкрили швидше</b> — напишіть Максиму (у Telegram, Viber чи просто подзвоніть), що ви зареєструвалися на сайті родоводу. Тоді він прийме заявку одразу.</p><button class="btn line" data-act="to-login">До входу</button></div>`);
 
 /* Підказки власнику: хто з дерева схожий на написане в заявці */
 const nrm = t => String(t || '').toLowerCase().replace(/[ʼ'’`]/g, '').replace(/ё/g, 'е');
