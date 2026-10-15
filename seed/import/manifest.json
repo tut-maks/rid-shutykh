@@ -28319,5 +28319,133 @@
   "data": {
    "text": "Фрагмент «трьохверстівки» Шуберта в повній роздільності. Видно Вороньки й Веприк на річці Супій (Супой) та притоці, хутір Пустотин на схід. На північний схід від Веприка позначено «х. Лыгинъ» — імовірно, нинішній Лідин (хутір Лигин), де, за родинними спогадами, жили Шуті з маминої лінії. За написом на аркуші: частину Полтавської губернії виправлено за рекогносцировкою 1869 р., залізницю нанесено за зйомками 1893 і 1902 рр. — отже, це видання початку XX століття. Прив'язано до сучасної карти за градусною сіткою на рамці аркуша."
   }
+ },
+ {
+  "key": "aud16h-vasyl_sh",
+  "kind": "personpatch",
+  "person": "vasyl_sh",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-pryska_vsh",
+  "kind": "personpatch",
+  "person": "pryska_vsh",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-mykhailo_yu",
+  "kind": "personpatch",
+  "person": "mykhailo_yu",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-p_4e5f0c0c60",
+  "kind": "personpatch",
+  "person": "p_4e5f0c0c60",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-naum_tel",
+  "kind": "personpatch",
+  "person": "naum_tel",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-melaniia_tel",
+  "kind": "personpatch",
+  "person": "melaniia_tel",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-nadia_parkh",
+  "kind": "personpatch",
+  "person": "nadia_parkh",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-ivan_ilev",
+  "kind": "personpatch",
+  "person": "ivan_ilev",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-anna_mlev",
+  "kind": "personpatch",
+  "person": "anna_mlev",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-semen_bat",
+  "kind": "personpatch",
+  "person": "semen_bat",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-krasnovyd_m",
+  "kind": "personpatch",
+  "person": "krasnovyd_m",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-petro_v",
+  "kind": "personpatch",
+  "person": "petro_v",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16h-ivan_hn",
+  "kind": "personpatch",
+  "person": "ivan_hn",
+  "set": {
+   "hyp": true
+  }
+ },
+ {
+  "key": "aud16s-davyd",
+  "kind": "personpatch",
+  "person": "davyd",
+  "unset": [
+   "bp"
+  ]
+ },
+ {
+  "key": "aud16s-kostiantyn",
+  "kind": "personpatch",
+  "person": "kostiantyn_sid",
+  "unset": [
+   "b"
+  ]
+ },
+ {
+  "key": "aud16s-maryna",
+  "kind": "personpatch",
+  "person": "maryna_fsh",
+  "set": {
+   "bp": "Веприк"
+  }
  }
 ]
