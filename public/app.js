@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610152227';
+const BUILD = '202610152309';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -394,7 +394,8 @@ function layoutTD(center) {
   function up(c, r, side, lim) { // блок предків людини c (c у x=0, ряд r); lim — з якого ряду ховати предків (коли відкрита рідня дружини/чоловіка)
     const B = mk(); const all = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
     const dflt = !SIBX[c] && !f.allOpen && SIBX[c] !== 0 && r === 0; const g = (SIBX[c] || f.allOpen || dflt) ? all : [c]; if (dflt && all.length > 1) DS[c] = 1; /* відкриті одразу лише брати й сестри центральної людини; решта — кнопкою ▸N */ if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
-    let order = g.filter(x => x !== c); order = side === 'L' ? [...order, c] : side === 'R' ? [c, ...order] : g;
+    const outer = x => x !== c && (SPOUSES[x] || []).some(s => EXP[s.id] && P[s.id]); // у кого розгорнута рідня чоловіка/дружини — ставимо скраю ряду, щоб чужа гілка не перетинала лінію братів і сестер
+    let order = g.filter(x => x !== c && !outer(x)); const ou = g.filter(outer); order = side === 'L' ? [...ou, ...order, c] : side === 'R' ? [c, ...order, ...ou] : [...g.filter(x => !outer(x)), ...ou];
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
     const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
     if ((fa || mo) && (r >= DEF || (lim && r >= lim)) && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
@@ -446,8 +447,8 @@ function layoutTD(center) {
   const upHidden = id => { const p = P[id]; return !!p && [p.f, p.mo].some(x => x && P[x] && !seen.has(x)); };
   A.n.slice().forEach(o0 => { const id = o0.id; if (id === center || !upHidden(id)) return;
     if (!EXP[id] && !f.allOpen) { (hid[id] ||= {}).up = true; return; }
-    const o = A.n.find(x => x.id === id); const keep = SIBX[id]; if (keep === undefined) SIBX[id] = 0;
-    const Ub = up(id, o.r, 'C'); if (keep === undefined) delete SIBX[id];
+    const o = A.n.find(x => x.id === id); const keep = SIBX[id]; if (keep === undefined) SIBX[id] = 1; // з батьками подружжя одразу видно і його братів та сестер (праворуч від нього)
+    const Ub = up(id, o.r, 'R'); if (keep === undefined) delete SIBX[id];
     Ub.n = Ub.n.filter(n => n.id !== id); if (!Ub.n.length) return; shift(Ub, o.x);
     const rowsU = [...new Set(Ub.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
     const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
