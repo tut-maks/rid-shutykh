@@ -108,7 +108,9 @@ for src, t in texts():
         if src.startswith('картка '): subj.add(src.split()[1])
         if src.startswith('документ '): subj |= set(D[src.split()[1]].get('people') or [])
         if any(sj in depth and depth[sj] - depth[q] == n for sj in subj for q in cands): continue
-        err('ступінь спорідненості (за ім\'ям)', src, f'«{t[st+1:en].strip()[:140]}»', f'«{w} {name}»: у дереві ' + ', '.join(f"{nm(P.get(q) or {'id': q})} — {want(depth[q])} Максима" for q in cands))
+        head = t[st+1:m.start()].split(' — ')[0]
+        known = any(re.search(r'\b' + re.escape(((P.get(sj) or {}).get('n') or '?').split()[0][:4]), head) for sj in subj)
+        (err if known or not head.strip() else warn)('ступінь спорідненості (за ім\'ям)', src, f'«{t[st+1:en].strip()[:140]}»', f'«{w} {name}»: у дереві ' + ', '.join(f"{nm(P.get(q) or {'id': q})} — {want(depth[q])} Максима" for q in cands))
     if src.startswith('картка '):
         pid = src.split()[1]
         for m in re.finditer(r'^[^.]{0,60}?' + KW + r'\s+(?:Максима|по\s)', t):
