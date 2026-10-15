@@ -230,6 +230,13 @@ export default handler(async (req, res, ctx, url) => {
     await db.insert('unions', u); await revision('union', u.id, 'create', null, u, me.id);
     return done({ union: { id: u.id, a, b, date: u.date } }, a);
   }
+  if (op === 'union.date') { // дата шлюбу вже наявного зв'язку (можна без року: «16.10»)
+    if (!editor) return fail(res, 403, 'forbidden');
+    const u = await db.get('unions', { eq: { id: S(body.id, 60) } }); if (!u || u.deleted) return fail(res, 404, 'not_found');
+    const date = S(body.date, 40);
+    await db.update('unions', { eq: { id: u.id } }, { date }); await revision('union', u.id, 'update', { date: u.date }, { date }, me.id);
+    return done({ union: { id: u.id, a: u.a, b: u.b, date } }, u.a);
+  }
   if (op === 'union.remove') {
     if (!editor) return fail(res, 403, 'forbidden');
     const u = await db.get('unions', { eq: { id: S(body.id, 60) } }); if (!u) return fail(res, 404, 'not_found');

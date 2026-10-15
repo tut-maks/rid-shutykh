@@ -295,6 +295,9 @@ export default handler(async (req, res, ctx, url) => {
     } else if (r.entity === 'family' && r.before) {
       await db.update('families', { eq: { id: r.entity_id } }, { data: r.before, updated_by: me.id, updated_at: now });
       await revision('family', r.entity_id, 'restore', r.after, r.before, me.id);
+    } else if (r.entity === 'union' && r.action === 'update') { // повернути попередню дату шлюбу
+      await db.update('unions', { eq: { id: r.entity_id } }, { date: r.before?.date || '' });
+      await revision('union', r.entity_id, 'restore', r.after, r.before, me.id);
     } else if (['union', 'story', 'photo'].includes(r.entity)) {
       const table = { union: 'unions', story: 'stories', photo: 'photos' }[r.entity];
       await db.update(table, { eq: { id: r.entity_id } }, { deleted: r.action === 'create' });

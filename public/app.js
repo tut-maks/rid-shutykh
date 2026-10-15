@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610150643';
+const BUILD = '202610150645';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -786,7 +786,7 @@ const closeLayer = () => { $('#layer').innerHTML = ''; document.body.classList.r
 function openEdit(p) {
   const sp = SPOUSES[p.id] || [];
   modal(`<h2>${esc(full(p))}</h2>${personForm(p)}
-    <div class="sec"><h3>Подружжя</h3><div class="row">${sp.map(s => `<span class="mini">${esc(short(P[s.id]))} <button class="btn line small" data-unlink="${s.u}" title="Прибрати зв'язок">×</button></span>`).join('') || '<span class="muted small">немає</span>'}</div>
+    <div class="sec"><h3>Подружжя</h3><div class="row">${sp.map(s => `<span class="mini">${esc(short(P[s.id]))} <input class="in" data-udate="${s.u}" value="${esc(s.date || '')}" placeholder="дата шлюбу" title="Дата шлюбу: ДД.ММ.РРРР (можна й без року — ДД.ММ). Зберігається одразу." style="width:130px;display:inline-block"> <button class="btn line small" data-unlink="${s.u}" title="Прибрати зв'язок">×</button></span>`).join('') || '<span class="muted small">немає</span>'}</div>
       <div class="btns"><select class="in" id="e-sp" style="max-width:320px"><option value="">Додати наявну людину…</option>${Object.values(P).filter(x => x.id !== p.id && !sp.some(s => s.id === x.id)).sort((a, b) => short(a).localeCompare(short(b), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}</option>`).join('')}</select><input class="in" id="e-spd" placeholder="дата шлюбу" style="max-width:160px"><button class="btn line small" data-act="link-spouse">Додати</button></div></div>
     <div class="btns"><button class="btn" data-act="save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button>${isOwner() && !p.root ? `<button class="btn danger" data-act="delete" style="margin-left:auto">Видалити картку</button>` : ''}<span class="msg" id="emsg"></span></div>
     ${isOwner() && p.id ? `<details class="mergebox"><summary>Ця людина є в дереві двічі? Об'єднати картки</summary>
@@ -1935,6 +1935,7 @@ const tagsOf = id => (CFG_().photoPeople || {})[id] || []; // хто ще поз
 const photoOf = (x, pid) => x.person === pid || tagsOf(x.id).includes(pid);
 const yN = s => { const m = String(s || '').match(/(\d{4})/); return m ? +m[1] : null; };
 const dmOf = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? { d: +m[1], m: +m[2], y: +m[3] } : null; };
+const dmW = s => dmOf(s) || ((m => m ? { d: +m[1], m: +m[2], y: null } : null)(String(s || '').match(/^\s*(\d{1,2})\.(\d{1,2})\.?\s*$/))); // дата шлюбу може бути без року («16.10»)
 const isLiving = p => !p.d && !p.dp && (yN(p.b) || 0) >= 1925;
 const isVoice = x => /^audio\//.test(x?.mime || '');
 const MONTHS_G = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
@@ -2113,13 +2114,13 @@ function dayEvents() {
   const now = new Date(), out = [];
   const push = (dm, kind, ids, extra) => { if (!dm) return; let nx = new Date(now.getFullYear(), dm.m - 1, dm.d); const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()); if (nx < t0) nx = new Date(now.getFullYear() + 1, dm.m - 1, dm.d); out.push({ dm, kind, ids, extra, ny: nx.getFullYear(), days: Math.round((nx - t0) / 864e5) }); };
   Object.values(P).forEach(p => { push(dmOf(p.b), isLiving(p) ? 'bday' : 'born', [p.id]); push(dmOf(p.d), 'died', [p.id]); });
-  S.data.unions.forEach(u => push(dmOf(u.date), 'wed', [u.a, u.b]));
+  S.data.unions.forEach(u => P[u.a] && P[u.b] && push(dmW(u.date), 'wed', [u.a, u.b]));
   S.data.documents.filter(d => d.type !== 'map').forEach(d => { const dm = dmOf(d.date); if (dm && !/народж|смерт|помер|вінчан|шлюб/i.test(d.title)) push(dm, 'doc', [], d); });
-  return out.sort((a, b) => a.days - b.days || a.dm.y - b.dm.y);
+  return out.sort((a, b) => a.days - b.days || (a.dm.y || 0) - (b.dm.y || 0));
 }
 function evLine(e) {
   const y = e.dm.y, ago = e.ny - y, p = P[e.ids[0]];
-  const t = e.kind === 'bday' ? `${pLink(p.id)} — день народження${ago > 0 ? `, ${ago} р.` : ''}${e.days === 0 ? ' 🎉' : ''}` : e.kind === 'born' ? `${y} — народи${p.sex === 'f' ? 'лася' : 'вся'} ${pLink(p.id)}` : e.kind === 'died' ? `${y} — помер${p.sex === 'f' ? 'ла' : ''} ${pLink(p.id)}` : e.kind === 'wed' ? `${y} — шлюб: ${pLink(e.ids[0])} і ${pLink(e.ids[1])}` : `${y} — <a href="#" data-doc="${e.extra.id}">${esc(e.extra.title)}</a>`;
+  const t = e.kind === 'bday' ? `${pLink(p.id)} — день народження${ago > 0 ? `, ${ago} р.` : ''}${e.days === 0 ? ' 🎉' : ''}` : e.kind === 'born' ? `${y} — народи${p.sex === 'f' ? 'лася' : 'вся'} ${pLink(p.id)}` : e.kind === 'died' ? `${y} — помер${p.sex === 'f' ? 'ла' : ''} ${pLink(p.id)}` : e.kind === 'wed' ? (isLiving(P[e.ids[0]]) && isLiving(P[e.ids[1]]) ? `${pLink(e.ids[0])} і ${pLink(e.ids[1])} — річниця шлюбу${y && ago > 0 ? `, ${ago} р.` : ''}${e.days === 0 ? ' 💍' : ''}` : `${y ? y + ' — ' : ''}шлюб: ${pLink(e.ids[0])} і ${pLink(e.ids[1])}`) : `${y} — <a href="#" data-doc="${e.extra.id}">${esc(e.extra.title)}</a>`;
   return `<li class="ev-${e.kind}"><span class="ev-d mono">${e.dm.d} ${MONTHS_G[e.dm.m - 1]}</span><span>${t}</span></li>`;
 }
 function todayCard() {
@@ -2141,7 +2142,7 @@ function calHtml() {
   const cells = []; for (let i = 0; i < first; i++) cells.push('<span class="cal-e"></span>');
   for (let d = 1; d <= days; d++) { const L = by[d] || [], bd = L.some(e => e.kind === 'bday'), today = m === now.getMonth() && d === now.getDate();
     cells.push(`<button class="cal-d${L.length ? ' has' : ''}${bd ? ' bd' : ''}${today ? ' today' : ''}${d === sel ? ' sel' : ''}" data-act="cal-day" data-v="${d}"><b>${d}</b>${L.length ? `<i>${L.length}</i>` : ''}</button>`); }
-  const list = (by[sel] || []).sort((a, b) => a.dm.y - b.dm.y);
+  const list = (by[sel] || []).sort((a, b) => (a.dm.y || 0) - (b.dm.y || 0));
   return `<div class="cal"><div class="cal-h"><button class="btn line small" data-act="cal-m" data-v="-1" aria-label="Попередній місяць">‹</button><b>${MONTHS_N[m]}</b><button class="btn line small" data-act="cal-m" data-v="1" aria-label="Наступний місяць">›</button>${m !== now.getMonth() ? '<button class="btn line small" data-act="cal-now">Сьогодні</button>' : ''}<span class="small muted">${E.length} подій за місяць</span></div>
     <div class="cal-w">${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map(x => `<span>${x}</span>`).join('')}</div><div class="cal-g">${cells.join('')}</div>
     <h4>${sel} ${MONTHS_G[m]}</h4>${list.length ? `<ul class="evl">${list.map(evLine).join('')}</ul>` : '<p class="small muted">Цього дня подій у документах роду немає.</p>'}
@@ -2699,6 +2700,7 @@ document.addEventListener('change', async e => {
   if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; render(); return; }
   if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
   if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
+  if (t.dataset.udate) { const v = t.value.trim(); try { await api('/api/data', { body: { op: 'union.date', id: t.dataset.udate, date: v } }); const u = S.data.unions.find(x => x.id === t.dataset.udate); if (u) u.date = v; index(); toast('Дату шлюбу збережено'); } catch (er) { toast('Не вдалося зберегти дату шлюбу'); } return; }
   if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.docbulk) return uploadBulk([...t.files]);
   if (t.dataset.docpage) return uploadPages(t.dataset.docpage, [...t.files]);
