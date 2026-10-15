@@ -18692,5 +18692,412 @@
     }
    ]
   }
+ },
+ {
+  "key": "mk2-fsx6xqxcdqn",
+  "kind": "docpatch",
+  "id": "fsx6xqxcdqn",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.065,
+     "y": 0.374,
+     "w": 0.44,
+     "h": 0.154
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqxs5dg",
+  "kind": "docpatch",
+  "id": "fsx6xqxs5dg",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.515,
+     "y": 0.357,
+     "w": 0.45,
+     "h": 0.096
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqd1crg",
+  "kind": "docpatch",
+  "id": "fsx6xqd1crg",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.515,
+     "y": 0.418,
+     "w": 0.45,
+     "h": 0.172
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq6p97c",
+  "kind": "docpatch",
+  "id": "fsx6xq6p97c",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.055,
+     "y": 0.485,
+     "w": 0.89,
+     "h": 0.1
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6x3ydv9x",
+  "kind": "docpatch",
+  "id": "fsx6x3ydv9x",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.065,
+     "y": 0.685,
+     "w": 0.83,
+     "h": 0.14
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqqd8xj",
+  "kind": "docpatch",
+  "id": "fsx6xqqd8xj",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.14,
+     "y": 0.645,
+     "w": 0.765,
+     "h": 0.154
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6x3f3n8h",
+  "kind": "docpatch",
+  "id": "fsx6x3f3n8h",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.1,
+     "y": 0.555,
+     "w": 0.82,
+     "h": 0.146
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqw1rb3",
+  "kind": "docpatch",
+  "id": "fsx6xqw1rb3",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.105,
+     "y": 0.388,
+     "w": 0.8,
+     "h": 0.157
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq6cpb9",
+  "kind": "docpatch",
+  "id": "fsx6xq6cpb9",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.05,
+     "y": 0.262,
+     "w": 0.452,
+     "h": 0.124
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq6znx6",
+  "kind": "docpatch",
+  "id": "fsx6xq6znx6",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.055,
+     "y": 0.215,
+     "w": 0.44,
+     "h": 0.179
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqxkv9m",
+  "kind": "docpatch",
+  "id": "fsx6xqxkv9m",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.065,
+     "y": 0.567,
+     "w": 0.88,
+     "h": 0.201
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6x3hjynw",
+  "kind": "docpatch",
+  "id": "fsx6x3hjynw",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.11,
+     "y": 0.256,
+     "w": 0.78,
+     "h": 0.173
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqxxp12",
+  "kind": "docpatch",
+  "id": "fsx6xqxxp12",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.045,
+     "y": 0.578,
+     "w": 0.91,
+     "h": 0.128
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqqs213",
+  "kind": "docpatch",
+  "id": "fsx6xqqs213",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.095,
+     "y": 0.448,
+     "w": 0.82,
+     "h": 0.107
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq6wzdy",
+  "kind": "docpatch",
+  "id": "fsx6xq6wzdy",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.065,
+     "y": 0.428,
+     "w": 0.9,
+     "h": 0.154
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xqqsq97",
+  "kind": "docpatch",
+  "id": "fsx6xqqsq97",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.105,
+     "y": 0.692,
+     "w": 0.795,
+     "h": 0.114
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq6cxsr",
+  "kind": "docpatch",
+  "id": "fsx6xq6cxsr",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.075,
+     "y": 0.517,
+     "w": 0.88,
+     "h": 0.124
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq633jf",
+  "kind": "docpatch",
+  "id": "fsx6xq633jf",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.075,
+     "y": 0.607,
+     "w": 0.415,
+     "h": 0.183
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6x3h8k88",
+  "kind": "docpatch",
+  "id": "fsx6x3h8k88",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.12,
+     "y": 0.258,
+     "w": 0.785,
+     "h": 0.188
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsx6xq4mvxk",
+  "kind": "docpatch",
+  "id": "fsx6xq4mvxk",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.11,
+     "y": 0.711,
+     "w": 0.83,
+     "h": 0.186
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fskoz1912",
+  "kind": "docpatch",
+  "id": "fskoz1912",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.115,
+     "y": 0.475,
+     "w": 0.8,
+     "h": 0.168
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fslev1910",
+  "kind": "docpatch",
+  "id": "fslev1910",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.07,
+     "y": 0.635,
+     "w": 0.86,
+     "h": 0.17
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsbat1889m",
+  "kind": "docpatch",
+  "id": "fsbat1889m",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.1,
+     "y": 0.245,
+     "w": 0.39,
+     "h": 0.178
+    },
+    {
+     "p": 0,
+     "x": 0.555,
+     "y": 0.245,
+     "w": 0.25,
+     "h": 0.155
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fsbat1868",
+  "kind": "docpatch",
+  "id": "fsbat1868",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.04,
+     "y": 0.215,
+     "w": 0.445,
+     "h": 0.174
+    }
+   ]
+  }
+ },
+ {
+  "key": "mk2-fslev1902",
+  "kind": "docpatch",
+  "id": "fslev1902",
+  "data": {
+   "marks": [
+    {
+     "p": 0,
+     "x": 0.08,
+     "y": 0.665,
+     "w": 0.84,
+     "h": 0.132
+    }
+   ]
+  }
  }
 ]
