@@ -13,6 +13,9 @@
   6. посилання [[p:]] / [[d:]] на неіснуючі картки й документи (крім p_… — їх створено на сайті);
   8. тлумачення замість фактів: «отже / це точно / найімовірніше / доводить…» без «Є припущення» — ПОМИЛКА;
      «тобто / підтверджує» — УВАГА; спорідненість з дерева («брат», «дядько»…) у РЯДКУ документа — ПОМИЛКА.
+  9. дерево: у дитини вказано і батька, і матір, а шлюбу (union) між ними немає — ПОМИЛКА (інакше дерево показує дитину
+     лише під одним із батьків, а братів і сестер — окремо); шлюб із неіснуючою карткою — ПОМИЛКА.
+     Свідомі винятки — UNION_OK нижче, з причиною.
 ПОМИЛКА — точна суперечність; УВАГА — варто подивитись очима.
 """
 import json, re, sys, os
@@ -214,6 +217,31 @@ for d in D.values():
     if re.search(r'\((рідн\w+ )?(брат|сестра|дядько|тітка|тесть|теща)\b[^)]*\)', ln): err('спорідненість з дерева в рядку документа', d['id'], re.search(r'\([^)]*(брат|сестра|дядько|тітка|тесть|теща)[^)]*\)', ln).group(0)[:80])
 for k, t in T.items():
     if isinstance(t, dict) and 'md' in t: interp('Історія роду', t['md'])
+
+# ---------- 9. дерево: батьки дитини мають бути подружжям ----------
+UNION_OK = {  # пари батьків без шлюбу, свідомо (причина)
+    frozenset(['davyd', 'feodora_lev']): 'батько Пархома — Є припущення, шлюбу не знайдено',
+}
+U = set()
+for u in seed.get('unions', []): U.add(frozenset([u['a'], u['b']]))
+if '--live' not in sys.argv:
+    for x in it:
+        if x.get('kind') == 'person' and x.get('spouseOf'): U.add(frozenset([x['spouseOf'], x['id']]))
+        if x.get('kind') == 'unionpatch':
+            k = frozenset([x['a'], x['b']])
+            if x.get('del'): U.discard(k)
+            elif x.get('add'): U.add(k)
+for k in U:
+    for i in k:
+        if i not in P and not i.startswith('p_'): err('шлюб із неіснуючою карткою', i, sorted(k))  # p_… створено на сайті
+seenU = set()
+for p in P.values():
+    f, mo = p.get('f'), p.get('mo')
+    if f and mo and f in P and mo in P:
+        k = frozenset([f, mo])
+        if '--live' not in sys.argv and (f.startswith('p_') or mo.startswith('p_')): continue  # шлюби карток, створених на сайті, є лише в живих даних (--live)
+        if k not in U and k not in UNION_OK and k not in seenU:
+            seenU.add(k); err('батьки дитини не пов\'язані шлюбом (дерево розірве родину)', nm(p), nm(P[f]), nm(P[mo]))
 
 print(f'Людей: {len(P)}, документів: {len(D)}')
 print(f'\nПОМИЛКИ ({len(ERR)}):'); [print(' -', e) for e in ERR]
