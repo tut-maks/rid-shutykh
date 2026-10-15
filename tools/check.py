@@ -175,6 +175,26 @@ for src, t in texts():
         if k == 'p' and i not in P and not i.startswith('p_'): err('посилання на неіснуючу картку', src, i)
         if k == 'd' and i not in D and not re.match(r'^(fs|d)\d', i): warn('посилання на документ, якого немає в репозиторії', src, i)
 
+# ---------- 7. текст описів: повтори речень, «..», обірвані дати, російські по батькові ----------
+for p in P.values():
+    n = p.get('note') or ''
+    sents = [x.strip() for x in re.split(r'(?<=[.!?])\s+', n) if len(x.strip()) > 25]
+    seen = set()
+    for x in sents:
+        k = re.sub(r'\W+', ' ', x.lower())
+        if k in seen: err('повтор речення в описі', nm(p), x[:90])
+        seen.add(k)
+    if re.search(r'[а-яі]\.\.(?!\.)', n): err('дві крапки', nm(p), re.search(r'.{0,30}[а-яі]\.\.(?!\.)', n).group(0))
+    if re.search(r'Народи(вся|лася|всяла) \d{1,2}\.\s*$|Народивсяла', n): err('обірвана або зіпсована фраза', nm(p))
+    if re.search(r', [А-ЯІЄЇ] [а-яіїє]', n): warn('велика літера посеред речення?', nm(p), re.search(r'.{0,25}, [А-ЯІЄЇ] [а-яіїє].{0,15}', n).group(0))
+    for f in ('pt', 'n'):
+        if re.search(r'(Кузьмич|Фомич|Ильич|Лукич)\b', str(p.get(f) or '')): err('російська форма по батькові', nm(p), p.get(f))
+    if p.get('n') and re.search(r'\d', str(p.get('n'))): err('цифри в імені', nm(p), p.get('n'))
+for d in D.values():
+    t = ' '.join(str(d.get(k) or '') for k in ('title', 'text'))
+    if re.search(r'Народи(вся|лася) \d{1,2}\.(\s|$)|Народивсяла', t): err('обірвана фраза в документі', d['id'])
+    if re.search(r'\b(Кузьмич|Фомич)\b', t): warn('російська форма по батькові в документі', d['id'])
+
 print(f'Людей: {len(P)}, документів: {len(D)}')
 print(f'\nПОМИЛКИ ({len(ERR)}):'); [print(' -', e) for e in ERR]
 print(f'\nУВАГА ({len(WARN)}):'); [print(' -', w) for w in WARN]
