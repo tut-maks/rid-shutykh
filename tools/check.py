@@ -40,6 +40,14 @@ T = {}
 for x in it:
     if x.get('kind') == 'text': T[x['id']] = x['value']
 
+# --live <файл>: перевірити дані з самого сайту (вивантаження /api/data + тексти) замість репозиторію
+if '--live' in sys.argv:
+    L = json.load(open(sys.argv[sys.argv.index('--live') + 1]))
+    P = {p['id']: {k: v for k, v in p.items() if v not in ('', None)} for p in L['persons'] if not p.get('deleted')}
+    D = {d['id']: d for d in L['documents']}
+    T = {k: v['text'] for k, v in L['texts'].items()}
+    seed = {'unions': L.get('unions', [])}
+
 MON = {'січня': 1, 'лютого': 2, 'березня': 3, 'квітня': 4, 'травня': 5, 'червня': 6, 'липня': 7, 'серпня': 8, 'вересня': 9, 'жовтня': 10, 'листопада': 11, 'грудня': 12}
 def yrs(v): return [int(y) for y in re.findall(r'(?<!\d)(1[5-9]\d\d|20[0-4]\d)(?!\d)', str(v or ''))]
 def yr(v):
