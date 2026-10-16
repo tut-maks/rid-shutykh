@@ -35,6 +35,9 @@ for x in it:
         for k in x.get('unset') or []: p.pop(k, None)
         for a, b in x.get('replace') or []: p['note'] = (p.get('note') or '').replace(a, b)
         if x.get('append') and x['append'] not in (p.get('note') or ''): p['note'] = ((p.get('note') or '') + ' ' + x['append']).strip()
+for x in it:  # kind merge: картки-дублі (drop) зведено в keep на сайті
+    if x.get('kind') == 'merge':
+        for d in x.get('drop') or []: P.pop(d, None)
 D = {d['id']: dict(d) for d in seed['documents']}
 for x in it:
     if x.get('kind') in ('doc', 'map'):
