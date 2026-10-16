@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610152309';
+const BUILD = '202610161907';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -224,8 +224,10 @@ const SOC = { tel: ['Телефон', '☎', 'tel', '+380…'], vb: ['Viber', 'V
 const socHref = l => l.t === 'tel' ? 'tel:' + l.u : l.t === 'vb' ? 'viber://chat?number=' + encodeURIComponent(l.u) : /^https:\/\//.test(l.u) ? l.u : '#';
 const socLabel = l => { if (l.t === 'tel' || l.t === 'vb') return l.u; try { const u = new URL(l.u), seg = decodeURIComponent(u.pathname).split('/').filter(Boolean); if (l.t === 'wa') return '+' + seg[0]; if (['ig', 'tg', 'tt'].includes(l.t) && seg[0]) return /^\+/.test(seg[0]) ? seg[0] : '@' + seg[0].replace(/^@/, ''); if (['fb', 'yt', 'li'].includes(l.t) && seg.length) return seg[seg.length - 1].replace(/^@/, ''); return u.hostname.replace(/^www\./, ''); } catch { return l.u; } };
 const canSoc = p => !!S.me && (canEdit() || S.me.person_id === p.id);
-const socChips = (p, small) => (p.links || []).length ? `<div class="soc${small ? ' sm' : ''}">${p.links.map(l => `<a class="soc-a s-${l.t}" href="${esc(socHref(l))}" target="_blank" rel="noopener noreferrer" data-soc="${l.t}" title="${esc(SOC[l.t]?.[0] || '')}"><span class="si">${esc(SOC[l.t]?.[1] || '·')}</span><span class="sl">${esc(small ? SOC[l.t]?.[0] || '' : socLabel(l))}</span></a>`).join('')}</div>` : '';
+const isGone = p => !!(p.d || p.dp || (yN(p.b) && yN(p.b) < 1925));
+const socChips = (p, small) => (p.links || []).length && !isGone(p) ? `<div class="soc${small ? ' sm' : ''}">${p.links.map(l => `<a class="soc-a s-${l.t}" href="${esc(socHref(l))}" target="_blank" rel="noopener noreferrer" data-soc="${l.t}" title="${esc(SOC[l.t]?.[0] || '')}"><span class="si">${esc(SOC[l.t]?.[1] || '·')}</span><span class="sl">${esc(small ? SOC[l.t]?.[0] || '' : socLabel(l))}</span></a>`).join('')}</div>` : '';
 function socBlock(p) {
+  if (isGone(p)) return '';
   const has = (p.links || []).length, can = canSoc(p);
   if (!has && !(can && !p.d) && !(isLiving(p) && S.me && !accSet().has(p.id))) return '';
   const mine = S.me?.person_id === p.id;
