@@ -259,6 +259,18 @@ for d in D.values():
         if 0 <= age < 16 and not re.search(r'років \d+ місяц|менше 15|лише 1[0-5] рок', p.get('note') or ''):
             warn('вік на вінчанні менше 16 — перевірити ототожнення з метрикою (і написати про це в описі)', nm(p), d.get('id'), f'{age} р.')
 
+# ---------- 11. документ, прив'язаний лише через припущення, має про це казати (16.10, рецензент) ----------
+for d in D.values():
+    dd = d.get('data', d); ppl = dd.get('people') or []
+    if not ppl: continue
+    p = P.get(ppl[0])
+    if not p or not p.get('hyp'): continue
+    if not re.match(r'(Народження|Вінчання|Смерть)', str(dd.get('title') or '')): continue
+    txt = ' '.join(str(dd.get(k) or '') for k in ('text', 'line'))
+    sents = [x for x in re.split(r'(?<=[.!?])\s+(?=[А-ЯІЇЄҐ])', p.get('note') or '') if f"d:{d.get('id')}|" in x]
+    if 'припущ' not in txt.lower() and any('припущ' in x.lower() for x in sents):
+        warn('документ прив’язано до людини з позначкою hyp — в описі документа немає «Є припущення»', d.get('id'), nm(p))
+
 print(f'Людей: {len(P)}, документів: {len(D)}')
 print(f'\nПОМИЛКИ ({len(ERR)}):'); [print(' -', e) for e in ERR]
 print(f'\nУВАГА ({len(WARN)}):'); [print(' -', w) for w in WARN]
