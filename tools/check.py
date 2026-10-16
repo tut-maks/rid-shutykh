@@ -243,6 +243,22 @@ for p in P.values():
         if k not in U and k not in UNION_OK and k not in seenU:
             seenU.add(k); err('батьки дитини не пов\'язані шлюбом (дерево розірве родину)', nm(p), nm(P[f]), nm(P[mo]))
 
+# ---------- 10. вік на вінчанні за точною датою народження (16.10: Гордій 1779 → вінчання 1794) ----------
+def dmy(v):
+    m = re.fullmatch(r'\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s*', str(v or ''))
+    return (int(m.group(3)), int(m.group(2)), int(m.group(1))) if m else None
+for d in D.values():
+    dd = d.get('data', d); t = str(dd.get('title') or '')
+    if not t.startswith('Вінчання'): continue
+    wd = dmy(dd.get('date')) or ((yr(dd.get('date')), 6, 30) if yr(dd.get('date')) else None)
+    if not wd: continue
+    for pid in dd.get('people') or []:
+        p = P.get(pid); b = dmy(p.get('b')) if p else None
+        if not b: continue
+        age = wd[0] - b[0] - ((wd[1], wd[2]) < (b[1], b[2]))
+        if 0 <= age < 16 and not re.search(r'років \d+ місяц|менше 15|лише 1[0-5] рок', p.get('note') or ''):
+            warn('вік на вінчанні менше 16 — перевірити ототожнення з метрикою (і написати про це в описі)', nm(p), d.get('id'), f'{age} р.')
+
 print(f'Людей: {len(P)}, документів: {len(D)}')
 print(f'\nПОМИЛКИ ({len(ERR)}):'); [print(' -', e) for e in ERR]
 print(f'\nУВАГА ({len(WARN)}):'); [print(' -', w) for w in WARN]
