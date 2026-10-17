@@ -1341,3 +1341,17 @@ html{touch-action:manipulation}
 #acbox .aco:hover,#acbox .aco.on{background:var(--wine2,#f4e8e9)}
 #acbox .aco.none{color:#8a8075;cursor:default;background:none}
 @media (max-width:820px){#acbox .aco{padding:12px 14px;min-height:44px;font-size:16px}}
+
+/* кнопка «Внести правку» — на картці й у бічній панелі */
+.fixbtn{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:10px;min-height:44px;padding:9px 18px;border:1.5px solid var(--wine,#7A2E3B);border-radius:999px;background:var(--wine2,#F4E8E9);color:var(--wine,#7A2E3B);font:600 15px/1.2 inherit;cursor:pointer;overflow:hidden;animation:fxPulse 2.6s ease-in-out infinite;transition:background .2s,color .2s,transform .15s}
+.fixbtn::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-120%);animation:fxShine 3.4s ease-in-out infinite;pointer-events:none}
+.fixbtn .fx-ic{display:inline-block;font-size:17px;animation:fxPen 3.4s ease-in-out infinite;transform-origin:30% 80%}
+.fixbtn:hover{background:var(--wine,#7A2E3B);color:#fff;transform:translateY(-1px)}
+.fixbtn:active{transform:scale(.97)}
+.fixbtn.sm{margin:10px auto 0}
+@keyframes fxPulse{0%,100%{box-shadow:0 0 0 0 rgba(122,46,59,.35)}50%{box-shadow:0 0 0 7px rgba(122,46,59,0)}}
+@keyframes fxShine{0%,55%{transform:translateX(-120%)}80%,100%{transform:translateX(120%)}}
+@keyframes fxPen{0%,60%,100%{transform:rotate(0)}68%{transform:rotate(-14deg)}76%{transform:rotate(10deg)}84%{transform:rotate(-6deg)}}
+@media (prefers-reduced-motion:reduce){.fixbtn,.fixbtn::after,.fixbtn .fx-ic{animation:none}}
+@media (max-width:820px){.fixbtn{font-size:16px}}
+@media (max-width:820px){.pp-head .fixbtn{grid-column:1/-1;justify-self:start;margin-left:0}}

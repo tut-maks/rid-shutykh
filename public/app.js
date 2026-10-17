@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610171641';
+const BUILD = '202610171644';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -275,7 +275,7 @@ function ppHtml(id) {
     <div class="pp-top"><button type="button" class="pp-ic" data-act="pp-back"${back ? '' : ' disabled'} title="Назад">${IC.back}</button><span>Людина у дереві</span><button type="button" class="pp-ic" data-act="pp-close" title="Закрити">${IC.x}</button></div>
     <div class="pp-sc" id="pp-sc">
       <div class="pp-head">${p.portrait ? `<button type="button" class="pp-av" data-photo="${esc(p.portrait)}" data-pctx="${p.id}" title="Відкрити фото">${avatar(p, 'lg')}</button>` : avatar(p, 'lg')}<h2>${esc(full(p))}</h2><div class="pp-y">${esc(years(p))}</div>${childAge(p) ? `<div class="pp-kd">† ${esc(childAge(p).txt)}</div>` : ''}
-        ${socChips(p, true)}<div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div>${dupNote(p.id, true)}</div>
+        ${socChips(p, true)}<div class="pp-chips">${fams.map(f => `<a class="chip2" href="${href('fam', f)}">${IC.leaf}${esc(FAM[f].title)}</a>`).join('')}${p.hyp ? '<span class="chip2 hyp">гіпотеза</span>' : ''}</div>${dupNote(p.id, true)}${fixBtn(p.id, 'sm')}</div>
       <div class="pp-tabs" role="tablist">${[['life', 'Життя'], ['fam', 'Родина'], ['src', 'Джерела' + (docs.length ? ` <i>${docs.length}</i>` : '')]].map(([k, t]) => `<button type="button" role="tab" data-act="pp-tab" data-v="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="pp-body">${tab === 'fam' ? fam : tab === 'src' ? src : life}</div>
     </div>
@@ -652,7 +652,7 @@ function vPerson() {
   return `<div class="person">
   <div class="sec" style="align-content:start">
     <div class="phead">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? pimg(p, ` data-photo="${esc(p.portrait)}" data-pctx="${p.id}" title="Відкрити фото"`) : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? pimg(p) : esc((p.n || '?')[0])}</div>`}
-      <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1></div></div>
+      <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1>${fixBtn(p.id)}</div></div>
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
       ${p.d ? `<dt>Смерть</dt><dd><span class="mono">${esc(p.d)}</span>${p.dp ? ' · ' + esc(p.dp) : ''}</dd>` : ''}
@@ -893,6 +893,7 @@ function qAboutHtml(pid) {
   const open = list.filter(q => q.status === 'new' || q.status === 'work').length;
   return `<p class="small" style="margin:8px 0 0"><a href="${href('q')}">${canEdit() ? 'Запитань про цю людину' : 'Ваших запитань про цю людину'}: ${list.length}${open ? ` (відкритих: ${open})` : ''}</a></p>`;
 }
+const fixBtn = (id, cls = '') => S.me ? `<button type="button" class="fixbtn ${cls}" data-act="q-fix" data-id="${esc(id)}" title="Бачите помилку чи знаєте більше? Напишіть — перевіримо й виправимо"><span class="fx-ic">✎</span><span>Внести правку</span></button>` : '';
 const personOpts = () => `<datalist id="qpeople">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(full(p) + (life(p) ? ' (' + life(p) + ')' : ''))}"></option>`).join('')}</datalist>`;
 // Пошук людей за будь-якими частинами імені: «настя шута», «Іван Пархомович», «1931»
 const nrm_ = t => String(t || '').toLowerCase().replace(/[ʼ’'`]/g, '').replace(/ё/g, 'е');
@@ -957,6 +958,7 @@ function qClaudeText() {
   }).join('\n\n');
 }
 async function qHandle(act, t, d) {
+  if (act === 'q-fix') { const id = d.id || S.arg; if (!P[id]) return true; modal(`<h2>Внести правку</h2><p class="small muted" style="margin:0 0 8px">Помітили помилку в даті, імені, родині чи описі — або знаєте більше? Напишіть, як має бути і звідки це відомо (документ, слова родичів). Правку перевірять і внесуть.</p>${qForm(id, 'fix')}`); return true; }
   if (act === 'q-ask') { modal(`<h2>Уточнити або запитати</h2>${qForm(S.arg)}`); return true; }
   if (act === 'q-kind') { const f = t.closest('.qform'); f.dataset.kind = d.v; f.querySelectorAll('[data-act=q-kind]').forEach(b => b.classList.toggle('on', b === t)); return true; }
   if (act === 'q-filter') { S.ui.qf = d.v; S.ui.keepScroll = true; render(); return true; }
