@@ -1504,3 +1504,7 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 .rtn{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:#7A2E3B;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
 .rtintro{margin:0 0 10px;line-height:1.5}
 .btn.danger{color:#a8322d;border-color:#a8322d}
+
+.hyprel{margin:8px 0;padding:8px 10px;border:1px solid var(--rule2,#ddd);border-radius:8px;background:#faf7f2}
+.hyprel summary{cursor:pointer;font-size:14px}
+.hyprel ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}

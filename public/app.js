@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172353';
+const BUILD = '202610172354';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3295,10 +3295,16 @@ function vHyp() {
     <input class="in search" id="hyp-q" type="search" value="${esc(S.ui.hypQ || '')}" placeholder="Пошук: ім'я, село…" aria-label="Пошук"></div>
   <div class="hyp-l">${L.map(hypCard).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
 }
+// Пов'язані припущення: ті самі люди (сильний зв'язок) або їхні батьки, діти, подружжя (слабший). Якщо одне підтвердиться чи спростується — ці треба переглянути.
+function hypRel(x, all) {
+  const mine = new Set(x.people || []), near = new Set(); mine.forEach(id => { const p = P[id]; if (!p) return; [p.f, p.mo, ...(KIDS[id] || []), ...(SPOUSES[id] || []).map(s => s.id)].forEach(y => y && !mine.has(y) && near.add(y)); });
+  return all.filter(h => h.id !== x.id).map(h => { const pp = h.people || []; const a = pp.filter(y => mine.has(y)).length, b = pp.filter(y => near.has(y)).length; return { h, w: a * 3 + b, a, b }; }).filter(r => r.w).sort((p, q) => q.w - p.w).filter((r, i, A) => r.h.title !== x.title && A.findIndex(z => z.h.title === r.h.title) === i).slice(0, 10);
+}
 function openHyp(id) {
-  const x = hypItems().find(h => h.id === id); if (!x) return;
+  const all_ = hypItems(), x = all_.find(h => h.id === id); if (!x) return; const REL_ = hypRel(x, all_);
   const A = hypAns(id);
   modal(`<h2>${esc(x.title)}</h2><p>${glossify(mdLinks(esc(x.text)))}</p>${x.basis ? `<p class="small muted"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
+    ${REL_.length ? `<details class="hyprel"${REL_.some(r => r.a) ? ' open' : ''}><summary>🔗 Пов'язані припущення (${REL_.length}) — якщо це підтвердиться чи спростується, їх треба переглянути</summary><ul>${REL_.map(r => `<li><button class="lnk" data-act="hyp-open" data-id="${esc(r.h.id)}">${esc(r.h.title)}</button> <span class="small muted">${r.a ? 'ті самі люди' : 'їхня найближча рідня'}</span></li>`).join('')}</ul></details>` : ''}
     <h3>Що кажуть родичі</h3>${A.length ? `<div class="hyp-ans">${A.map(s => `<div class="story"><div><b class="v-${verdOf(s)}">${VERD[verdOf(s)][0]} ${VERD[verdOf(s)][1]}</b><br>${glossify(esc(ansText(s)))}</div><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted small">Ще ніхто не відповів. Будьте першим!</p>'}
     <div class="sec" style="gap:8px">
       <div class="verd">${Object.entries(VERD).map(([k, [ic, t]]) => `<label class="vd vd-${k}"><input type="radio" name="hyp-v" value="${k}"${k === 'add' ? ' checked' : ''}> <span>${ic} ${t}</span></label>`).join('')}</div>
