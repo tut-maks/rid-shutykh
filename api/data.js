@@ -25,6 +25,53 @@ const FIXK = { n: "Ім'я", pt: 'По батькові', s: 'Прізвище',
 const FIXN = { n: 80, pt: 80, s: 80, m: 80, sex: 2, b: 40, bp: 160, d: 40, dp: 160, lp: 160, note: 8000 };
 async function fixGet() { try { const r = await db.get('settings', { eq: { key: 'fix_pending' } }); return r?.value || {}; } catch { return {}; } }
 async function fixSet(v, by) { await db.upsert('settings', { key: 'fix_pending', value: v, updated_by: by, updated_at: new Date().toISOString() }); }
+const FIXREL = { spouse: 'чоловік / дружина', son: 'син', daughter: 'донька', father: 'батько', mother: 'мати', brother: 'брат', sister: 'сестра' };
+const fixKeys = it => [...Object.keys(it.ch || {}), ...(it.add || []).map((_, i) => 'add' + i), ...(it.dup ? ['dup'] : [])];
+function fixText(it) {
+  const sh = v => v.length > 200 ? v.slice(0, 200) + '…' : v;
+  const L = [...Object.entries(it.ch || {}).map(([k, [a, b]]) => `${FIXK[k]}: «${sh(a) || '—'}» → «${sh(b) || '—'}»`),
+    ...(it.add || []).map(x => `Додати: ${FIXREL[x.rel]} — ${[x.n, x.pt, x.s].filter(Boolean).join(' ')}${x.m ? ' (' + x.m + ')' : ''}${x.b ? ', н. ' + x.b : ''}`),
+    ...(it.dup ? ['Це та сама людина, що й картка ' + it.dup] : [])];
+  return L.join('\n') + (it.why ? (L.length ? '\n\n' : '') + 'Звідки відомо / коментар: ' + it.why : '');
+}
+/* Внести пропозицію: поля картки, нові рідні (з перевіркою дублів і зв'язками), об'єднання дубля. keys = null → усе. */
+async function applyFix(it, keys, keep, me) {
+  const all = fixKeys(it); keys = (keys || all).filter(k => all.includes(k)); if (!keys.length) return { error: 'empty' };
+  const now = () => new Date().toISOString(), made = [];
+  const get = id => db.get('persons', { eq: { id, deleted: false } });
+  const upd = async (id, set) => { const p = await get(id); if (!p) return; const data = { ...p.data, ...set }; await db.update('persons', { eq: { id } }, { data, version: (p.version || 1) + 1, updated_by: me.id, updated_at: now() }); await revision('person', id, 'update', p.data, data, me.id); };
+  const unite = async (a, b, date = '') => { if (!a || !b || a === b) return; const us = await db.list('unions', { eq: { deleted: false } }); if (us.some(u => (u.a === a && u.b === b) || (u.a === b && u.b === a))) return; const u = { id: 'u_' + slugId().replace(/^p_/, ''), a, b, date, created_by: me.id }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, me.id); };
+  const fk = keys.filter(k => it.ch?.[k]);
+  if (fk.length) { const cur = await get(it.person); if (!cur) return { error: 'not_found' }; const set = {}; for (const k of fk) set[k] = it.ch[k][1]; await upd(cur.id, set); }
+  const note = 'Додано ' + (it.author ? 'за словами ' + it.author + ' ' : '') + '(пропозиція на сайті, підтвердив власник).';
+  const SEX = { son: 'm', brother: 'm', father: 'm', daughter: 'f', sister: 'f', mother: 'f' };
+  const order = ['spouse', 'father', 'mother', 'son', 'daughter', 'brother', 'sister'];
+  const items = (it.add || []).map((x, i) => ({ ...x, i })).filter(x => keys.includes('add' + x.i)).sort((a, b) => order.indexOf(a.rel) - order.indexOf(b.rel));
+  let newSp = '';
+  for (const x of items) {
+    const cur = await get(it.person); if (!cur) break;
+    const sex = SEX[x.rel] || (cur.data.sex === 'm' ? 'f' : cur.data.sex === 'f' ? 'm' : '');
+    const data = cleanPerson({ s: x.s, n: x.n, pt: x.pt, m: x.m, b: x.b, sex, fam: cur.data.fam || [], note });
+    if (x.rel === 'son' || x.rel === 'daughter') {
+      const me2 = cur.data.sex === 'f' ? 'mo' : 'f', oth = me2 === 'f' ? 'mo' : 'f'; data[me2] = cur.id;
+      const sps = (await db.list('unions', { eq: { deleted: false } })).filter(u => u.a === cur.id || u.b === cur.id).map(u => u.a === cur.id ? u.b : u.a);
+      const sp = newSp || (sps.length === 1 ? sps[0] : ''); if (sp) data[oth] = sp;
+    }
+    if (x.rel === 'brother' || x.rel === 'sister') { data.f = cur.data.f || ''; data.mo = cur.data.mo || ''; }
+    if (!data.s) { const fa = data.f ? await get(data.f) : null; data.s = fa?.data.s || ''; } // прізвище не вказали — як у батька
+    const dd = await findDupes(data); let id;
+    if (dd.length === 1) { id = dd[0].id; const set = {}; for (const k of ['f', 'mo']) if (data[k] && !dd[0].data[k]) set[k] = data[k]; if (Object.keys(set).length) await upd(id, set); }
+    else { id = slugId(); await db.insert('persons', { id, data, created_by: me.id, updated_by: me.id }); await revision('person', id, 'create', null, data, me.id); made.push(id); }
+    if (x.rel === 'spouse') { await unite(cur.id, id); newSp ||= id; }
+    if (x.rel === 'father' || x.rel === 'mother') { const k = x.rel === 'father' ? 'f' : 'mo'; if (!cur.data[k]) await upd(cur.id, { [k]: id }); const c2 = await get(cur.id); if (c2?.data.f && c2?.data.mo) await unite(c2.data.f, c2.data.mo); }
+  }
+  let kept = '';
+  if (keys.includes('dup') && it.dup) {
+    const a = await get(it.person), b = await get(it.dup);
+    if (a && b) { const k = [a.id, b.id].includes(keep) ? keep : (b.data.portrait && !a.data.portrait ? b.id : a.data.root ? a.id : b.data.root ? b.id : a.id); const r = await mergePersons(k, k === a.id ? b.id : a.id, me.id); if (r.error) return { error: r.error }; kept = k; }
+  }
+  return { keys, made, keep: kept };
+}
 const rid = () => Math.random().toString(36).slice(2, 10);
 const DNA_CO = ['MyHeritage', 'FamilyTreeDNA', 'Ancestry', '23andMe', 'GEDmatch', 'інше'];
 
@@ -45,7 +92,7 @@ async function bootstrap(ctx) {
     const f = { eq: { deleted: false }, order: 'created_at', desc: true, limit: 2000 };
     if (!can(ctx.member, 'editor')) f.eq.created_by = ctx.member.id;
     questions = (await db.list('questions', f)).map(qOut);
-    const fp = await fixGet(); for (const q of questions) if (fp[q.id]) Object.assign(q, { patch: fp[q.id].ch, pst: fp[q.id].st || '', pkeys: fp[q.id].keys || null });
+    const fp = await fixGet(); for (const q of questions) if (fp[q.id]) Object.assign(q, { patch: fp[q.id].ch || {}, padd: fp[q.id].add || [], pdup: fp[q.id].dup || '', pst: fp[q.id].st || '', pkeys: fp[q.id].keys || null });
   } catch { qReady = false; }
   const [pend, cfg, jc, pver] = await Promise.all([pendGet(), cfgAll(), joinCfg(false).catch(() => null), verGet()]); const isOwn = can(ctx.member, 'owner');
   const photosV = photos.filter(p => !pend[p.id] || isOwn || p.created_by === ctx.member.id); // чужі непідтверджені фото не показуємо
@@ -412,41 +459,43 @@ export default handler(async (req, res, ctx, url) => {
     await revision('question', q.id, 'update', pick(q), pick(row), me.id);
     return done({ question: qOut(row) }, 'q:' + q.id);
   }
-  if (op === 'fix.add') { // родич пропонує правку картки — чекає підтвердження власника
+  if (op === 'fix.add') { // родич пропонує правку картки (поля, нові рідні, дублікат) — вносить власник одним кліком
     const cur = await db.get('persons', { eq: { id: S(body.person, 60), deleted: false } }); if (!cur) return fail(res, 404, 'not_found');
     const pt = body.patch && typeof body.patch === 'object' ? body.patch : {}, ch = {};
     for (const k of Object.keys(FIXK)) { if (!(k in pt)) continue; let v = S(pt[k], FIXN[k]); if (k === 'sex' && !['m', 'f', ''].includes(v)) continue; const old = String(cur.data[k] ?? ''); if (v !== old) ch[k] = [old, v]; }
-    const why = S(body.text, 5000);
-    if (!Object.keys(ch).length && !why) return fail(res, 400, 'empty');
+    const add = (Array.isArray(body.add) ? body.add : []).slice(0, 12).map(x => ({ rel: S(x?.rel, 10), s: S(x?.s, 80), n: S(x?.n, 80), pt: S(x?.pt, 80), m: S(x?.m, 80), b: S(x?.b, 40) })).filter(x => FIXREL[x.rel] && x.n);
+    let dup = S(body.dup, 60); if (dup && (dup === cur.id || !(await db.get('persons', { eq: { id: dup, deleted: false } })))) dup = '';
+    const why = S(body.text, 5000), any = Object.keys(ch).length || add.length || dup;
+    if (!any && !why) return fail(res, 400, 'empty');
+    const it = { person: cur.id, ch, add, dup, why, at: new Date().toISOString() };
+    if (owner && body.apply) { // власник — одразу
+      const r = await applyFix(it, null, S(body.keep, 60), me); if (r.error) return fail(res, r.error === 'conflict' ? 409 : 400, r.error);
+      return done({ ok: true, made: r.made, keep: r.keep }, cur.id);
+    }
     const open = await db.list('questions', { eq: { created_by: me.id, status: 'new', deleted: false }, limit: 60 });
     if (open.length >= 50) return fail(res, 429, 'too_many_q');
-    const sh = v => v.length > 200 ? v.slice(0, 200) + '…' : v;
-    const text = (Object.entries(ch).map(([k, [a, b]]) => `${FIXK[k]}: «${sh(a) || '—'}» → «${sh(b) || '—'}»`).join('\n') + (why ? (Object.keys(ch).length ? '\n\n' : '') + 'Звідки відомо / коментар: ' + why : '')).slice(0, 5000);
-    const now = new Date().toISOString();
-    const [q] = await db.insert('questions', { kind: 'fix', person_id: cur.id, about: '', text, status: 'new', answer: '', deleted: false, created_by: me.id, created_at: now, updated_at: now });
-    if (Object.keys(ch).length) { const fp = await fixGet(); fp[q.id] = { person: cur.id, ch, at: now }; await fixSet(fp, me.id); }
-    await revision('question', q.id, 'create', null, { kind: 'fix', person: cur.id, ch, text: why }, me.id);
-    return done({ question: { ...qOut(q), patch: Object.keys(ch).length ? ch : undefined, pst: '' } }, cur.id);
+    const text = fixText(it).slice(0, 5000);
+    const [q] = await db.insert('questions', { kind: 'fix', person_id: cur.id, about: '', text, status: 'new', answer: '', deleted: false, created_by: me.id, created_at: it.at, updated_at: it.at });
+    if (any) { const fp = await fixGet(); fp[q.id] = it; await fixSet(fp, me.id); }
+    await revision('question', q.id, 'create', null, { kind: 'fix', person: cur.id, ch, add, dup, text: why }, me.id);
+    return done({ question: { ...qOut(q), ...(any ? { patch: ch, padd: add, pdup: dup } : {}), pst: '' } }, cur.id);
   }
-  if (op === 'fix.apply' || op === 'fix.reject') { // власник: внести вибрані поля / відхилити
+  if (op === 'fix.apply' || op === 'fix.reject') { // власник: внести вибране / відхилити
     if (!owner) return fail(res, 403, 'forbidden');
     const q = await db.get('questions', { eq: { id: S(body.id, 60), deleted: false } }); if (!q) return fail(res, 404, 'not_found');
     const fp = await fixGet(), it = fp[q.id]; if (!it || it.st) return fail(res, 409, 'done');
-    const now = new Date().toISOString(); let answer = S(body.answer, 8000), keys = [];
+    const now = new Date().toISOString(); let answer = S(body.answer, 8000), keys = [], made = [];
     if (op === 'fix.apply') {
-      const cur = await db.get('persons', { eq: { id: it.person, deleted: false } }); if (!cur) return fail(res, 404, 'not_found');
-      keys = (Array.isArray(body.keys) ? body.keys : Object.keys(it.ch)).filter(k => it.ch[k]);
-      if (!keys.length) return fail(res, 400, 'empty');
-      const data = { ...cur.data }; for (const k of keys) data[k] = it.ch[k][1];
-      const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: now });
-      if (!row) return fail(res, 409, 'conflict');
-      await revision('person', cur.id, 'update', cur.data, data, me.id);
-      answer ||= 'Дякуємо! Правку внесено в картку' + (keys.length < Object.keys(it.ch).length ? ' (частково: ' + keys.map(k => FIXK[k]).join(', ') + ')' : '') + '.';
-    } else answer ||= 'Правку переглянули й поки не вносимо.';
-    fp[q.id] = { ...it, st: op === 'fix.apply' ? 'ok' : 'no', keys, done: now, by: me.id }; await fixSet(fp, me.id);
+      const mem = await db.get('members', { eq: { id: q.created_by } }).catch(() => null);
+      const r = await applyFix({ ...it, author: mem?.name || '' }, Array.isArray(body.keys) ? body.keys.map(k => S(k, 20)) : null, S(body.keep, 60), me);
+      if (r.error) return fail(res, r.error === 'conflict' ? 409 : 400, r.error);
+      keys = r.keys; made = r.made;
+      answer ||= 'Дякуємо! Внесено в дерево' + (keys.length < fixKeys(it).length ? ' (частково)' : '') + '.';
+    } else answer ||= 'Переглянули й поки не вносимо.';
+    fp[q.id] = { ...it, st: op === 'fix.apply' ? 'ok' : 'no', keys, made, done: now, by: me.id }; await fixSet(fp, me.id);
     const [row] = await db.update('questions', { eq: { id: q.id } }, { status: 'closed', answer, updated_by: me.id, updated_at: now });
     await revision('question', q.id, 'update', { status: q.status }, { status: 'closed', fix: fp[q.id].st, keys }, me.id);
-    return done({ question: { ...qOut(row), patch: it.ch, pst: fp[q.id].st, pkeys: keys } }, it.person);
+    return done({ question: { ...qOut(row), patch: it.ch, padd: it.add || [], pdup: it.dup || '', pst: fp[q.id].st, pkeys: keys } }, it.person);
   }
   if (op === 'q.delete') {
     const q = await db.get('questions', { eq: { id: S(body.id, 60), deleted: false } }); if (!q) return fail(res, 404, 'not_found');

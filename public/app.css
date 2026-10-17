@@ -1370,3 +1370,10 @@ table.fxd tr.no td{opacity:.6}
 table.fxd input[type=checkbox]{width:20px;height:20px}
 .fx-ok{color:#2f6b3a;font-weight:600}
 .fxwait{display:block;width:fit-content;margin:10px 10px 0 0;padding:6px 12px;border-radius:999px;background:#fff4d6;color:#7a5a00;font-size:14px;font-weight:600;text-decoration:none}
+
+.fxsec{border:1px solid var(--rule2);border-radius:var(--r);padding:8px 12px;margin:0 0 10px;background:var(--sheet)}
+.fxsec>summary{cursor:pointer;font-weight:600;padding:4px 0;min-height:32px}
+.fxsec[open]>summary{margin-bottom:8px}
+.fxrel{display:grid;grid-template-columns:170px 1fr 110px 36px;gap:6px;margin-bottom:6px;align-items:center}
+.fxx{width:36px;height:40px;border:0;background:none;font-size:22px;color:#8a8075;cursor:pointer}
+@media (max-width:820px){.fxrel{grid-template-columns:1fr 1fr 44px;}.fxrel [data-fr=fio]{grid-column:1/-1;grid-row:1}.fxx{width:44px;height:44px}}

@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610171657';
+const BUILD = '202610171812';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -674,7 +674,7 @@ function vPerson() {
     </div>
   </div>
   <div class="sec" style="align-content:start;gap:30px">
-    <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Уточнити / запитати</button></span></h3>
+    <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Запитати</button></span></h3>
       ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
       ${birthPara(p, docs)}
       ${p.note ? `<div class="about">${glossify(mdLinks(esc(p.note)))}</div>` : ''}
@@ -895,25 +895,34 @@ function qAboutHtml(pid) {
 }
 const fixBtn = (id, cls = '') => S.me ? (isOwner() && fixPend(id).length ? `<a class="fxwait" href="#/q">Чекає вашого підтвердження: ${fixPend(id).length} ${fixPend(id).length === 1 ? 'правка' : 'правки'} →</a>` : '') + `<button type="button" class="fixbtn ${cls}" data-act="q-fix" data-id="${esc(id)}" title="Бачите помилку чи знаєте більше? Напишіть — перевіримо й виправимо"><span class="fx-ic">✎</span><span>Внести правку</span></button>` : '';
 const FIXK = { n: "Ім'я", pt: 'По батькові', s: 'Прізвище', m: 'Дівоче прізвище', sex: 'Стать', b: 'Народження', bp: 'Місце народження', d: 'Смерть', dp: 'Місце смерті', lp: 'Де жив(-ла) / живе', note: 'Опис' };
-const fixPend = pid => (S.data.questions || []).filter(q => q.kind === 'fix' && q.person === pid && q.patch && !q.pst);
+const fixPend = pid => (S.data.questions || []).filter(q => q.kind === 'fix' && q.person === pid && (q.patch || q.padd || q.pdup) && q.pst === '');
+const FXREL = { spouse: 'чоловік / дружина', son: 'син', daughter: 'донька', father: 'батько', mother: 'мати', brother: 'брат', sister: 'сестра' };
+const fxRelRow = p => `<div class="fxrel"><select class="in" data-fr="rel">${Object.entries(FXREL).filter(([k]) => !((k === 'father' && P[p.f]) || (k === 'mother' && P[p.mo]) || ((k === 'brother' || k === 'sister') && !P[p.f] && !P[p.mo]))).map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select><input class="in" data-fr="fio" placeholder="Прізвище Ім'я По батькові"><input class="in" data-fr="b" placeholder="рік народж." inputmode="numeric"><button type="button" class="fxx" data-act="q-fxrm" title="Прибрати">×</button></div>`;
 function fxForm(p) {
   const own = isOwner(), f = (k, t, ph = '') => `<label class="f">${t}<input class="in" data-fx="${k}" value="${esc(p[k] || '')}" placeholder="${esc(ph)}"></label>`;
   return `<div class="fxform" data-id="${esc(p.id)}">
-    <p class="small muted" style="margin:0 0 10px">${own ? 'Ви власник — зміни збережуться одразу.' : 'Виправте, як має бути, і напишіть, звідки це відомо. Правку побачить Максим і внесе після перевірки — тоді вона з’явиться на сайті.'}</p>
-    <div class="grid2">${f('n', "Ім'я")}${f('pt', 'По батькові')}${f('s', 'Прізвище')}${f('m', 'Дівоче прізвище', 'для жінок')}
-      ${f('b', 'Дата народження', 'напр. 14.02.1938 або 1938')}${f('bp', 'Місце народження')}${f('d', 'Дата смерті', 'якщо померла людина')}${f('dp', 'Місце смерті / поховання')}
+    <p class="small muted" style="margin:0 0 10px">${own ? 'Ви власник — усе внесеться одразу.' : 'Виправте, що не так, додайте рідних і напишіть, звідки це відомо. Максим перегляне й одним кліком внесе в дерево.'}</p>
+    <details class="fxsec" open><summary>Дані картки</summary><div class="grid2">${f('n', "Ім'я")}${f('pt', 'По батькові')}${f('s', 'Прізвище')}${f('m', 'Дівоче прізвище', 'для жінок')}
+      ${f('b', 'Дата народження', 'напр. 14.02.1938 або 1938')}${f('bp', 'Місце народження')}${f('d', 'Дата смерті', 'якщо людина померла')}${f('dp', 'Місце смерті / поховання')}
       ${f('lp', 'Де жив(-ла) / живе')}<label class="f">Стать<select class="in" data-fx="sex"><option value=""${!p.sex ? ' selected' : ''}>—</option><option value="m"${p.sex === 'm' ? ' selected' : ''}>чоловік</option><option value="f"${p.sex === 'f' ? ' selected' : ''}>жінка</option></select></label></div>
-    <label class="f">Опис<textarea class="in" data-fx="note" rows="5">${esc(p.note || '')}</textarea></label>
-    ${own ? '' : `<label class="f">Звідки це відомо / що не так <textarea class="in" id="fx-why" rows="3" placeholder="Напр.: так записано в свідоцтві про народження; або: так казала бабуся; або: на фото не він, а його брат"></textarea></label>`}
-    <div class="btns"><button class="btn wine" data-act="q-fxsend">${own ? 'Зберегти' : 'Надіслати правку'}</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="fx-m"></span></div>
+    <label class="f">Опис<textarea class="in" data-fx="note" rows="4">${esc(p.note || '')}</textarea></label></details>
+    <details class="fxsec"${own ? '' : ' open'}><summary>Додати рідних (чоловік / дружина, діти, батьки…)</summary><div id="fxrels">${fxRelRow(p)}</div><button type="button" class="btn line small" data-act="q-fxmore">+ ще одна людина</button></details>
+    <details class="fxsec"><summary>Це дублікат — та сама людина вже є в дереві</summary>${peopleList('fxpeople')}<input class="in" id="fx-dup" list="fxpeople" placeholder="Почніть вводити ім'я другої картки…" autocomplete="off"></details>
+    ${own ? '' : `<label class="f">Звідки це відомо / коментар<textarea class="in" id="fx-why" rows="2" placeholder="Напр.: так у свідоцтві; або: так казала бабуся"></textarea></label>`}
+    <div class="btns"><button class="btn wine" data-act="q-fxsend">${own ? 'Внести' : 'Надіслати'}</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="fx-m"></span></div>
   </div>`;
 }
 function fxDiff(q) {
-  const ch = q.patch || {}, ks = Object.keys(ch); if (!ks.length) return '';
-  const can = isOwner() && !q.pst, cut = v => v ? (v.length > 400 ? v.slice(0, 400) + '…' : v) : '—', sx = (k, v) => k === 'sex' ? ({ m: 'чоловік', f: 'жінка' }[v] || '—') : cut(v);
-  return `<table class="fxd"><thead><tr>${can ? '<th></th>' : ''}<th>Поле</th><th>Було</th><th>Стане</th></tr></thead><tbody>${ks.map(k => `<tr class="${q.pst === 'ok' && (q.pkeys || ks).includes(k) ? 'ok' : q.pst ? 'no' : ''}">${can ? `<td><input type="checkbox" data-fxk="${k}" checked></td>` : ''}<td>${esc(FIXK[k] || k)}</td><td class="was">${esc(sx(k, ch[k][0]))}</td><td class="now">${esc(sx(k, ch[k][1]))}</td></tr>`).join('')}</tbody></table>
+  const ch = q.patch || {}, ad = q.padd || [], dup = q.pdup || '', rows = [];
+  const can = isOwner() && !q.pst, done = k => q.pst === 'ok' && (q.pkeys || []).includes(k), cut = v => v ? (v.length > 400 ? v.slice(0, 400) + '…' : v) : '—', sx = (k, v) => k === 'sex' ? ({ m: 'чоловік', f: 'жінка' }[v] || '—') : cut(v);
+  const cb = k => can ? `<td><input type="checkbox" data-fxk="${k}" checked></td>` : '';
+  Object.keys(ch).forEach(k => rows.push(`<tr class="${done(k) ? 'ok' : q.pst ? 'no' : ''}">${cb(k)}<td>${esc(FIXK[k] || k)}</td><td class="was">${esc(sx(k, ch[k][0]))}</td><td class="now">${esc(sx(k, ch[k][1]))}</td></tr>`));
+  ad.forEach((x, i) => rows.push(`<tr class="${done('add' + i) ? 'ok' : q.pst ? 'no' : ''}">${cb('add' + i)}<td>Додати: ${esc(FXREL[x.rel] || x.rel)}</td><td class="was">—</td><td class="now">${esc([x.n, x.pt, x.s].filter(Boolean).join(' '))}${x.b ? ', н. ' + esc(x.b) : ''}</td></tr>`));
+  if (dup) { const a = P[q.person], b = P[dup]; rows.push(`<tr class="${done('dup') ? 'ok' : q.pst ? 'no' : ''}">${cb('dup')}<td>Дублікат</td><td colspan="2">${b ? `та сама людина, що й <a href="${href('p', dup)}">${esc(plabel(b))}</a>` : 'картку вже об’єднано'}${can && a && b ? `<div class="small" style="margin-top:4px">Залишити: <label><input type="radio" name="fxk-${q.id}" value="${a.id}"${!b.portrait || a.portrait ? ' checked' : ''}> ${esc(short(a))}${a.portrait ? ' (з фото)' : ''}</label> · <label><input type="radio" name="fxk-${q.id}" value="${b.id}"${b.portrait && !a.portrait ? ' checked' : ''}> ${esc(short(b))}${b.portrait ? ' (з фото)' : ''}</label></div>` : ''}</td></tr>`); }
+  if (!rows.length) return '';
+  return `<table class="fxd"><thead><tr>${can ? '<th></th>' : ''}<th>Що</th><th>Було</th><th>Стане</th></tr></thead><tbody>${rows.join('')}</tbody></table>
     ${can ? `<div class="btns"><button class="btn wine small" data-act="q-fxok" data-id="${q.id}">✓ Підтвердити й внести</button><button class="btn line small" data-act="q-fxno" data-id="${q.id}">Відхилити</button><span class="msg" id="fx-qm-${q.id}"></span></div>`
-      : q.pst ? `<p class="small ${q.pst === 'ok' ? 'fx-ok' : 'muted'}">${q.pst === 'ok' ? '✓ Внесено в картку' : 'Не внесено'}</p>` : '<p class="small muted">Чекає підтвердження Максима</p>'}`;
+      : q.pst ? `<p class="small ${q.pst === 'ok' ? 'fx-ok' : 'muted'}">${q.pst === 'ok' ? '✓ Внесено в дерево' : 'Не внесено'}</p>` : '<p class="small muted">Чекає підтвердження Максима</p>'}`;
 }
 const personOpts = () => `<datalist id="qpeople">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(full(p) + (life(p) ? ' (' + life(p) + ')' : ''))}"></option>`).join('')}</datalist>`;
 // Пошук людей за будь-якими частинами імені: «настя шута», «Іван Пархомович», «1931»
@@ -926,7 +935,7 @@ function qForm(pid, kind) {
   kind = kind || (pid ? 'ask' : 'find');
   const p = pid && P[pid];
   return `<div class="qform" data-kind="${kind}">
-    <div class="seg" role="group" aria-label="Що саме">${Object.entries(QKIND).filter(([k]) => !(p && k === 'find')).map(([k, t]) => `<button type="button" class="${k === kind ? 'on' : ''}" data-act="q-kind" data-v="${k}">${t}</button>`).join('')}</div>
+    <div class="seg" role="group" aria-label="Що саме">${Object.entries(QKIND).filter(([k]) => !(p && k !== 'ask') && !(!p && k === 'fix')).map(([k, t]) => `<button type="button" class="${k === kind ? 'on' : ''}" data-act="q-kind" data-v="${k}">${t}</button>`).join('')}</div>
     ${p ? `<input type="hidden" id="qf-person" value="${esc(p.id)}"><p class="small muted" style="margin:0">Про: <b>${esc(full(p))}</b> ${esc(life(p))}</p>`
         : `<label class="f qf-about">Кого шукаємо<input class="in" id="qf-about" maxlength="300" placeholder="Ім'я, прізвище, приблизні роки, село"></label>
            <label class="f qf-person">Про кого з дерева (необов'язково)<input class="in" id="qf-pick" list="qpeople" placeholder="Почніть вводити ім'я…" autocomplete="off"></label>${personOpts()}`}
@@ -940,13 +949,13 @@ function qItem(q) {
   const edit = canEdit();
   return `<article class="qi st-${q.status}">
     <div class="qh"><span class="pill st-${q.status}">${QSTAT[q.status] || q.status}</span><span class="small muted">${esc(QKIND[q.kind] || '')}</span>${subj ? `<span>${subj}</span>` : ''}</div>
-    ${q.patch ? fxDiff(q) + (q.text.includes('Звідки відомо / коментар: ') ? `<div class="qt">${esc(q.text.slice(q.text.indexOf('Звідки відомо / коментар: '))).replace(/\n/g, '<br>')}</div>` : '') : `<div class="qt">${esc(q.text).replace(/\n/g, '<br>')}</div>`}
+    ${(q.patch || q.padd || q.pdup) && q.pst !== undefined ? fxDiff(q) + (q.text.includes('Звідки відомо / коментар: ') ? `<div class="qt">${esc(q.text.slice(q.text.indexOf('Звідки відомо / коментар: '))).replace(/\n/g, '<br>')}</div>` : '') : `<div class="qt">${esc(q.text).replace(/\n/g, '<br>')}</div>`}
     <div class="small muted">${mine ? 'Ви' : esc(who(q.by))}, ${esc(when(q.at))}</div>
     ${q.answer && !edit ? `<div class="qa"><span class="small muted">Відповідь${q.updBy ? ' · ' + esc(who(q.updBy)) : ''}, ${esc(when(q.upd))}</span><div>${glossify(esc(q.answer)).replace(/\n/g, '<br>')}</div></div>` : ''}
     ${edit ? `<div class="qedit">
       <div class="seg small">${Object.entries(QSTAT).map(([k, t]) => `<button type="button" class="${q.status === k ? 'on' : ''}" data-act="q-status" data-id="${q.id}" data-v="${k}">${t}</button>`).join('')}</div>
       <textarea class="in" id="qa-${q.id}" placeholder="Відповідь — її побачить автор запитання">${esc(q.answer)}</textarea>
-      ${p ? `<div class="qadd"><span class="small muted">Внести в дерево:</span><button class="btn small" data-act="q-add" data-rel="spouse" data-id="${q.id}">+ чоловік / дружина</button><button class="btn line small" data-act="q-add" data-rel="child" data-id="${q.id}">+ дитина</button><button class="btn line small" data-act="q-add" data-rel="father" data-id="${q.id}">+ батько</button><button class="btn line small" data-act="q-add" data-rel="mother" data-id="${q.id}">+ мати</button><button class="btn line small" data-act="q-add" data-rel="sibling" data-id="${q.id}">+ брат / сестра</button><a class="btn line small" href="${href('p', p.id)}">Відкрити картку</a></div>` : ''}
+      ${p && !(q.padd && q.pst === '') ? `<div class="qadd"><span class="small muted">Внести в дерево:</span><button class="btn small" data-act="q-add" data-rel="spouse" data-id="${q.id}">+ чоловік / дружина</button><button class="btn line small" data-act="q-add" data-rel="child" data-id="${q.id}">+ дитина</button><button class="btn line small" data-act="q-add" data-rel="father" data-id="${q.id}">+ батько</button><button class="btn line small" data-act="q-add" data-rel="mother" data-id="${q.id}">+ мати</button><button class="btn line small" data-act="q-add" data-rel="sibling" data-id="${q.id}">+ брат / сестра</button><a class="btn line small" href="${href('p', p.id)}">Відкрити картку</a></div>` : ''}
       <div class="btns"><button class="btn line small" data-act="q-answer" data-id="${q.id}">Зберегти відповідь</button>${isOwner() ? `<button class="btn line small" data-act="q-del" data-id="${q.id}">Видалити</button>` : ''}<span class="msg" id="qa-m-${q.id}"></span></div></div>`
     : mine && q.status === 'new' ? `<div class="btns"><button class="btn line small" data-act="q-del" data-id="${q.id}">Видалити</button></div>` : ''}
   </article>`;
@@ -980,32 +989,37 @@ function qClaudeText() {
 }
 async function qHandle(act, t, d) {
   if (act === 'q-fix') { const id = d.id || S.arg; if (!P[id]) return true; modal(`<h2>Внести правку — ${esc(short(P[id]))}</h2>${fxForm(P[id])}`); return true; }
+  if (act === 'q-fxmore') { const w = $('#fxrels'), id = t.closest('.fxform').dataset.id; if (w && P[id] && w.children.length < 12) w.insertAdjacentHTML('beforeend', fxRelRow(P[id])); return true; }
+  if (act === 'q-fxrm') { const r = t.closest('.fxrel'); if (r) { r.querySelectorAll('input').forEach(i => i.value = ''); if (r.parentElement.children.length > 1) r.remove(); } return true; }
   if (act === 'q-fxsend') {
     const f = t.closest('.fxform'), id = f.dataset.id, p = P[id], m = f.querySelector('#fx-m'); if (!p) return true;
     const patch = {}; f.querySelectorAll('[data-fx]').forEach(i => { const k = i.dataset.fx, v = i.value.trim(); if (v !== String(p[k] || '')) patch[k] = v; });
+    const add = [...f.querySelectorAll('.fxrel')].map(r => { const o = parseFio(r.querySelector('[data-fr=fio]').value); const b = r.querySelector('[data-fr=b]').value.trim() || o.b; return { rel: r.querySelector('[data-fr=rel]').value, s: o.s, n: o.n, pt: o.pt, m: o.m, b }; }).filter(x => x.n);
+    const dv = f.querySelector('#fx-dup').value.trim(), dup = dv ? personByLabel(dv) : '';
+    if (dv && !dup) { m.className = 'msg err'; m.textContent = 'Дублікат: оберіть людину зі списку.'; return true; }
     const why = f.querySelector('#fx-why')?.value.trim() || '';
-    if (!Object.keys(patch).length && !why) { m.className = 'msg err'; m.textContent = 'Нічого не змінено. Виправте поле або напишіть, що не так.'; return true; }
+    if (!Object.keys(patch).length && !add.length && !dup && !why) { m.className = 'msg err'; m.textContent = 'Нічого не змінено. Виправте поле, додайте рідних або напишіть, що не так.'; return true; }
     if (t.disabled) return true; t.disabled = true; m.className = 'msg'; m.textContent = 'Надсилаю…';
     try {
-      if (isOwner()) { const { id: _i, v, last, ...data } = p; await api('/api/data', { body: { op: 'person.save', id, v, data: { ...data, ...patch } } }); await load(); closeLayer(); toast('Збережено'); return true; }
-      const r = await api('/api/data', { body: { op: 'fix.add', person: id, patch, text: why } });
+      const r = await api('/api/data', { body: { op: 'fix.add', person: id, patch, add, dup, text: why, apply: isOwner() } });
+      if (isOwner()) { await load(); closeLayer(); if (r.keep && r.keep !== id) location.hash = href('p', r.keep); toast('Внесено' + (r.made?.length ? ` · нових карток: ${r.made.length}` : '')); return true; }
       (S.data.questions ||= []).unshift(r.question); closeLayer(); S.ui.keepScroll = true; render();
-      toast('Дякуємо! Правку надіслано — з’явиться на сайті після підтвердження. Стан — у розділі «Запитання».');
+      toast('Дякуємо! Надіслано — з’явиться в дереві після підтвердження. Стан — у розділі «Запитання».');
     } catch (err) { m.className = 'msg err'; m.textContent = errText(err); t.disabled = false; }
     return true;
   }
   if (act === 'q-fxok' || act === 'q-fxno') {
-    const it = t.closest('.qi'), m = $('#fx-qm-' + d.id), keys = [...it.querySelectorAll('[data-fxk]')].filter(c => c.checked).map(c => c.dataset.fxk);
+    const it = t.closest('.qi'), m = $('#fx-qm-' + d.id), keys = [...it.querySelectorAll('[data-fxk]')].filter(c => c.checked).map(c => c.dataset.fxk), keep = it.querySelector(`input[name="fxk-${d.id}"]:checked`)?.value || '';
     if (act === 'q-fxok' && !keys.length) { m.className = 'msg err'; m.textContent = 'Позначте хоча б одне поле.'; return true; }
     if (t.disabled) return true; t.disabled = true;
     try {
-      const r = await api('/api/data', { body: { op: act === 'q-fxok' ? 'fix.apply' : 'fix.reject', id: d.id, keys, answer: $('#qa-' + d.id)?.value.trim() || '' } });
+      const r = await api('/api/data', { body: { op: act === 'q-fxok' ? 'fix.apply' : 'fix.reject', id: d.id, keys, keep, answer: $('#qa-' + d.id)?.value.trim() || '' } });
       const i = S.data.questions.findIndex(q => q.id === d.id); if (i >= 0) S.data.questions[i] = r.question;
-      if (act === 'q-fxok') await load(); S.ui.keepScroll = true; render(); toast(act === 'q-fxok' ? 'Правку внесено в картку' : 'Правку відхилено');
+      if (act === 'q-fxok') await load(); S.ui.keepScroll = true; render(); toast(act === 'q-fxok' ? 'Внесено в дерево' : 'Відхилено');
     } catch (err) { m.className = 'msg err'; m.textContent = errText(err); t.disabled = false; }
     return true;
   }
-  if (act === 'q-ask') { modal(`<h2>Уточнити або запитати</h2>${qForm(S.arg)}`); return true; }
+  if (act === 'q-ask') { modal(`<h2>Запитати</h2><p class="small muted" style="margin:0 0 8px">Щоб виправити дані чи додати рідних — кнопка «Внести правку».</p>${qForm(S.arg, 'ask')}`); return true; }
   if (act === 'q-kind') { const f = t.closest('.qform'); f.dataset.kind = d.v; f.querySelectorAll('[data-act=q-kind]').forEach(b => b.classList.toggle('on', b === t)); return true; }
   if (act === 'q-filter') { S.ui.qf = d.v; S.ui.keepScroll = true; render(); return true; }
   if (act === 'q-send') {
