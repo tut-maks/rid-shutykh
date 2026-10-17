@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172318';
+const BUILD = '202610172320';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2280,7 +2280,13 @@ function askDone(open = true) {
 /* ── Голоси роду (аудіо) ── */
 const voicesOf = pid => S.data.photos.filter(x => isVoice(x) && (!pid || x.person === pid));
 const vcache = {};
-async function voiceUrl(id) { if (vcache[id]) return vcache[id]; const r = await fetch(img('photo=' + id), { credentials: 'same-origin' }); if (!r.ok) throw new Error('http_' + r.status); return (vcache[id] = URL.createObjectURL(await r.blob())); }
+async function voiceUrl(id) { // довгі записи сервер віддає частинами по 4 МБ (x-chunks) — збираємо в один файл
+  if (vcache[id]) return vcache[id];
+  const get = async k => { const r = await fetch(img('photo=' + id) + (k ? '&chunk=' + k : ''), { credentials: 'same-origin' }); if (!r.ok) throw new Error('http_' + r.status); return r; };
+  const r0 = await get(0), n = Number(r0.headers.get('x-chunks') || 1), parts = [await r0.blob()];
+  for (let k = 1; k < n; k++) parts.push(await (await get(k)).blob());
+  return (vcache[id] = URL.createObjectURL(new Blob(parts, { type: parts[0].type })));
+}
 const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${(isOwner() || x.by === S.me.id) && !x.pending ? `<button class="btn line small" data-delphoto="${x.id}" title="Видалити запис">✕</button>` : ''}</div>`;
 function voiceSec(p) {
   const L = voicesOf(p.id);
@@ -2289,7 +2295,7 @@ function voiceSec(p) {
 }
 let REC = null;
 function openRec(pid) {
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { modal(`<h2>Запис голосу</h2><p>Цей браузер не вміє записувати звук. Спробуйте Chrome або Safari на телефоні.</p><div class="btns"><button class="btn line" data-act="close">Закрити</button></div>`); return; }
+  const canRec = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
   const fixed = pid && (P[pid] || FAM[String(pid).replace(/^fam:/, '')]); // відкрили з картки людини чи родини — «про кого» вже відомо
   const famOpts = S.data.families.map(f => `<option value="fam:${f.id}"${pid === 'fam:' + f.id ? ' selected' : ''}>${esc(f.title)}</option>`).join('');
   const pplOpts = `<option value="">Почніть вводити ім'я…</option>` + Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(x => `<option value="${x.id}">${esc(full(x))}${life(x) ? ' (' + esc(life(x)) + ')' : ''}</option>`).join('');
@@ -2299,11 +2305,25 @@ function openRec(pid) {
       <label class="f rec-fam" hidden>Якого роду<select class="in" id="rec-fam">${famOpts}</select></label>
       <p class="small muted" style="margin:0">До 15 хвилин. Можна записати бабусю чи дідуся просто зараз — телефон поруч, і натисніть червону кнопку.</p></div>`;
   modal(`<h2>Записати історію</h2>${about}
-    <div class="rec"><button class="recbtn" data-act="rec-go" aria-label="Почати запис"><span></span></button><div class="rec-t mono" id="rec-t">00:00</div><div class="rec-s small muted" id="rec-s">Натисніть червону кнопку, щоб почати</div></div>
+    ${canRec ? `<div class="rec"><button class="recbtn" data-act="rec-go" aria-label="Почати запис"><span></span></button><div class="rec-t mono" id="rec-t">00:00</div><div class="rec-s small muted" id="rec-s">Натисніть червону кнопку, щоб почати</div></div>` : `<p class="small muted" id="rec-s">Цей браузер не вміє записувати звук — але можна завантажити готовий запис.</p>`}
+    <div class="recfile"><span class="muted small">${canRec ? 'або' : ''}</span><label class="btn line small">📁 Завантажити готовий запис<input type="file" id="rec-f" accept="audio/*,.m4a,.mp3,.wav,.ogg,.opus,.webm" hidden></label><span class="small muted">диктофон телефона, WhatsApp, Viber… (mp3, m4a, wav, ogg; до 45 МБ)</span></div>
     <audio id="rec-a" controls hidden></audio>
     <label class="f">Хто розповідає і про що<input class="in" id="rec-c" placeholder="Напр.: «Баба Оля про війну і Веприк»"></label>
     <div class="btns"><button class="btn" data-act="rec-save" disabled>Зберегти</button><button class="btn line" data-act="rec-cancel">Скасувати</button><span class="msg" id="recmsg"></span></div>`);
   REC = { pid: fixed ? pid : '', mode: 'p', chunks: [], blob: null };
+  $('#rec-f').onchange = e => { const f = e.target.files[0]; if (!f || !REC) return; if (REC.mr?.state === 'recording') REC.mr.stop();
+    const m = $('#recmsg'); if (f.size > 45e6) { m.className = 'msg err'; m.textContent = 'Файл завеликий (понад 45 МБ). Розріжте запис на частини.'; return; }
+    REC.blob = f; const a = $('#rec-a'); a.src = URL.createObjectURL(f); a.hidden = false; const s = $('#rec-s'); if (s) s.textContent = 'Обрано файл «' + f.name + '». Прослухайте й натисніть «Зберегти».';
+    if (!$('#rec-c').value.trim()) $('#rec-c').value = f.name.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').slice(0, 120);
+    $('[data-act="rec-save"]').disabled = false; m.textContent = ''; };
+}
+// Завантаження аудіо: до 4 МБ — одним запитом, більше — частинами (сервер збирає)
+async function voiceUpload(pid, cap, blob, onp) {
+  const q = `person=${encodeURIComponent(pid)}&caption=${encodeURIComponent(cap)}`, CH = 3_900_000;
+  if (blob.size <= CH) return api('/api/upload?' + q, { raw: blob });
+  const n = Math.ceil(blob.size / CH), code = [...crypto.getRandomValues(new Uint8Array(10))].map(x => x.toString(16).padStart(2, '0')).join('');
+  let r; for (let i = 0; i < n; i++) { onp?.(i, n); r = await api(`/api/upload?${q}&part=${code}&i=${i}&n=${n}`, { raw: blob.slice(i * CH, (i + 1) * CH) }); }
+  return r;
 }
 async function recToggle() {
   if (!REC) return; const b = $('[data-act="rec-go"]'), s = $('#rec-s');
@@ -2737,9 +2757,8 @@ document.addEventListener('click', async e => {
       if (!REC?.blob) return; const m = $('#recmsg');
       if (!REC.pid) { const v = REC.mode === 'fam' ? $('#rec-fam')?.value : $('#rec-p')?.value; if (!v) { m.className = 'msg err'; m.textContent = 'Оберіть, про кого ця розповідь (або «Загальна історія роду»).'; return; } REC.pid = v; }
       t.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
-      if (REC.blob.size > 4.1e6) { m.className = 'msg err'; m.textContent = 'Запис завеликий (понад 4 МБ). Запишіть коротший, частинами.'; t.disabled = false; return; }
-      try { const r = await api(`/api/upload?person=${encodeURIComponent(REC.pid)}&caption=${encodeURIComponent($('#rec-c').value.trim())}`, { raw: REC.blob }); const pid = REC.pid; recStop(); await load(); closeLayer(); S.ui.keepScroll = true; render(); toast(r.pending ? 'Запис збережено — з\'явиться для всіх після підтвердження Максимом' : 'Голосовий спогад збережено'); ev('open', 'voice', 'person:' + pid); }
-      catch (err) { t.disabled = false; m.className = 'msg err'; m.textContent = err.message === 'type' ? 'Цей формат запису не підтримується. Спробуйте інший браузер.' : errText(err); }
+      try { const r = await voiceUpload(REC.pid, $('#rec-c').value.trim(), REC.blob, (i, n) => { m.textContent = `Надсилаю… частина ${i + 1} з ${n}, не закривайте вікно`; }); const pid = REC.pid; recStop(); await load(); closeLayer(); S.ui.keepScroll = true; render(); toast(r.pending ? 'Запис збережено — з\'явиться для всіх після підтвердження Максимом' : 'Голосовий спогад збережено'); ev('open', 'voice', 'person:' + pid); }
+      catch (err) { t.disabled = false; m.className = 'msg err'; m.textContent = err.message === 'type' ? 'Цей формат не підтримується. Підійдуть mp3, m4a, wav, ogg, webm.' : errText(err); }
       return;
     }
     if (a === 'v-play') {

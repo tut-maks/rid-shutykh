@@ -1390,3 +1390,6 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 .updone .ask-prev img{max-height:220px}
 @keyframes upPop{0%{transform:scale(.4);opacity:0}80%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 .dupw{color:#9a5b00;font-size:13px}
+
+.recfile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:4px 0 10px;text-align:center}
+.recfile .btn{cursor:pointer}

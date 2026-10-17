@@ -32,5 +32,9 @@ export default handler(async (req, res, _c, url) => {
   res.setHeader('x-content-type-options', 'nosniff');
   const ext = { 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' }[mime] || 'jpg';
   res.setHeader('content-disposition', url.searchParams.get('dl') === '1' && !thumb ? `attachment; filename="${(target || 'file').replace(/[^a-z0-9_-]/gi, '-')}.${ext}"` : 'inline');
+  // великі файли (довгі аудіозаписи) — частинами по 4 МБ: ?chunk=<k>; у відповіді x-chunks — скільки всього частин
+  const CH = 4_000_000, nch = Math.ceil(buf.length / CH), ck = url.searchParams.get('chunk');
+  res.setHeader('x-chunks', String(nch));
+  if (ck != null || nch > 1) { const k = Math.max(0, Math.min(nch - 1, Number(ck) || 0)); res.setHeader('cache-control', 'private, max-age=86400'); return res.end(buf.subarray(k * CH, (k + 1) * CH)); }
   res.end(buf);
 }, { auth: false });

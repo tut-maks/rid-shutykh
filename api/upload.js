@@ -26,7 +26,20 @@ function sniff(b) {
 export default handler(async (req, res, ctx, url) => {
   if (req.method !== 'POST') return fail(res, 405, 'method');
   const me = ctx.member;
-  const buf = await readRaw(req, 4_200_000);
+  let buf = await readRaw(req, 4_200_000);
+  // Великий аудіозапис (готовий файл з телефона) — частинами до 4 МБ: ?part=<код>&i=<k>&n=<усього>&person=…; остання частина збирає файл
+  const part = url.searchParams.get('part');
+  if (part != null) {
+    const i = Number(url.searchParams.get('i')), n = Number(url.searchParams.get('n'));
+    if (!/^[a-z0-9]{12,40}$/.test(part) || !Number.isInteger(i) || !Number.isInteger(n) || n < 2 || n > 12 || i < 0 || i >= n) return fail(res, 400, 'bad');
+    if (i === 0 && !(sniff(buf) || '').startsWith('audio/')) return fail(res, 415, 'type');
+    const pre = `tmp/${me.id}/${part}-`;
+    if (i < n - 1) { await db.put(pre + i, buf, 'application/octet-stream'); return send(res, 200, { ok: true, i }); }
+    const parts = []; for (let k = 0; k < n - 1; k++) { const b = await db.read(pre + k); if (!b) return fail(res, 400, 'part_missing'); parts.push(b); }
+    buf = Buffer.concat([...parts, buf]);
+    for (let k = 0; k < n - 1; k++) db.del(pre + k).catch(() => {});
+    if (!(sniff(buf) || '').startsWith('audio/')) return fail(res, 415, 'type');
+  }
   const mime = sniff(buf);
   if (!mime) return fail(res, 415, 'type');
   const kind = url.searchParams.get('kind') === 'thumb' ? 'thumb' : 'full';
