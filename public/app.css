@@ -1409,3 +1409,18 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 .ped-sl{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font-size:14px}
 .ped-sl label{display:flex;gap:8px;align-items:center}
 .ped-sl input{width:150px}
+
+/* позначки достовірності */
+.relrow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.relb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 6px;border-radius:999px;font-size:13px;line-height:1.2;border:1px solid currentColor;background:#fff;white-space:nowrap;cursor:help;vertical-align:middle}
+.relb svg{width:16px;height:16px;flex:0 0 auto}
+.relb em{font-style:normal}
+.relb.sm{padding:0;border:0;background:none;gap:0}
+.relb.sm svg{width:14px;height:14px}
+.rel-doc{color:#2f6b3a}.rel-mem{color:#2d5d8a}.rel-chk{color:#a0670a}.rel-con{color:#a8322d}
+.rellg{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.relc{display:flex;gap:6px;align-items:flex-start;color:#a8322d}
+.relc svg{width:16px;height:16px;flex:0 0 auto;margin-top:3px}
+.nd .ndrel{position:absolute;right:6px;top:5px;width:16px;height:16px;line-height:0;pointer-events:auto}
+.nd .ndrel svg{width:15px;height:15px}
+.nd .ndrel.con::after{content:'';position:absolute;right:-3px;top:-2px;width:7px;height:7px;border-radius:50%;background:#a8322d;border:1px solid #fff}

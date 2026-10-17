@@ -145,6 +145,7 @@ export function cleanPerson(d) {
   const ln = cleanLinks(d.links); if (ln.length) o.links = ln;
   if (typeof d.dna === 'string' && d.dna) o.dna = STR(d.dna, 30);
   if (d.war && typeof d.war === 'object' && ['ww1', 'ww2', 'other'].includes(d.war.w)) o.war = { w: d.war.w, f: ['ret', 'kil', 'mis', 'unk'].includes(d.war.f) ? d.war.f : 'unk', ...(d.war.h ? { h: true } : {}) }; // участь у війні: яка, доля, h — припущення
+  if (d.rel && typeof d.rel === 'object') { const k = ['doc', 'mem', 'chk'].includes(d.rel.k) ? d.rel.k : '', c = STR(d.rel.c, 600); if (k || c) o.rel = { ...(k ? { k } : {}), ...(c ? { c } : {}) }; } // достовірність: k — вручну (інакше рахується сама), c — суперечливі версії
   return o;
 }
 

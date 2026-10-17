@@ -215,7 +215,7 @@ export default handler(async (req, res, ctx, url) => {
       if (cur.data.root) data.root = true;
       if (cur.data.portrait && !body.data.hasOwnProperty('portrait')) data.portrait = cur.data.portrait;
       // поля, яких немає у формі редагування, не губити (джерела, соцмережі)
-      for (const k of ['src', 'links', 'dna', 'pc', 'war']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
+      for (const k of ['src', 'links', 'dna', 'pc', 'war', 'rel']) if (cur.data[k] && !body.data.hasOwnProperty(k)) data[k] = cur.data[k];
       const [row] = await db.update('persons', { eq: { id: cur.id, version: cur.version } }, { data, version: cur.version + 1, updated_by: me.id, updated_at: new Date().toISOString() });
       if (!row) return fail(res, 409, 'conflict');
       await revision('person', cur.id, 'update', cur.data, data, me.id);
