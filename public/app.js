@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610171655';
+const BUILD = '202610171657';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3283,7 +3283,7 @@ document.addEventListener('focusout', e => { if (!e.target.classList?.contains('
   let box = null, inp = null, opts = [], ext = [], cur = -1, items = [];
   // додаткові слова для пошуку: дівоче прізвище, прізвище чоловіка/дружини («Янок» знайде Маню Шуту, дружину Миколи Янка)
   const extOf = p => { if (!p) return null; const sp = (SPOUSES[p.id] || []).map(x => P[x.id]).filter(Boolean); const t = [p.m, ...sp.map(q => q.s), ...sp.map(q => q.m)].filter(Boolean).join(' ');
-    return { t, h: sp.length ? (p.sex === 'f' ? 'дружина: ' : p.sex === 'm' ? 'чоловік: ' : 'подружжя: ') + sp.map(q => short(q)).join(', ') : '' }; };
+    return { t, h: sp.length ? (p.sex === 'f' ? 'чоловік: ' : p.sex === 'm' ? 'дружина: ' : 'подружжя: ') + sp.map(q => short(q)).join(', ') : '' }; };
   const norm = v => String(v || '').toLowerCase().replace(/[’ʼ`]/g, "'").replace(/ё/g, 'е');
   const ensure = () => { if (!box) { box = document.createElement('div'); box.id = 'acbox'; box.setAttribute('role', 'listbox'); document.body.appendChild(box);
     box.addEventListener('mousedown', e => { const o = e.target.closest('[data-ai]'); e.preventDefault(); if (o) choose(+o.dataset.ai); }); } return box; };
