@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610161907';
+const BUILD = '202610171637';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3225,6 +3225,37 @@ function bookGoPage(n) {
 }
 document.addEventListener('keydown', e => { if (!e.target.classList?.contains('bk-pgin')) return; e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value; e.target.closest('.bk-pg').textContent = ''; bookGoPage(v); } else if (e.key === 'Escape') { e.target.closest('.bk-pg').textContent = ''; bookCounter(); } }, true);
 document.addEventListener('focusout', e => { if (!e.target.classList?.contains('bk-pgin')) return; const t = e.target; setTimeout(() => { if (!t.isConnected) return; const v = t.value, p = t.closest('.bk-pg'); p.textContent = ''; const N = BOOK.pages.length, cur = S.ui.bkOpen ? (BOOK.spread ? S.ui.bkPos || 1 : (S.ui.bkPos || 0) + 1) : 0; if (+v && +v !== cur) bookGoPage(v); else bookCounter(); }, 120); });
+
+// Власний випадний список для полів «оберіть людину» (замість <datalist>: у Safari він не відкривається по кліку й шукає лише з початку)
+(() => {
+  let box = null, inp = null, opts = [], cur = -1, items = [];
+  const norm = v => String(v || '').toLowerCase().replace(/[’ʼ`]/g, "'").replace(/ё/g, 'е');
+  const ensure = () => { if (!box) { box = document.createElement('div'); box.id = 'acbox'; box.setAttribute('role', 'listbox'); document.body.appendChild(box);
+    box.addEventListener('mousedown', e => { const o = e.target.closest('[data-ai]'); e.preventDefault(); if (o) choose(+o.dataset.ai); }); } return box; };
+  const place = () => { if (!inp || !box || !inp.isConnected) return hide(); const r = inp.getBoundingClientRect(); const below = innerHeight - r.bottom, up = below < 220 && r.top > below;
+    Object.assign(box.style, { left: r.left + 'px', width: Math.max(r.width, 260) + 'px', top: up ? '' : r.bottom + 2 + 'px', bottom: up ? innerHeight - r.top + 2 + 'px' : '', maxHeight: Math.max(160, Math.min(320, (up ? r.top : below) - 12)) + 'px' }); };
+  const hide = () => { if (box) box.style.display = 'none'; inp = null; cur = -1; };
+  const show = all => {
+    const q = all ? '' : norm(inp.value).trim(), ws = q.split(/[\s,()]+/).filter(Boolean);
+    items = opts.map((v, i) => { const n = norm(v); if (!ws.every(w => n.includes(w))) return null; const sc = ws.reduce((a, w) => a + (new RegExp('(^|[\\s(\'-])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(n) ? 0 : 1), 0); return { v, i, sc }; }).filter(Boolean).sort((a, b) => a.sc - b.sc || a.i - b.i).slice(0, 80);
+    const b = ensure(); cur = -1;
+    b.innerHTML = items.length ? items.map((o, k) => `<div class="aco" data-ai="${k}" role="option">${esc(o.v)}</div>`).join('') : '<div class="aco none">Нікого не знайдено — перевірте написання</div>';
+    b.style.display = 'block'; b.scrollTop = 0; place();
+  };
+  const mark = k => { const els = box.querySelectorAll('[data-ai]'); if (!els.length) return; cur = (k + els.length) % els.length; els.forEach((e, j) => e.classList.toggle('on', j === cur)); els[cur].scrollIntoView({ block: 'nearest' }); };
+  const choose = k => { const o = items[k]; if (!o || !inp) return; const t = inp; t.value = o.v; hide(); t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); };
+  const bind = t => { if (!t.dataset.dl) { const id = t.getAttribute('list'); if (!id) return false; t.dataset.dl = id; t.removeAttribute('list'); } const dl = document.getElementById(t.dataset.dl); if (!dl) return false; opts = [...dl.options].map(o => o.value).filter(Boolean); inp = t; return true; };
+  const isAc = t => t?.matches?.('input[list], input[data-dl]');
+  document.addEventListener('focusin', e => { const t = e.target; if (!isAc(t) || !bind(t)) return; show(true); try { t.select(); } catch {} });
+  document.addEventListener('click', e => { const t = e.target; if (isAc(t) && t !== inp && bind(t)) show(true); else if (isAc(t) && box?.style.display === 'none') { bind(t); show(true); } });
+  document.addEventListener('input', e => { if (e.target === inp && e.isTrusted) show(false); });
+  document.addEventListener('keydown', e => { if (e.target !== inp || !box || box.style.display === 'none') { if (isAc(e.target) && e.key === 'ArrowDown' && bind(e.target)) { show(true); e.preventDefault(); } return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); mark(cur + 1); } else if (e.key === 'ArrowUp') { e.preventDefault(); mark(cur - 1); }
+    else if (e.key === 'Enter' && cur >= 0) { e.preventDefault(); e.stopPropagation(); choose(cur); } else if (e.key === 'Escape') { e.stopPropagation(); hide(); } }, true);
+  document.addEventListener('focusout', e => { if (e.target === inp) setTimeout(() => { if (document.activeElement !== inp) hide(); }, 120); });
+  addEventListener('scroll', e => { if (inp && box?.style.display !== 'none' && !box.contains(e.target)) place(); }, true);
+  addEventListener('resize', () => inp && place());
+})();
 
 start();
 })();
