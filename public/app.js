@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610171637';
+const BUILD = '202610171641';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1110,7 +1110,7 @@ function jrRelBlock(r, pid) {
     if (has[k] && P[has[k]]) return `<div class="relr"><b class="small">${t}</b> <span class="small">вже в дереві: <a href="${href('p', has[k])}">${esc(short(P[has[k]]))}</a></span></div>`;
     if (!T[k]) return '';
     const gp = g[k]; act++;
-    return `<div class="relr" data-k="${k}"><b class="small">${t}</b> <span class="small muted">в анкеті: «${esc(T[k])}»</span>
+    return `<div class="relr" data-relk="${k}"><b class="small">${t}</b> <span class="small muted">в анкеті: «${esc(T[k])}»</span>
       <div class="relc"><input class="in" list="jpeople" data-rk="pick" value="${gp ? esc(plabel(gp)) : ''}" placeholder="вже є в дереві — оберіть" autocomplete="off">
       <label class="small relmk"><input type="checkbox" data-rk="mk"${gp ? '' : ' checked'}> або нова картка:</label><input class="in" data-rk="txt" value="${esc(T[k])}"></div></div>`;
   }).join('');
@@ -1119,8 +1119,8 @@ function jrRelBlock(r, pid) {
 }
 function jrRelRead(id) {
   const rel = {};
-  document.querySelectorAll(`#jrel-${id} .relr[data-k]`).forEach(el => {
-    const k = el.dataset.k, pick = el.querySelector('[data-rk="pick"]').value.trim(), pid = pick ? personByLabel(pick) : '';
+  document.querySelectorAll(`#jrel-${id} .relr[data-relk]`).forEach(el => {
+    const k = el.dataset.relk, pick = el.querySelector('[data-rk="pick"]').value.trim(), pid = pick ? personByLabel(pick) : '';
     if (pid) rel[k] = { id: pid };
     else if (el.querySelector('[data-rk="mk"]').checked) { const o = parseFio(el.querySelector('[data-rk="txt"]').value); if (o.n) rel[k] = { make: o }; }
   });
@@ -2868,7 +2868,7 @@ document.addEventListener('click', async e => {
     if (d.member !== undefined) { S.admin.member = d.member && S.admin.member !== d.member ? d.member : null; // другий клік по тому самому рядку — згорнути
       if (!S.admin.member) { S.admin.log = null; S.ui.keepScroll = true; render(); return; } S.admin.log = null; if (!S.admin.stats) return loadAdmin(); // лише журнал — загальні цифри не перезавантажуємо, щоб не «стрибали»
       { const { from, to } = periodRange(); try { S.admin.log = await api(`/api/admin?a=log&id=${S.admin.member}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); } catch (err) { toast(errText(err)); } S.ui.keepScroll = true; render(); return; } }
-    if (d.k) { S.admin.dir = S.admin.sort === d.k ? -(S.admin.dir || -1) : -1; S.admin.sort = d.k; render(); return; }
+    if (d.k && t.tagName === 'TH') { S.admin.dir = S.admin.sort === d.k ? -(S.admin.dir || -1) : -1; S.admin.sort = d.k; render(); return; }
     if (d.revert) { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відкотити?'; return; } await api('/api/admin?a=revert', { body: { id: d.revert } }); await load(); S.admin.revs = null; await loadAdmin(); toast('Відкочено'); return; }
     if (d.reset) { const r = await api('/api/admin?a=reset', { body: { member_id: d.reset } }); modal(`<h2>Посилання для нового пароля</h2><p>Надішліть його особисто. Діє 7 днів, одноразове.</p><input class="in mono" value="${esc(r.link)}" readonly><div class="btns"><button class="btn" data-act="copy" data-v="${esc(r.link)}">Скопіювати</button><button class="btn line" data-act="close">Готово</button></div>`); return; }
     if (d.revoke) { await api('/api/admin?a=revoke', { body: { member_id: d.revoke } }); toast('Сеанси завершено'); S.admin.members = null; return loadAdmin(); }
