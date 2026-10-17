@@ -105,7 +105,7 @@ export default handler(async (req, res, ctx, url) => {
     const rows = await db.list('photos', { in: { id: ids }, eq: { deleted: false } });
     const mem = await db.list('members', { select: 'id,name' }); const nm = Object.fromEntries(mem.map(m => [m.id, m.name || 'Родич']));
     const pver = await verGet();
-    return send(res, 200, { photos: rows.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: nm[p.created_by] || 'Родич', at: p.created_at, ...(pver[p.id] ? { ver: verOut(pver[p.id]) } : {}) })) });
+    return send(res, 200, { photos: rows.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, size: p.size || 0, byId: p.created_by, by: nm[p.created_by] || 'Родич', at: p.created_at, ...(pver[p.id] ? { ver: verOut(pver[p.id]) } : {}) })) });
   }
   if (a === 'photo_ok') {
     const body = await readJSON(req, 2000); const id = String(body.id || '').slice(0, 60);
@@ -116,7 +116,8 @@ export default handler(async (req, res, ctx, url) => {
       await revision('photo', id, 'approve', null, { person_id: p.person_id }, ctx.member.id);
       const person = await db.get('persons', { eq: { id: p.person_id, deleted: false } });
       if (person && !person.data.portrait && p.mime !== 'application/pdf') await db.update('persons', { eq: { id: person.id } }, { data: { ...person.data, portrait: id }, version: person.version + 1, updated_by: ctx.member.id, updated_at: new Date().toISOString() });
-    } else { await db.update('photos', { eq: { id } }, { deleted: true }); await revision('photo', id, 'delete', p, null, ctx.member.id); }
+    } else if (body.done) { await db.update('photos', { eq: { id } }, { deleted: true }); await revision('photo', id, 'resolve', p, null, ctx.member.id); } // «Вирішено»: власник уже врахував фото (обробив і додав сам)
+    else { await db.update('photos', { eq: { id } }, { deleted: true }); await revision('photo', id, 'delete', p, null, ctx.member.id); }
     return send(res, 200, { ok: true });
   }
   if (a === 'join_link') {

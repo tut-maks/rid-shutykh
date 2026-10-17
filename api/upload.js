@@ -130,12 +130,17 @@ export default handler(async (req, res, ctx, url) => {
   if (famRec && !(await db.get('families', { eq: { id: personId.slice(4) } }))) return fail(res, 404, 'not_found');
   if (!ask && !famRec && !person) return fail(res, 404, 'not_found');
   const pending = ask ? !can(me, 'editor') : !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
+  // той самий файл уже завантажували (хеш оригіналу з браузера ?h= і хеш стиснутого файлу) — не дублювати
+  const hs = [crypto.createHash('sha256').update(buf).digest('hex').slice(0, 40), String(url.searchParams.get('h') || '').replace(/[^0-9a-f]/g, '').slice(0, 40)].filter(x => x.length === 40);
+  let hmap = {}; try { hmap = (await db.get('settings', { eq: { key: 'photo_hash' } }))?.value || {}; } catch {}
+  for (const h of hs) { const old = hmap[h] && await db.get('photos', { eq: { id: hmap[h], deleted: false } }); if (old) return send(res, 409, { error: 'dup', id: old.id, person: old.person_id }); }
   const id = crypto.randomUUID();
   const path = `${isAudio ? 'voice' : 'photos'}/${personId.replace(/[^a-z0-9_-]/gi, '_')}/${id}.${OK[mime]}`;
   await db.put(path, buf, mime);
   const caption = String(url.searchParams.get('caption') || '').slice(0, 500);
   await db.insert('photos', { id, person_id: personId, path, caption, mime, size: buf.length, created_by: me.id });
   await revision('photo', id, 'create', null, { person_id: personId, caption, path }, me.id);
+  if (hs.length && !isAudio) { try { const cur = (await db.get('settings', { eq: { key: 'photo_hash' } }))?.value || {}; for (const h of hs) cur[h] = id; await db.upsert('settings', { key: 'photo_hash', value: cur, updated_by: me.id, updated_at: new Date().toISOString() }); } catch {} }
   if (pending) { const pd = await pendGet(); pd[id] = { by: me.id, at: new Date().toISOString(), person: personId }; await pendSet(pd, me.id); }
   // перше фото стає головним (крім тих, що чекають підтвердження)
   if (person && !pending && !isAudio && !person.data.portrait && mime !== 'application/pdf') {

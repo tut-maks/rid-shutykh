@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610171812';
+const BUILD = '202610172318';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -690,7 +690,7 @@ function vPerson() {
       ${parDocs(p, docs)}</div>
     <div class="sec"><h3>Фото ${S.me ? `<label class="btn line small" style="cursor:pointer" title="Портрет, родинне фото або скан документа (свідоцтво, лист, довідка)${canAdd(p.id) ? '' : '. Фото з\'явиться на сайті після підтвердження Максимом.'}">Додати фото чи документ<input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : ''}</h3>
       <div class="msg" id="upmsg"></div>
-      ${photos.length ? `<div class="thumbs">${photos.map(x => `${x.pending ? '<div class="phpend">' : ''}<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${x.pending ? '<b class="pend-l">Чекає підтвердження</b><br>' : ''}${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}${x.pending && x.by ? `<br><small class="muted">додав(ла): ${esc(who(x.by))}</small>` : ''}</span></button>${x.pending ? `${isOwner() ? `<div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button></div>` : ''}</div>` : ''}`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
+      ${photos.length ? `<div class="thumbs">${photos.map(x => `${x.pending ? '<div class="phpend">' : ''}<button class="doc" data-photo="${x.id}"><span class="im">${x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span>${x.pending ? '<b class="pend-l">Чекає підтвердження</b><br>' : ''}${p.portrait === x.id ? '<b style="font-size:12px;color:var(--seal)">Головне фото</b><br>' : ''}${esc(x.caption || '')}${x.pending && x.by ? `<br><small class="muted">додав(ла): ${esc(who(x.by))}</small>` : ''}</span></button>${x.pending ? `${isOwner() ? `<div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-done" data-id="${x.id}" title="Фото вже враховане: ви обробили його й додали самі. Прибрати з черги — без позначки «відхилено»">✓ Вирішено</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button></div>` : ''}</div>` : ''}`).join('')}</div>` : `<p class="muted">Фото ще немає. Сюди можна додати все: портрет, родинні фото, скани документів (свідоцтва, листи, довідки), PDF. Перше фото стане головним (портретом у дереві); змінити — відкрийте фото → «⋯» → «Зробити головним». Під кожним фото можна написати підпис: хто, коли, де.</p>`}
     </div>
     ${voiceSec(p)}
     <div class="sec"><h3>Спогади</h3>${storiesHtml(stories)}${canAdd(p.id) ? storyForm(p.id) : noAdd}</div>
@@ -2001,7 +2001,8 @@ function chartDaily(daily, from, to) {
 function sortRows(rows, key) { const k = S.admin.sort || key; const dir = S.admin.dir || -1; return rows.sort((a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * dir); }
 function phPendBlock(list) {
   if (!list?.length) return '';
-  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : x.person === '_ask' ? '«Хто на фото?» — без картки' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) : ''}</b>${x.person === '_ask' ? '<br><small class="muted">Автор не знає, хто на фото, і просить родичів упізнати. Після «Показати всім» фото з\'явиться на Головній у «Хто на фото?»; людей можна позначити, відкривши фото → «⋯» → «Хто на фото».</small>' : ''}<br>${esc(x.caption || '') || '<i class="muted">без підпису</i>'}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small></span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${isVoice(x) ? '' : `<a class="btn line small" href="${img('photo=' + x.id)}${x.ver?.orig ? '&v=orig' : ''}&dl=1" download>⬇ Оригінал</a>`}${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
+  const dupOf = x => x.size && list.find(y => y !== x && y.byId === x.byId && y.size === x.size && y.at < x.at);
+  return `<div class="sec pendsec"><h3>Нові фото від родичів <span class="small muted" style="text-transform:none;letter-spacing:0">з'являться для всіх лише після вашого підтвердження</span></h3><div class="thumbs">${list.map(x => `<div class="phpend"><button class="doc" data-photo="${x.id}"><span class="im">${isVoice(x) ? '<span class="ph" style="width:100%;height:100%">🎙 голос</span>' : x.mime === 'application/pdf' ? '<span class="ph" style="width:100%;height:100%">PDF</span>' : `<img src="${img('photo=' + x.id, true)}" alt="" loading="lazy">`}</span><span><b>${P[x.person] ? esc(full(P[x.person])) : x.person === '_ask' ? '«Хто на фото?» — без картки' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) : ''}</b>${x.person === '_ask' ? '<br><small class="muted">Автор не знає, хто на фото, і просить родичів упізнати. Після «Показати всім» фото з\'явиться на Головній у «Хто на фото?»; людей можна позначити, відкривши фото → «⋯» → «Хто на фото».</small>' : ''}<br>${esc(x.caption || '') || '<i class="muted">без підпису</i>'}<br><small class="muted">додав(ла): ${esc(x.by)}, ${esc(when(x.at))}</small>${dupOf(x) ? '<br><b class="dupw">⚠ Схоже, повтор: той самий файл від цього ж автора вже є в черзі</b>' : ''}</span></button><div class="btns pend-b"><button class="btn small" data-act="ph-ok" data-id="${x.id}">✓ Показати всім</button><button class="btn line small" data-act="ph-done" data-id="${x.id}" title="Фото вже враховане: ви обробили його й додали самі. Прибрати з черги — без позначки «відхилено»">✓ Вирішено</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕ Відхилити</button>${isVoice(x) ? '' : `<a class="btn line small" href="${img('photo=' + x.id)}${x.ver?.orig ? '&v=orig' : ''}&dl=1" download>⬇ Оригінал</a>`}${P[x.person] ? `<a class="btn line small" href="${href('p', x.person)}">Картка</a>` : ''}</div></div>`).join('')}</div></div>`;
 }
 function vAdmin() {
   if (!isOwner()) return '<p>Немає доступу.</p>';
@@ -2201,8 +2202,8 @@ function vKin() {
 const askList = () => Object.entries(CFG_().photoAsk || {}).map(([id, v]) => ({ ...v, ph: S.data.photos.find(x => x.id === id) })).filter(x => x.ph && !isVoice(x.ph)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 const hintsOf = id => S.data.stories.filter(s => s.target === 'photo:' + id);
 function askGrid(max) {
-  const L = askList(), addB = S.me ? `<button class="btn small askadd" data-act="ask-new">＋ Фото: хто на ньому?</button>` : '';
-  if (!L.length) return `${addB}<p class="muted small">Поки немає фото, на яких треба когось упізнати. Маєте старе фото й не знаєте, хто на ньому? Натисніть «＋ Фото: хто на ньому?» — родичі підкажуть.</p>`;
+  const L = askList(), addB = S.me ? `<button class="btn small askadd" data-act="ask-new">＋ Додати фото</button>` : '';
+  if (!L.length) return `${addB}<p class="muted small">Поки немає фото, на яких треба когось упізнати. Маєте старе фото й не знаєте, хто на ньому? Натисніть «＋ Додати фото» і позначте «Не знаю, хто на фото» — родичі підкажуть.</p>`;
   return `${addB}<div class="askg">${L.slice(0, max || 999).map(x => `<button class="askc" data-act="ask-open" data-id="${x.ph.id}"><img src="${img('photo=' + x.ph.id, true)}" alt="" loading="lazy"><span><b>${esc(x.ph.caption || (P[x.ph.person] ? short(P[x.ph.person]) : 'Хто це?'))}</b><i>${x.ph.pending ? 'чекає підтвердження · ' : ''}${hintsOf(x.ph.id).length ? hintsOf(x.ph.id).length + ' підказ.' : 'ще ніхто не підказав'}</i></span></button>`).join('')}</div>`;
 }
 function openAsk(id) {
@@ -2217,27 +2218,54 @@ function openAsk(id) {
   S.ui.askOpen = id;
 }
 
+async function fileHash(f) { try { const b = await crypto.subtle.digest('SHA-256', await f.arrayBuffer()); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 40); } catch { return ''; } }
+ERR.dup = 'Це фото вже є на сайті (можливо, чекає підтвердження Максимом) — повторно надсилати не треба.';
+// «＋ Додати фото»: одразу питаємо, хто на фото. Знаєте — обираєте людей (фото потрапить у їхні картки); не знаєте — «Хто на фото?», родичі підкажуть.
 function openAskNew() {
-  modal(`<h2>Хто на фото?</h2><p class="small muted">Завантажте фото, на якому треба когось упізнати. Воно з'явиться на головній у розділі «Хто на фото?», і родичі зможуть написати, хто це${canEdit() ? '' : ' (після підтвердження Максимом)'}.</p>
-    <div class="sec" style="gap:10px">
+  let sel = [];
+  modal(`<h2>Додати фото</h2>
+    <div class="sec" style="gap:10px" id="an-box">
       <label class="f">Фото<input class="in" type="file" id="an-f" accept="image/*"></label>
       <div class="ask-prev" id="an-p" hidden></div>
-      <label class="f">Що відомо про фото<textarea class="in" id="an-c" maxlength="500" placeholder="Напр.: «Фото з бабиного альбому, Веприк, десь 1950-ті. Хто ці люди? Чи це не сестри баби Вівді?»"></textarea></label>
-      <div class="btns"><button class="btn" data-act="ask-send">Завантажити й запитати</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="an-m"></span></div></div>`);
+      <div class="f"><span>Хто на фото <small class="muted">— оберіть людей з дерева, і фото з'явиться в їхніх картках</small></span><div class="tagl" id="an-l"></div>
+        <input class="in" id="an-q" type="search" placeholder="🔍 Почніть писати ім'я, напр. «Надія» або «Шутий Яків»" autocomplete="off" enterkeyhint="search"><div class="tagres" id="an-r"></div></div>
+      <label class="anunk"><input type="checkbox" id="an-u"> <span><b>Не знаю, хто на фото</b> (або не всіх) — попросити родичів упізнати. Фото з'явиться на Головній у «Хто на фото?».</span></label>
+      <label class="f">Підпис <small class="muted">— коли, де, яка подія (не обов'язково)</small><textarea class="in" id="an-c" maxlength="500" placeholder="Напр.: «Різдво у баби Паші, приблизно 2003»"></textarea></label>
+      <div class="upprog" id="an-g" hidden><div class="upbar"><i></i></div><span></span></div>
+      <div class="btns"><button class="btn" data-act="ask-send">Завантажити</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="an-m"></span></div></div>`);
+  const paint = () => { $('#an-l').innerHTML = sel.map(y => `<span class="tagc">${esc(short(P[y]))}<button type="button" data-rm="${y}" aria-label="Прибрати">×</button></span>`).join(''); };
+  const q = $('#an-q'), res = $('#an-r');
+  q.addEventListener('input', () => { const L = personFind(q.value).filter(p => !sel.includes(p.id)); res.innerHTML = q.value.trim() ? (L.length ? L.map(p => `<button type="button" class="tagopt" data-pick="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span><em>＋</em></button>`).join('') : '<p class="muted small">Нікого не знайдено. Немає людини в дереві — позначте «Не знаю» і напишіть у підписі, хто це.</p>') : ''; });
+  res.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; sel.push(b.dataset.pick); paint(); q.value = ''; res.innerHTML = ''; q.focus(); });
+  $('#an-l').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { sel = sel.filter(y => y !== b.dataset.rm); paint(); } });
   $('#an-f').onchange = e => { const f = e.target.files[0], p = $('#an-p'); if (!f) { p.hidden = true; return; } p.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; p.hidden = false; };
+  openAskNew.sel = () => sel;
 }
 async function askSend(btn) {
-  const f = $('#an-f').files[0], m = $('#an-m'), cap = $('#an-c').value.trim();
+  const f = $('#an-f').files[0], m = $('#an-m'), cap = $('#an-c').value.trim(), sel = openAskNew.sel ? openAskNew.sel() : [], unk = $('#an-u').checked;
   if (!f) { m.className = 'msg err'; m.textContent = 'Оберіть фото.'; return; }
-  btn.disabled = true; m.className = 'msg'; m.textContent = 'Завантажую…';
+  if (!sel.length && !unk) { m.className = 'msg err'; m.textContent = 'Оберіть, хто на фото, або позначте «Не знаю, хто на фото».'; return; }
+  if (btn.disabled) return; btn.disabled = true; $('#an-f').disabled = true; m.className = 'msg'; m.textContent = '';
+  const g = $('#an-g'), st = (pc, t) => { g.hidden = false; g.querySelector('i').style.width = pc + '%'; g.querySelector('span').textContent = t; };
   try {
-    const full = await bestPhoto(f); const thumb = await toJpeg(f, 420, 0.78);
-    const r = await api(`/api/upload?ask=1&caption=${encodeURIComponent(cap)}`, { raw: full });
+    st(10, 'Готую фото…'); const h = await fileHash(f); const full = await bestPhoto(f); const thumb = await toJpeg(f, 420, 0.78);
+    st(40, 'Надсилаю на сайт… не закривайте вікно');
+    const qs = `caption=${encodeURIComponent(cap)}&h=${h}`;
+    const r = await api(sel.length ? `/api/upload?person=${encodeURIComponent(sel[0])}&${qs}` : `/api/upload?ask=1&${qs}`, { raw: full });
+    st(75, 'Майже готово…');
     await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
-    await api('/api/data', { body: { op: 'photo.ask', id: r.id, on: true, note: '' } });
-    await load(); closeLayer(); S.ui.keepScroll = true; render();
-    toast(r.pending ? 'Фото надіслано. Воно з\'явиться в «Хто на фото?» для всіх після підтвердження Максимом.' : 'Фото додано в «Хто на фото?» — родичі зможуть підказати.');
-  } catch (err) { btn.disabled = false; m.className = 'msg err'; m.textContent = errText(err); }
+    if (sel.length > 1) await api('/api/data', { body: { op: 'photo.people', id: r.id, people: sel.slice(1) } }).catch(() => {});
+    if (unk) await api('/api/data', { body: { op: 'photo.ask', id: r.id, on: true, note: '' } }).catch(() => {});
+    st(100, 'Готово');
+    await load(); S.ui.keepScroll = true; render();
+    modal(`<div class="updone"><div class="updone-ic">✓</div><h2>Фото надіслано</h2>
+      <div class="ask-prev"><img src="${URL.createObjectURL(thumb)}" alt=""></div>
+      <p>${r.pending ? 'Його побачать усі після підтвердження Максимом. <b>Повторно надсилати не треба.</b>' : 'Фото вже на сайті.'}${sel.length ? ' Позначено: ' + sel.map(y => esc(short(P[y]))).join(', ') + '.' : ''}${unk ? ' Фото буде в «Хто на фото?» — родичі зможуть підказати.' : ''}</p>
+      <div class="btns" style="justify-content:center"><button class="btn" data-act="ask-new">＋ Додати ще фото</button><button class="btn line" data-act="close">Закрити</button></div></div>`);
+  } catch (err) {
+    btn.disabled = false; $('#an-f').disabled = false; g.hidden = true; m.className = 'msg err'; m.textContent = errText(err);
+    if (err.message === 'dup') { btn.disabled = true; btn.textContent = 'Уже завантажено'; }
+  }
 }
 
 // Фото «Хто на фото?», які вже прибрали (впізнали): їх можна переглянути й повернути в список
@@ -2966,7 +2994,7 @@ document.addEventListener('click', async e => {
     if (act === 'map-over') return openOverlay(d.id);
     if (act.startsWith('q-') && await qHandle(act, t, d)) return;
     if (/^(to-|jl-|jr-)/.test(act)) { e.preventDefault(); if (await joinHandle(act, t, d)) return; }
-    if (act === 'ph-ok' || act === 'ph-no') { if (act === 'ph-no' && t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відхилити?'; return; } t.disabled = true; try { await api('/api/admin?a=photo_ok', { body: { id: t.dataset.id, ok: act === 'ph-ok' } }); toast(act === 'ph-ok' ? 'Фото тепер бачать усі' : 'Фото відхилено'); } catch (err) { toast(errText(err)); } await load(); if (S.admin) S.admin.pph = null; if (S.view === 'admin') await loadAdmin(); S.ui.keepScroll = true; render(); return; }
+    if (act === 'ph-ok' || act === 'ph-no' || act === 'ph-done') { if (act === 'ph-no' && t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно відхилити?'; return; } t.disabled = true; try { await api('/api/admin?a=photo_ok', { body: { id: t.dataset.id, ok: act === 'ph-ok', done: act === 'ph-done' } }); toast(act === 'ph-ok' ? 'Фото тепер бачать усі' : act === 'ph-done' ? 'Позначено «Вирішено» — фото прибрано з черги' : 'Фото відхилено'); } catch (err) { toast(errText(err)); } await load(); if (S.admin) S.admin.pph = null; if (S.view === 'admin') await loadAdmin(); S.ui.keepScroll = true; render(); return; }
     if (act === 'hs-all') { const ds = [...document.querySelectorAll('details.hsec[data-hs]')].filter(x => /^\d+$/.test(x.dataset.hs)); const open = !ds.every(x => x.open); ds.forEach(x => { x.open = open; }); return; }
     if (act === 't-png') { if (t.disabled) return; t.disabled = true; const o = t.textContent; t.textContent = 'Готую картинку…'; try { await treePng(); } catch (err) { console.error(err); toast('Не вдалося зробити картинку'); } t.disabled = false; t.textContent = o; return; }
     if (act === 't-open') { S.ui.tf ||= {}; S.ui.tf.allOpen = !S.ui.tf.allOpen; if (!S.ui.tf.allOpen) { S.ui.exp = {}; S.ui.sibx = {}; S.ui.kidx = {}; } delete S.ui.vp?.all; render(); return; }
@@ -3101,7 +3129,7 @@ async function upload(personId, files) {
       let full, thumb = null;
       if (f.type === 'application/pdf') { if (f.size > 4e6) throw new Error('too_large'); full = f; }
       else { full = await bestPhoto(f); thumb = await toJpeg(f, 420, 0.78); }
-      const r = await api(`/api/upload?person=${encodeURIComponent(personId)}&caption=${encodeURIComponent(prompt2())}`, { raw: full });
+      const r = await api(`/api/upload?person=${encodeURIComponent(personId)}&caption=${encodeURIComponent(prompt2())}&h=${f.type === 'application/pdf' ? '' : await fileHash(f)}`, { raw: full });
       if (thumb) await api(`/api/upload?kind=thumb&photo=${r.id}`, { raw: thumb }).catch(() => {});
       if (r.pending) pend = true; n++; if (f.type !== 'application/pdf') (upload.ids ||= []).push(r.id);
     } catch (err) { console.warn("[upload]", err); m.className = "msg err"; m.textContent = `«${f.name}»: ${errText(err)}`; }

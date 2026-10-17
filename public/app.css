@@ -1377,3 +1377,16 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 .fxrel{display:grid;grid-template-columns:170px 1fr 110px 36px;gap:6px;margin-bottom:6px;align-items:center}
 .fxx{width:36px;height:40px;border:0;background:none;font-size:22px;color:#8a8075;cursor:pointer}
 @media (max-width:820px){.fxrel{grid-template-columns:1fr 1fr 44px;}.fxrel [data-fr=fio]{grid-column:1/-1;grid-row:1}.fxx{width:44px;height:44px}}
+
+/* «Додати фото»: вибір «не знаю», прогрес, готово */
+.anunk{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px dashed var(--rule2);border-radius:var(--r);background:var(--paper);cursor:pointer;font-size:14px;line-height:1.4}
+.anunk input{width:20px;height:20px;flex:0 0 auto;margin-top:1px}
+.upprog{display:grid;gap:6px}
+.upbar{height:10px;border-radius:999px;background:var(--sand,#ECE6DC);overflow:hidden}
+.upbar i{display:block;height:100%;width:0;background:var(--wine,#7A2E3B);border-radius:999px;transition:width .4s ease}
+.upprog span{font-size:14px;color:#6b5f55}
+.updone{text-align:center;display:grid;gap:10px;justify-items:center}
+.updone-ic{width:64px;height:64px;border-radius:50%;background:#2f6b3a;color:#fff;font-size:36px;line-height:64px;animation:upPop .4s ease-out}
+.updone .ask-prev img{max-height:220px}
+@keyframes upPop{0%{transform:scale(.4);opacity:0}80%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.dupw{color:#9a5b00;font-size:13px}

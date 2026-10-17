@@ -146,7 +146,7 @@ export default handler(async (req, res, ctx, url) => {
   }
   if (op === 'photo.ask') { // «Хто на фото?» — редактор позначає фото, на якому треба впізнати людей
     const id = S(body.id, 60); const ph = await db.get('photos', { eq: { id, deleted: false } }); if (!ph) return fail(res, 404, 'not_found');
-    if (!editor && !(body.on && ph.created_by === me.id && ph.person_id === '_ask')) return fail(res, 403, 'forbidden'); // родич може попросити впізнати своє щойно завантажене фото
+    if (!editor && !(body.on && ph.created_by === me.id)) return fail(res, 403, 'forbidden'); // родич може попросити впізнати своє щойно завантажене фото
     const before = await cfgGet('photo_ask'), v = { ...before };
     if (body.on) v[id] = { at: new Date().toISOString(), by: me.id, note: S(body.note, 300) }; else delete v[id];
     await cfgSet('photo_ask', v, me.id, before); return done({ photoAsk: v }, 'photo:' + id);
