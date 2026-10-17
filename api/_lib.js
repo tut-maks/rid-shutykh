@@ -132,7 +132,7 @@ export function cleanPerson(d) {
     sex: ['m', 'f'].includes(d.sex) ? d.sex : '',
     b: STR(d.b, 40), d: STR(d.d, 40), bp: STR(d.bp, 160), dp: STR(d.dp, 160), lp: STR(d.lp, 160),
     note: STR(d.note, 8000), f: STR(d.f, 60), mo: STR(d.mo, 60),
-    hyp: !!d.hyp, fam: Array.isArray(d.fam) ? d.fam.map(x => STR(x, 40)).filter(Boolean).slice(0, 10) : [],
+    hyp: !!d.hyp, ...(d.dead && !d.d ? { dead: true } : {}), fam: Array.isArray(d.fam) ? d.fam.map(x => STR(x, 40)).filter(Boolean).slice(0, 10) : [],
   };
   if (d.portrait) o.portrait = STR(d.portrait, 60);
   if (d.portrait && d.pc && typeof d.pc === 'object') { // кадр обличчя на головному фото: частки зображення, квадрат

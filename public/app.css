@@ -1424,3 +1424,19 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 .nd .ndrel{position:absolute;right:6px;top:5px;width:16px;height:16px;line-height:0;pointer-events:auto}
 .nd .ndrel svg{width:15px;height:15px}
 .nd .ndrel.con::after{content:'';position:absolute;right:-3px;top:-2px;width:7px;height:7px;border-radius:50%;background:#a8322d;border:1px solid #fff}
+
+/* питання для розмови */
+.ivbar{gap:8px}
+.ivl{margin:0;padding-left:22px;display:grid;gap:12px}
+.ivq{line-height:1.45}
+.ivq.done .ivt{color:#4b5a4e}
+.ivok{color:#2f6b3a;font-size:13px;font-weight:600}
+.iva{margin:6px 0 0;padding:6px 10px;border-left:3px solid #2f6b3a;background:#f4f7f2;border-radius:4px;font-size:15px}
+.iva i{color:#6b5f55;font-size:13px}
+.ivbtn{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ivform{margin-top:6px;display:grid;gap:6px}
+.ivg h3 .muted{font-weight:400}
+@media print{.ivbtn,.ivform,.ivbar .btns,#iv-q,#iv-r,header,nav,.bnav,footer{display:none!important}.ivg{break-inside:avoid-page;box-shadow:none!important;border:0!important}}
+
+.edead{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;cursor:pointer;color:#5b5048}
+.edead input{width:20px;height:20px}

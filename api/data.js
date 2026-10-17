@@ -373,7 +373,8 @@ export default handler(async (req, res, ctx, url) => {
     let open = false;
     if (/^photo:/.test(target)) open = !!(await cfgGet('photo_ask'))[target.slice(6)];
     else if (/^want:/.test(target)) open = (await cfgGet('wanted')).some(x => x.id === target.slice(5));
-    else if (/^hyp:[\w:.-]{1,70}$/.test(target)) open = true; // «Припущення»: підтвердити, спростувати чи доповнити може кожен родич
+    else if (/^hyp:[\w:.-]{1,70}$/.test(target)) open = true;
+    else if (/^iv:[\w-]{1,60}$/.test(target)) open = !!(await db.get('persons', { eq: { id: target.slice(3), deleted: false } })); // відповіді на «Питання для розмови» — кожен родич // «Припущення»: підтвердити, спростувати чи доповнити може кожен родич
     if (!open && !(await canAddTo(me, target))) return fail(res, 403, 'branch');
     const [s] = await db.insert('stories', { target, text, created_by: me.id });
     await revision('story', s.id, 'create', null, { target, text }, me.id);
