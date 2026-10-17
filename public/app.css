@@ -1508,3 +1508,15 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 .hyprel{margin:8px 0;padding:8px 10px;border:1px solid var(--rule2,#ddd);border-radius:8px;background:#faf7f2}
 .hyprel summary{cursor:pointer;font-size:14px}
 .hyprel ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
+
+.h-iv.pulse{border:2px solid var(--wine,#7A2E3B);animation:ivPulse 2.4s ease-in-out infinite}
+@keyframes ivPulse{0%,100%{box-shadow:0 0 0 0 rgba(122,46,59,.35)}50%{box-shadow:0 0 0 8px rgba(122,46,59,0)}}
+.ivcnt{display:inline-flex;min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:var(--wine,#7A2E3B);color:#fff;font-style:normal;font-size:13px;align-items:center;justify-content:center;vertical-align:middle}
+.ivnudge{position:fixed;right:16px;bottom:16px;z-index:60;max-width:360px;background:#fff;border:2px solid var(--wine,#7A2E3B);border-radius:12px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:grid;gap:6px;animation:upPop .35s ease-out}
+.ivnudge span{font-size:14px;color:#5b5048}
+@media (max-width:820px){.ivnudge{left:12px;right:12px;bottom:84px;max-width:none}}
+.ivp{border-left:3px solid var(--wine,#7A2E3B);background:#fbf7f3}
+.ivp ul{margin:4px 0 8px;padding-left:18px;font-size:15px}
+
+.hyp-chg{border-color:#c0392b!important}
+.hypchg{margin:-4px 0 8px;padding:8px 10px;background:#fdf0ec;border:1px solid #e3a597;border-radius:8px;font-size:14px;line-height:1.45}

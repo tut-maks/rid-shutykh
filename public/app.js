@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172354';
+const BUILD = '202610172358';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -356,7 +356,7 @@ function mNav(cur) {
 const SURN = ['Шуті', 'Красновиди', 'Левченки', 'Янки', 'Семени', 'Вдовинці']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ivOpen().length || ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -702,6 +702,7 @@ function vPerson() {
     </div>
   </div>
   <div class="sec" style="align-content:start;gap:30px">
+    ${(() => { const Q = S.me ? ivQuestions(startId()).filter(q => q.id === p.id && p.id !== startId()) : []; const A = new Set(S.data.stories.filter(s => s.target === 'iv:' + p.id).map(s => (s.text.match(/^«([^»]*)»/) || [])[1])); const O = Q.filter(q => !A.has(q.t)); return O.length ? `<div class="sec ivp"><h3>🎙 Чого ми не знаємо про ${esc(short(p))}</h3><ul>${O.slice(0, 4).map(q => `<li>${esc(q.t)}</li>`).join('')}</ul><a class="btn small" href="#/iv" data-act="iv-who" data-id="${startId()}">Знаю відповідь</a></div>` : ''; })()}
     <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Запитати</button><button class="btn line small" data-act="fb-open" data-id="${p.id}" title="Сімейна книга (PDF): ця людина, її предки й нащадки — з біографіями, фото й джерелами">📖 Книга</button></span></h3>
       ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
       ${birthPara(p, docs)}
@@ -2994,6 +2995,12 @@ function ivQuestions(x) {
   push(x, 'who', 'Хто з родичів пам\'ятає найбільше? До кого ще варто звернутися з цими питаннями?', 'загальне');
   return Q;
 }
+const IV_GEN = ['move', 'docs', 'tales', 'who'];
+function ivOpen(x) { const A = new Set(S.data.stories.filter(s => /^iv:/.test(s.target)).map(s => s.target.slice(3) + '|' + (s.text.match(/^«([^»]*)»/) || [])[1])); return ivQuestions(x || startId()).filter(q => !IV_GEN.includes(q.k) && !A.has(q.id + '|' + q.t)); }
+function ivNudge() { // «маячок»: раз на 3 дні після входу — нагадування, скільки питань про рідню ще без відповіді
+  try { if (!S.me || S.view === 'iv') return; const k = 'rs_ivn', last = +localStorage.getItem(k) || 0; if (Date.now() - last < 3 * 864e5) return; const n = ivOpen().length; if (!n) return;
+    localStorage.setItem(k, Date.now()); setTimeout(() => { const d = document.createElement('div'); d.className = 'ivnudge'; d.innerHTML = `<b>🎙 ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'питання' : 'питань'} про вашу рідню чекають відповіді</b><span>Може, знаєте відповідь — або спитаєте бабусю чи дідуся?</span><div class="btns"><a class="btn small" href="#/iv">Подивитись</a><button class="btn line small" type="button">Пізніше</button></div>`; d.querySelector('button').onclick = () => d.remove(); d.querySelector('a').onclick = () => d.remove(); document.body.appendChild(d); setTimeout(() => d.remove(), 30000); }, 2500); } catch {}
+}
 function vIv() {
   const x = P[S.ui.ivWho] ? S.ui.ivWho : startId(), Q = ivQuestions(x), ans = id => S.data.stories.filter(s => s.target === 'iv:' + id);
   const groups = []; Q.forEach(q => { let gp = groups.find(g => g.id === q.id); if (!gp) groups.push(gp = { id: q.id, qs: [] }); gp.qs.push(q); });
@@ -3116,6 +3123,7 @@ function vHome() {
   ${statTiles()}
   <div class="hgrid">
     <div class="hcol">
+            <div class="hcard h-iv${ivOpen().length ? ' pulse' : ''}"><h3>🎙 Питання для розмови ${ivOpen().length ? `<i class="ivcnt">${ivOpen().length}</i>` : ''} <a class="small" href="#/iv">усі →</a></h3><p class="small muted" style="margin:0 0 8px">Сайт сам склав питання з того, чого бракує в дереві. Знаєте відповідь — напишіть; не знаєте — спитайте старших.</p>${ivOpen().slice(0, 3).map(q => `<p class="small" style="margin:0 0 6px">• ${esc(q.t)}</p>`).join('')}<a class="btn small" href="#/iv">Відповісти на питання</a></div>
       ${tgCard()}
       <div class="h-today">${todayCard()}</div>
       <div class="hcard h-kin"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
@@ -3124,7 +3132,7 @@ function vHome() {
     <div class="hcol">
       <div class="hcard h-hyp"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const all = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin'), H = all.sort((a, b) => b.p - a.p).slice(0, 2); return H.length ? `<ul class="hypprev">${H.map(x => { const n = hypAns(x.id).length, pr = x.p >= 75 ? ['hi', 'Дуже ймовірно'] : x.p >= 50 ? ['mid', 'Ймовірно'] : ['lo', 'Можливо']; return `<li><button class="hpv" data-act="hyp-open" data-id="${esc(x.id)}"><span class="hpv-h"><span class="hyp-pr pr-${pr[0]}">${pr[1]}</span>${x.cat === 'kin' ? '<span class="hpv-k">можлива рідня</span>' : ''}</span><b>${esc(x.title)}</b><span class="hpv-t">${esc(String(x.text || '').slice(0, 140))}${String(x.text || '').length > 140 ? '…' : ''}</span><span class="hpv-f">${n ? '💬 ' + n + ' відповід.' : 'Ще ніхто не відповів — будьте першим'} <i>Щось знаю →</i></span></button></li>`; }).join('')}</ul><a class="btn line small hpv-all" href="#/hyp">Усі припущення (${all.length}) →</a>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : ''); })()}</div>
       <div class="hcard h-help"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
-      <div class="hcard h-iv"><h3>Питання для розмови <a class="small" href="#/iv">усі →</a></h3><p class="small muted" style="margin:0 0 8px">Їдете до бабусі чи дідуся? Сайт уже склав, про що спитати — з того, чого бракує в дереві.</p>${ivQuestions(startId()).filter(q => !['move', 'docs', 'tales', 'who'].includes(q.k)).slice(0, 3).map(q => `<p class="small" style="margin:0 0 6px">• ${esc(q.t)}</p>`).join('')}<a class="btn line small" href="#/iv">🎙 Відкрити питання</a></div>
+
       <div class="hcard h-ask"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}${askDone(false)}</div>
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
       <div class="hcard links3">
@@ -3273,9 +3281,16 @@ const hypAns = id => S.data.stories.filter(s => s.target === 'hyp:' + id);
 const VERD = { yes: ['✓', 'Підтверджую — так і є'], no: ['✗', 'Спростовую — було не так'], add: ['✎', 'Доповнюю'] };
 const verdOf = s => (String(s.text).match(/^\[(yes|no|add)\]\s*/) || [])[1] || 'add';
 const ansText = s => String(s.text).replace(/^\[(yes|no|add)\]\s*/, '');
-function hypCard(x) {
-  const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0 }; A.forEach(s => c[verdOf(s)]++);
-  return `<article class="hyp-c hc-${x.cat}">
+// Автоматичний «ланцюжок»: щойно пов'язане припущення хтось підтвердив або спростував — це позначається «⚡ Перегляньте»
+function hypChg(x, all) {
+  let seen = 0; try { seen = +localStorage.getItem('rs_hrev:' + x.id) || 0; } catch {}
+  const own = Math.max(seen, ...hypAns(x.id).map(s => +new Date(s.at) || 0));
+  const out = []; for (const r of hypRel(x, all)) { const V = hypAns(r.h.id).filter(s => verdOf(s) !== 'add' && +new Date(s.at) > own); if (V.length) out.push({ h: r.h, v: verdOf(V[V.length - 1]), at: V[V.length - 1].at, a: r.a }); }
+  return out;
+}
+function hypCard(x, all) {
+  const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0 }; A.forEach(s => c[verdOf(s)]++); const CH = all ? hypChg(x, all) : [];
+  return `<article class="hyp-c hc-${x.cat}${CH.length ? ' hyp-chg' : ''}">${CH.length ? `<div class="hypchg">⚡ <b>Змінилось пов'язане припущення:</b> ${CH.slice(0, 3).map(r => `«<button class="lnk" data-act="hyp-open" data-id="${esc(r.h.id)}">${esc(r.h.title)}</button>» — ${r.v === 'yes' ? 'підтвердили' : 'спростували'}`).join('; ')}. Перегляньте — можливо, це відкриває щось і тут.${isOwner() ? ` <button class="btn line small" data-act="hyp-seen" data-id="${esc(x.id)}">✓ Переглянуто</button>` : ''}</div>` : ''}
     <div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
     <h3>${esc(x.title)}</h3><p>${glossify(mdLinks(esc(x.text)))}</p>
     ${x.basis ? `<p class="hyp-b"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
@@ -3286,14 +3301,15 @@ function hypCard(x) {
 }
 function vHyp() {
   const all = hypItems(), cat = S.ui.hypCat || '', q = (S.ui.hypQ || '').toLowerCase();
-  const L = all.filter(x => (!cat || x.cat === cat) && (!q || [x.title, x.text, x.basis].join(' ').toLowerCase().includes(q)))
+  const chgN = all.filter(x => hypChg(x, all).length).length;
+  const L = all.filter(x => (cat === 'chg' ? hypChg(x, all).length : !cat || x.cat === cat) && (!q || [x.title, x.text, x.basis].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => (b.p - a.p) || ({ hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[a.cat] - { hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[b.cat])); // зверху — найімовірніші
   const n = k => all.filter(x => !k || x.cat === k).length;
   const intro = loadText('hyps', true)?.intro || 'Тут усе, що ще не підтверджено документами. Знаєте щось — натисніть «Щось знаю, можу доповнити».';
   return `<div class="lede"><h1>Припущення</h1><p class="small muted">${esc(intro)}</p></div>
-  <div class="hypbar"><div class="seg">${HYPCAT.filter(([k]) => !k || n(k)).map(([k, t]) => `<button data-act="hyp-cat" data-v="${k}" class="${cat === k ? 'on' : ''}">${t} <i>${n(k)}</i></button>`).join('')}</div>
+  <div class="hypbar"><div class="seg">${HYPCAT.filter(([k]) => !k || n(k)).map(([k, t]) => `<button data-act="hyp-cat" data-v="${k}" class="${cat === k ? 'on' : ''}">${t} <i>${n(k)}</i></button>`).join('')}${chgN ? `<button data-act="hyp-cat" data-v="chg" class="${cat === 'chg' ? 'on' : ''}">⚡ Переглянути <i>${chgN}</i></button>` : ''}</div>
     <input class="in search" id="hyp-q" type="search" value="${esc(S.ui.hypQ || '')}" placeholder="Пошук: ім'я, село…" aria-label="Пошук"></div>
-  <div class="hyp-l">${L.map(hypCard).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
+  <div class="hyp-l">${L.map(x => hypCard(x, all)).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
 }
 // Пов'язані припущення: ті самі люди (сильний зв'язок) або їхні батьки, діти, подружжя (слабший). Якщо одне підтвердиться чи спростується — ці треба переглянути.
 function hypRel(x, all) {
@@ -3316,6 +3332,7 @@ document.addEventListener('click', async e => {
   const t = e.target.closest('[data-act]'); if (!t) return; const a = t.dataset.act;
   if (a === 'hyp-cat') { S.ui.hypCat = t.dataset.v; S.ui.keepScroll = true; render(); return; }
   if (a === 'hyp-open') return openHyp(t.dataset.id);
+  if (a === 'hyp-seen') { try { localStorage.setItem('rs_hrev:' + t.dataset.id, Date.now()); } catch {} S.ui.keepScroll = true; render(); return; }
   if (a === 'hyp-send') {
     const txt = $('#hyp-t').value.trim(), v = (document.querySelector('input[name="hyp-v"]:checked') || {}).value || 'add', m = $('#hypmsg');
     if (!txt && v === 'add') { m.className = 'msg err'; m.textContent = 'Напишіть кілька слів.'; return; }
@@ -3354,6 +3371,7 @@ function render() {
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'geo') requestAnimationFrame(geoMount);
   if (S.view === 'routes' && S.arg) requestAnimationFrame(rtMount);
+  if (S.data && S.me && !ivNudge.done) { ivNudge.done = 1; ivNudge(); }
   stickBars();
   if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');
   const bkNew = document.getElementById('bk');
