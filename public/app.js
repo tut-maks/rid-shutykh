@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172344';
+const BUILD = '202610172347';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -342,10 +342,11 @@ const MI = {
   admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.5h4.5v15H14M10 8l-4 4 4 4M6 12h9.5"/></svg>',
   fbook: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14c-2.5-1.5-5.5-1.5-8 0zM20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg>',
+  words: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19.5V5a1.5 1.5 0 0 1 1.5-1.5H19v13H6.5A1.5 1.5 0 0 0 5 18v1.5A1.5 1.5 0 0 0 6.5 21H19"/><path d="M9 8h6M9 11h4"/></svg>',
   iv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5M9 20.5h6"/></svg>',
 };
 function mNav(cur) {
-  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv', 'fbook'].includes(cur) ? 'more' : cur;
+  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv', 'fbook', 'words'].includes(cur) ? 'more' : cur;
   const B = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
@@ -354,7 +355,7 @@ function mNav(cur) {
 const SURN = ['Шуті', 'Красновиди', 'Левченки', 'Янки', 'Семени', 'Вдовинці']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['iv', 'Питання для розмови з родичами', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['iv', 'Питання для розмови з родичами', ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -2778,9 +2779,28 @@ const TERMS = [
 function vTerms() {
   const q = (S.ui.trq || '').toLowerCase();
   const G = TERMS.map(([g, L]) => [g, L.filter(t => !q || (t[0] + ' ' + t[1]).toLowerCase().includes(q))]).filter(x => x[1].length);
-  return `<div class="lede"><h1>Словник і джерела</h1><p class="small muted">Що за документи ми читаємо і що означають старі слова. До кожного пояснення — посилання, звідки воно.</p></div>
+  return `<div class="lede"><h1>Словник і джерела</h1><p class="small muted">Що за документи ми читаємо і що означають старі слова. До кожного пояснення — посилання, звідки воно. Місцеві слова, які казали наші, — у розділі <a href="#/words">«Наші слова» →</a></p></div>
   <div class="stbar"><input class="in" id="trq" type="search" placeholder="Знайти слово…" value="${esc(S.ui.trq || '')}" aria-label="Пошук у словнику"></div>
   <div class="terms">${G.map(([g, L]) => `<div class="sec"><h3>${esc(g)}</h3>${L.map(([t, d, u]) => `<div class="term"><b>${esc(t)}</b><p>${esc(d)}</p><a class="small" href="${esc(u)}" target="_blank" rel="noopener">Джерело ↗</a></div>`).join('')}</div>`).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
+}
+
+/* ───── «Наші слова»: говірка Вороньків, Веприка й сусідніх сіл — записує будь-хто з родичів ───── */
+function vWords() {
+  const W = (CFG_().words || []).slice(), q = (S.ui.wq || '').toLowerCase().trim();
+  const L = W.filter(x => !q || (x.w + ' ' + x.m + ' ' + (x.ex || '') + ' ' + (x.pl || '')).toLowerCase().includes(q)).sort((a, b) => a.w.localeCompare(b.w, 'uk'));
+  const groups = []; L.forEach(x => { const l = x.w[0].toUpperCase(); let g = groups.find(y => y.l === l); if (!g) groups.push(g = { l, L: [] }); g.L.push(x); });
+  const mine = x => x.by === S.me?.id || isOwner(), ed = S.ui.wEdit ? W.find(x => x.id === S.ui.wEdit) : null;
+  const form = `<div class="sec wform" id="wform"><h3>${ed ? 'Змінити слово' : 'Записати слово'}</h3>
+    <div class="wgrid"><label class="f">Слово<input class="in" id="w-w" maxlength="80" value="${esc(ed?.w || '')}" placeholder="Напр.: «гарбуза дати»"></label>
+    <label class="f">Де так кажуть<input class="in" id="w-pl" maxlength="120" value="${esc(ed?.pl || '')}" placeholder="Вороньки, Веприк…"></label></div>
+    <label class="f">Що означає<textarea class="in" id="w-m" maxlength="1000" placeholder="Поясніть простими словами">${esc(ed?.m || '')}</textarea></label>
+    <label class="f">Як кажуть — приклад <small class="muted">(не обов'язково)</small><input class="in" id="w-ex" maxlength="500" value="${esc(ed?.ex || '')}" placeholder="Напр.: «Баба казала: …»"></label>
+    <div class="btns"><button class="btn" data-act="w-save"${ed ? ` data-id="${ed.id}"` : ''}>${ed ? 'Зберегти' : 'Додати слово'}</button>${ed ? '<button class="btn line" data-act="w-cancel">Скасувати</button>' : ''}<span class="msg" id="w-msg"></span></div></div>`;
+  return `<div class="lede"><h1>Наші слова</h1><p class="small muted">Говірка наших сіл — слова, які казали бабусі й дідусі і яких не знайдеш у словнику. Записати може кожен: слово, що означає, і як його казали. Старі слова з документів — у <a href="#/terms">«Словнику»</a>.</p></div>
+  ${S.me ? form : ''}
+  <div class="stbar"><input class="in" id="wq" type="search" placeholder="Знайти слово… (усього ${W.length})" value="${esc(S.ui.wq || '')}" aria-label="Пошук у наших словах"></div>
+  ${groups.length ? `<div class="wletters">${groups.map(g => `<a href="#w-${esc(g.l)}" data-act="w-jump" data-l="${esc(g.l)}">${esc(g.l)}</a>`).join('')}</div>` : ''}
+  <div class="words">${groups.map(g => `<div class="sec" id="w-${esc(g.l)}"><h3>${esc(g.l)}</h3>${g.L.map(x => `<div class="word"><b>${esc(x.w)}</b>${x.pl ? ` <span class="muted small">· ${esc(x.pl)}</span>` : ''}<p>${esc(x.m)}</p>${x.ex ? `<p class="wex">${esc(x.ex)}</p>` : ''}<div class="small muted">записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${mine(x) ? ` · <button class="lnk" data-act="w-edit" data-id="${x.id}">змінити</button> · <button class="lnk" data-act="w-del" data-id="${x.id}">видалити</button>` : ''}</div></div>`).join('')}</div>`).join('') || `<p class="muted">${q ? 'Нічого не знайдено.' : 'Ще жодного слова. Будьте першим — згадайте, як казала ваша бабуся!'}</p>`}</div>`;
 }
 
 /* ───── Сімейна книга (PDF): обрана гілка — біографії, фото, джерела. Верстається на сторінці й друкується браузером («Зберегти як PDF») ───── */
@@ -3072,6 +3092,12 @@ document.addEventListener('click', async e => {
     if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
     if (a === 'ask-open') return openAsk(id);
     if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: P[ph.person] ? [ph.person] : [] }); return; }
+    if (a === 'w-save') { const m = $('#w-msg'), v = id => $('#' + id).value.trim(); if (!v('w-w') || !v('w-m')) { m.className = 'msg err'; m.textContent = 'Напишіть слово і що воно означає.'; return; }
+      t.disabled = true; try { const r = await api('/api/data', { body: { op: 'word.save', id: t.dataset.id || '', w: v('w-w'), m: v('w-m'), ex: v('w-ex'), pl: v('w-pl') } }); S.data.cfg.words = r.words; S.ui.wEdit = null; S.ui.keepScroll = true; render(); toast('Слово збережено — дякуємо!'); } catch (e) { t.disabled = false; m.className = 'msg err'; m.textContent = errText(e); } return; }
+    if (a === 'w-edit') { S.ui.wEdit = t.dataset.id; render(); $('#wform')?.scrollIntoView({ block: 'start' }); return; }
+    if (a === 'w-cancel') { S.ui.wEdit = null; render(); return; }
+    if (a === 'w-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'точно видалити?'; return; } const r = await api('/api/data', { body: { op: 'word.del', id: t.dataset.id } }); S.data.cfg.words = r.words; S.ui.keepScroll = true; render(); toast('Видалено'); return; }
+    if (a === 'w-jump') { document.getElementById('w-' + t.dataset.l)?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
     if (a === 'fb-open') { openFBook(t.dataset.id); return; }
     if (a === 'fb-make') { t.disabled = true; makeFBook().catch(e => { t.disabled = false; const m = $('#fb-msg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } }); return; }
     if (a === 'iv-who') { S.ui.ivWho = t.dataset.id; scrollTo(0, 0); render(); return; }
@@ -3191,7 +3217,7 @@ function openHyp(id) {
       <textarea class="in" id="hyp-t" placeholder="Що знаєте? Звідки (хто розповідав, який документ, фото)? Навіть «здається, баба казала…» — теж допоможе."></textarea>
       <div class="btns"><button class="btn" data-act="hyp-send" data-id="${esc(id)}">Надіслати</button><button class="btn line" data-act="close">Закрити</button><span class="msg" id="hypmsg"></span></div></div>`);
 }
-document.addEventListener('input', e => { if (e.target.id === 'iv-q') { const L = personFind(e.target.value), r = $('#iv-r'); if (r) r.innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-act="iv-who" data-id="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') || '<p class="muted small">Нікого не знайдено.</p>' : ''; return; } if (e.target.id === 'hyp-q') { S.ui.hypQ = e.target.value; clearTimeout(S.ui.hypT); S.ui.hypT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#hyp-q'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); } });
+document.addEventListener('input', e => { if (e.target.id === 'wq') { S.ui.wq = e.target.value; clearTimeout(S.ui.wqT); S.ui.wqT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#wq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); return; } if (e.target.id === 'iv-q') { const L = personFind(e.target.value), r = $('#iv-r'); if (r) r.innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-act="iv-who" data-id="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') || '<p class="muted small">Нікого не знайдено.</p>' : ''; return; } if (e.target.id === 'hyp-q') { S.ui.hypQ = e.target.value; clearTimeout(S.ui.hypT); S.ui.hypT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#hyp-q'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); } });
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-act]'); if (!t) return; const a = t.dataset.act;
   if (a === 'hyp-cat') { S.ui.hypCat = t.dataset.v; S.ui.keepScroll = true; render(); return; }
@@ -3225,7 +3251,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
+  const V = { words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;

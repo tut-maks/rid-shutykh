@@ -11,7 +11,7 @@ const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
 const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
 
 /* Спільні налаштування родини (settings): група Telegram, «Хто на фото?», «Допоможіть знайти», ДНК-збіги, місця на карті */
-const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {} };
+const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, words: [] };
 async function cfgAll() {
   const out = {}; for (const k in CFG) out[k] = structuredClone(CFG[k]);
   try { for (const r of await db.list('settings', { in: { key: Object.keys(CFG) } })) out[r.key] = r.value ?? out[r.key]; } catch {}
@@ -112,7 +112,7 @@ async function bootstrap(ctx) {
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
     accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
     questions, qReady, joinPending,
-    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -163,6 +163,19 @@ export default handler(async (req, res, ctx, url) => {
       v = v.slice(0, 200);
     }
     await cfgSet('wanted', v, me.id, before); return done({ wanted: v }, 'want:' + id);
+  }
+  if (op === 'word.save' || op === 'word.del') { // «Наші слова» — говірка: записати слово може кожен родич; змінити — автор або власник
+    const before = await cfgGet('words'); let v = Array.isArray(before) ? before.slice() : [];
+    const id = S(body.id, 20), cur = v.find(x => x.id === id);
+    if (cur && cur.by !== me.id && !can(me, 'owner')) return fail(res, 403, 'forbidden');
+    if (op === 'word.del') { if (!cur) return fail(res, 404, 'not_found'); v = v.filter(x => x.id !== id); }
+    else {
+      const it = { w: S(body.w, 80), m: S(body.m, 1000), ex: S(body.ex, 500), pl: S(body.pl, 120) };
+      if (!it.w || !it.m) return fail(res, 400, 'empty');
+      if (cur) Object.assign(cur, it, { upd: new Date().toISOString() });
+      else { if (v.length >= 3000) return fail(res, 400, 'full'); v.push({ id: rid(), ...it, by: me.id, at: new Date().toISOString() }); }
+    }
+    await cfgSet('words', v, me.id, before); return done({ words: v }, 'words');
   }
   if (op === 'dna.save' || op === 'dna.del') { // ДНК-збіги (без самих ДНК-даних)
     if (!editor) return fail(res, 403, 'forbidden');
