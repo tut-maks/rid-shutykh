@@ -11,7 +11,7 @@ const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
 const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
 
 /* Спільні налаштування родини (settings): група Telegram, «Хто на фото?», «Допоможіть знайти», ДНК-збіги, місця на карті */
-const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, words: [] };
+const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, words: [], routes: [] };
 async function cfgAll() {
   const out = {}; for (const k in CFG) out[k] = structuredClone(CFG[k]);
   try { for (const r of await db.list('settings', { in: { key: Object.keys(CFG) } })) out[r.key] = r.value ?? out[r.key]; } catch {}
@@ -112,7 +112,7 @@ async function bootstrap(ctx) {
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
     accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
     questions, qReady, joinPending,
-    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], routes: cfg.routes || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -163,6 +163,21 @@ export default handler(async (req, res, ctx, url) => {
       v = v.slice(0, 200);
     }
     await cfgSet('wanted', v, me.id, before); return done({ wanted: v }, 'want:' + id);
+  }
+  if (op === 'route.save' || op === 'route.del') { // «Сімейні маршрути»: створити може кожен родич; змінити — автор, редактор або власник
+    const before = await cfgGet('routes'); let v = Array.isArray(before) ? before.slice() : [];
+    const id = S(body.id, 20), cur = v.find(x => x.id === id);
+    if (cur && cur.by !== me.id && !editor) return fail(res, 403, 'forbidden');
+    if (op === 'route.del') { if (!cur) return fail(res, 404, 'not_found'); v = v.filter(x => x.id !== id); }
+    else {
+      const num = (x, a, b) => { const n = Number(x); return Number.isFinite(n) && n >= a && n <= b ? Math.round(n * 1e6) / 1e6 : null; };
+      const pts = (Array.isArray(body.pts) ? body.pts : []).slice(0, 60).map(q => ({ id: S(q?.id, 20) || rid(), la: num(q?.la, -90, 90), lo: num(q?.lo, -180, 180), name: S(q?.name, 120), kind: ['home', 'school', 'work', 'church', 'grave', 'war', 'other'].includes(q?.kind) ? q.kind : 'other', people: (Array.isArray(q?.people) ? q.people : []).map(x => S(x, 60)).filter(Boolean).slice(0, 20), story: S(q?.story, 3000), yr: S(q?.yr, 40) })).filter(q => q.la != null && q.lo != null && q.name);
+      const it = { title: S(body.title, 120), intro: S(body.intro, 2000), pts };
+      if (!it.title) return fail(res, 400, 'empty');
+      if (cur) Object.assign(cur, it, { upd: new Date().toISOString(), updBy: me.id });
+      else { if (v.length >= 200) return fail(res, 400, 'full'); v.push({ id: rid(), ...it, by: me.id, at: new Date().toISOString() }); }
+    }
+    await cfgSet('routes', v, me.id, before); return done({ routes: v, id: id || v[v.length - 1]?.id }, 'route:' + id);
   }
   if (op === 'word.save' || op === 'word.del') { // «Наші слова» — говірка: записати слово може кожен родич; змінити — автор або власник
     const before = await cfgGet('words'); let v = Array.isArray(before) ? before.slice() : [];
@@ -387,6 +402,7 @@ export default handler(async (req, res, ctx, url) => {
     if (/^photo:/.test(target)) open = !!(await cfgGet('photo_ask'))[target.slice(6)];
     else if (/^want:/.test(target)) open = (await cfgGet('wanted')).some(x => x.id === target.slice(5));
     else if (/^hyp:[\w:.-]{1,70}$/.test(target)) open = true;
+    else if (/^rt:[\w-]{1,20}$/.test(target)) open = (await cfgGet('routes')).some(x => x.id === target.slice(3)); // спогади до сімейного маршруту
     else if (/^iv:[\w-]{1,60}$/.test(target)) open = !!(await db.get('persons', { eq: { id: target.slice(3), deleted: false } })); // відповіді на «Питання для розмови» — кожен родич // «Припущення»: підтвердити, спростувати чи доповнити може кожен родич
     if (!open && !(await canAddTo(me, target))) return fail(res, 403, 'branch');
     const [s] = await db.insert('stories', { target, text, created_by: me.id });

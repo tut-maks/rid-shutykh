@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172347';
+const BUILD = '202610172353';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -342,11 +342,12 @@ const MI = {
   admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.5h4.5v15H14M10 8l-4 4 4 4M6 12h9.5"/></svg>',
   fbook: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14c-2.5-1.5-5.5-1.5-8 0zM20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg>',
+  routes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>',
   words: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19.5V5a1.5 1.5 0 0 1 1.5-1.5H19v13H6.5A1.5 1.5 0 0 0 5 18v1.5A1.5 1.5 0 0 0 6.5 21H19"/><path d="M9 8h6M9 11h4"/></svg>',
   iv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5M9 20.5h6"/></svg>',
 };
 function mNav(cur) {
-  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv', 'fbook', 'words'].includes(cur) ? 'more' : cur;
+  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv', 'fbook', 'words', 'routes'].includes(cur) ? 'more' : cur;
   const B = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
@@ -355,7 +356,7 @@ function mNav(cur) {
 const SURN = ['Шуті', 'Красновиди', 'Левченки', 'Янки', 'Семени', 'Вдовинці']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['iv', 'Питання для розмови з родичами', ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -1644,7 +1645,7 @@ function vMaps() {
   const all = mapsList(), vs = [...new Set(all.flatMap(m => m.villages || []))].sort((a, b) => a.localeCompare(b, 'uk'));
   const f = S.ui.mapv || '', list = f ? all.filter(m => (m.villages || []).includes(f)) : all;
   if (S.ui.mtab === 'hist') { S.ui.mtab = ''; location.hash = href('villages'); }
-  return `<div class="pghead"><h1 title="Старі карти наших сіл.">Старі карти</h1><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p></div>
+  return `<a class="rtlink" href="#/routes">${MI.routes}<span><b>Сімейні маршрути</b><i>Прогулянка місцями родини: дім, школа, робота, кладовище — з історіями біля кожної точки</i></span><em>→</em></a><div class="pghead"><h1 title="Старі карти наших сіл.">Старі карти</h1><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p></div>
   <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
     ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
   ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
@@ -2784,6 +2785,79 @@ function vTerms() {
   <div class="terms">${G.map(([g, L]) => `<div class="sec"><h3>${esc(g)}</h3>${L.map(([t, d, u]) => `<div class="term"><b>${esc(t)}</b><p>${esc(d)}</p><a class="small" href="${esc(u)}" target="_blank" rel="noopener">Джерело ↗</a></div>`).join('')}</div>`).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
 }
 
+/* ───── Сімейні маршрути: прогулянка місцями родини з історіями біля кожної точки (своя проста карта OSM) ───── */
+const RT_K = { home: ['🏠', 'Дім'], school: ['🏫', 'Школа'], work: ['🛠', 'Робота'], church: ['⛪', 'Церква'], grave: ['✝', 'Кладовище'], war: ['🎖', 'Пам\'ять війни'], other: ['📍', 'Інше'] };
+const RTS = () => CFG_().routes || [];
+function vRoutes() {
+  const R = RTS(), r = S.arg && R.find(x => x.id === S.arg);
+  if (!r) return `<div class="lede"><h1>Сімейні маршрути</h1><p class="small muted">Прогулянка місцями родини: де стояла хата, куди ходили до школи, де працювали, де спочивають. Біля кожної точки — історія. Можна пройти маршрут удома на екрані або справді, з телефоном у руці.</p></div>
+    ${S.me ? `<div class="btns" style="margin:0 0 12px"><button class="btn" data-act="rt-new">＋ Новий маршрут</button></div>` : ''}
+    <div class="rtlist">${R.map(x => `<a class="sec rtcard" href="${href('routes', x.id)}"><b>${esc(x.title)}</b><span class="small muted">${x.pts.length} точок · склав(ла) ${esc(who(x.by))}</span>${x.intro ? `<p class="small">${esc(x.intro.slice(0, 180))}${x.intro.length > 180 ? '…' : ''}</p>` : ''}<span class="rtk">${[...new Set(x.pts.map(q => RT_K[q.kind][0]))].join(' ')}</span></a>`).join('') || '<p class="muted">Маршрутів ще немає. Створіть перший — наприклад «Вороньки бабусі Насті»: хата, школа, колгосп, церква, кладовище.</p>'}</div>`;
+  const can_ = S.me && (r.by === S.me.id || canEdit()), ed = can_ && S.ui.rtEd === r.id, i = Math.min(S.ui.rtI ?? -1, r.pts.length - 1);
+  const gm = r.pts.length ? `https://www.google.com/maps/dir/${r.pts.map(q => q.la + ',' + q.lo).join('/')}` : '';
+  return `<div class="lede"><div class="eyebrow"><a href="#/routes">Сімейні маршрути</a></div><h1>${esc(r.title)}</h1><p class="small muted">${r.pts.length} точок · склав(ла) ${esc(who(r.by))}</p></div>
+  ${r.intro && !ed ? `<p class="rtintro">${esc(r.intro)}</p>` : ''}
+  ${ed ? `<div class="sec" style="gap:8px"><label class="f">Назва<input class="in" id="rt-t" value="${esc(r.title)}"></label><label class="f">Про маршрут<textarea class="in" id="rt-i">${esc(r.intro || '')}</textarea></label></div>` : ''}
+  <div class="rtbar">${r.pts.length ? `<button class="btn small" data-act="rt-go" data-v="-1">◀</button><button class="btn small" data-act="rt-go" data-v="1">${i < 0 ? '▶ Пройти маршрут' : 'Далі ▶'}</button>` : ''}
+    ${gm ? `<a class="btn line small" href="${esc(gm)}" target="_blank" rel="noopener">🧭 Прокласти в Google Картах</a>` : ''}
+    ${can_ ? (ed ? `<button class="btn small" data-act="rt-done">✓ Готово</button><span class="small muted">Клацніть на карті, щоб додати точку</span>` : `<button class="btn line small" data-act="rt-edit">✎ Редагувати</button>`) : ''}
+    ${can_ && ed ? `<button class="btn line small danger" data-act="rt-del">Видалити маршрут</button>` : ''}</div>
+  <div class="rtwrap"><div class="geomap rtmap" id="rtmap"><div class="gm-tiles"></div><svg class="rt-line"></svg><div class="gm-pins"></div><div class="gm-attr">© учасники OpenStreetMap</div><div class="gm-z"><button data-act="rt-z" data-v="1" aria-label="Збільшити">+</button><button data-act="rt-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
+  <ol class="rtpts">${r.pts.map((q, k) => `<li class="${k === i ? 'on' : ''}" id="rtp-${k}"><button class="rtpt" data-act="rt-pick" data-v="${k}"><span class="rtn">${k + 1}</span><span><b>${RT_K[q.kind][0]} ${esc(q.name)}</b>${q.yr ? ` <i class="small muted">${esc(q.yr)}</i>` : ''}</span></button>
+    ${q.people.length ? `<div class="small">${q.people.filter(x => P[x]).map(pLink).join(', ')}</div>` : ''}${q.story ? `<p>${esc(q.story).replace(/\n/g, '<br>')}</p>` : ''}
+    ${ed ? `<div class="btns"><button class="btn line small" data-act="rt-pe" data-v="${k}">✎</button><button class="btn line small" data-act="rt-up" data-v="${k}" ${k ? '' : 'disabled'}>↑</button><button class="btn line small" data-act="rt-dn" data-v="${k}" ${k < r.pts.length - 1 ? '' : 'disabled'}>↓</button><button class="btn line small" data-act="rt-pd" data-v="${k}">✕</button></div>` : ''}</li>`).join('') || '<li class="muted small">Точок ще немає.' + (can_ ? ' Натисніть «Редагувати» і клацніть на карті.' : '') + '</li>'}</ol></div>
+  <div class="sec"><h3>Спогади про ці місця</h3>${S.data.stories.filter(x => x.target === 'rt:' + r.id).map(x => `<div class="story"><p>${esc(x.text)}</p><span class="small muted">— ${esc(who(x.by))}, ${esc(when(x.at))}</span></div>`).join('')}${S.me ? storyForm('rt:' + r.id) : ''}</div>`;
+}
+async function rtSave(r, patch) {
+  const body = { op: 'route.save', id: r?.id || '', title: r?.title || '', intro: r?.intro || '', pts: r?.pts || [], ...patch };
+  const res = await api('/api/data', { body }); S.data.cfg.routes = res.routes; return res;
+}
+function rtPointForm(r, k, ll) {
+  const q = k != null ? r.pts[k] : { name: '', kind: 'home', people: [], story: '', yr: '', la: ll[0], lo: ll[1] }; let ppl = q.people.slice();
+  modal(`<h2>${k != null ? 'Змінити точку' : 'Нова точка'}</h2><div class="sec" style="gap:10px">
+    <label class="f">Що тут<input class="in" id="rp-n" maxlength="120" value="${esc(q.name)}" placeholder="Напр.: «Хата Терентія Шутого»"></label>
+    <label class="f">Тип<select class="in" id="rp-k">${Object.entries(RT_K).map(([v, [ic, t]]) => `<option value="${v}"${q.kind === v ? ' selected' : ''}>${ic} ${t}</option>`).join('')}</select></label>
+    <label class="f">Коли <small class="muted">(роки, не обов'язково)</small><input class="in" id="rp-y" maxlength="40" value="${esc(q.yr || '')}" placeholder="напр. 1930-ті"></label>
+    <div class="f"><span>Хто з родини пов'язаний</span><div class="tagl" id="rp-l"></div><input class="in" id="rp-q" type="search" placeholder="🔍 Почніть писати ім'я" autocomplete="off"><div class="tagres" id="rp-r"></div></div>
+    <label class="f">Історія<textarea class="in" id="rp-s" maxlength="3000" placeholder="Що тут було, що розповідали…">${esc(q.story || '')}</textarea></label>
+    <div class="btns"><button class="btn" data-act="rp-save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="rp-m"></span></div></div>`);
+  const paint = () => { $('#rp-l').innerHTML = ppl.map(y => `<span class="tagc">${esc(short(P[y]))}<button type="button" data-rm="${y}">×</button></span>`).join(''); }; paint();
+  $('#rp-q').addEventListener('input', e => { const L = personFind(e.target.value).filter(p => !ppl.includes(p.id)); $('#rp-r').innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-pick="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span><em>＋</em></button>`).join('') : ''; });
+  $('#rp-r').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { ppl.push(b.dataset.pick); paint(); $('#rp-q').value = ''; $('#rp-r').innerHTML = ''; } });
+  $('#rp-l').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { ppl = ppl.filter(y => y !== b.dataset.rm); paint(); } });
+  RTF = async () => { const n = $('#rp-n').value.trim(), m = $('#rp-m'); if (!n) { m.className = 'msg err'; m.textContent = 'Напишіть, що тут.'; return; }
+    const np = { ...q, name: n, kind: $('#rp-k').value, yr: $('#rp-y').value.trim(), people: ppl, story: $('#rp-s').value.trim() }; const pts = r.pts.slice(); if (k != null) pts[k] = np; else pts.push(np);
+    await rtSave(r, { pts }); closeLayer(); S.ui.rtI = k != null ? k : pts.length - 1; S.ui.keepScroll = true; render(); };
+}
+let RTF = null;
+function rtMount() {
+  const box = $('#rtmap'); if (!box) return; const r = RTS().find(x => x.id === S.arg); if (!r) return;
+  const tiles = box.querySelector('.gm-tiles'), pins = box.querySelector('.gm-pins'), svg = box.querySelector('.rt-line');
+  const G = (S.ui.rtG ||= {}); if (G.id !== r.id) { Object.assign(G, { id: r.id, cx: null }); }
+  if (G.cx == null) { const xs = r.pts.map(q => merc(q.la, q.lo)); if (xs.length) { const mn = [Math.min(...xs.map(x => x[0])), Math.min(...xs.map(x => x[1]))], mx = [Math.max(...xs.map(x => x[0])), Math.max(...xs.map(x => x[1]))]; G.cx = (mn[0] + mx[0]) / 2; G.cy = (mn[1] + mx[1]) / 2; const sp = Math.max(mx[0] - mn[0], mx[1] - mn[1], 1e-6); G.z = Math.max(5, Math.min(17, Math.log2(Math.min(box.clientWidth, box.clientHeight) * 0.7 / sp))); } else { const c = placeLL('Вороньки') || [50.68, 31.6]; [G.cx, G.cy] = merc(c[0], c[1]); G.z = 14; } }
+  const W = () => box.clientWidth, H = () => box.clientHeight, cache = new Map();
+  const toPx = (la, lo) => { const [wx, wy] = merc(la, lo), S2 = 2 ** G.z; return [(wx - G.cx) * S2 + W() / 2, (wy - G.cy) * S2 + H() / 2]; };
+  const paint = () => {
+    const zt = Math.max(0, Math.min(18, Math.round(G.z))), S2 = 2 ** G.z, ts = 256 * 2 ** (G.z - zt), n = 2 ** zt;
+    const x0 = (G.cx - W() / 2 / S2) / 256 * n, y0 = (G.cy - H() / 2 / S2) / 256 * n, x1 = (G.cx + W() / 2 / S2) / 256 * n, y1 = (G.cy + H() / 2 / S2) / 256 * n, want = new Set();
+    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) { if (ty < 0 || ty >= n) continue; const key = zt + '/' + tx + '/' + ty; want.add(key); let el = cache.get(key);
+      if (!el) { el = new Image(); el.alt = ''; el.draggable = false; el.referrerPolicy = 'strict-origin-when-cross-origin'; el.onerror = () => { el.style.visibility = 'hidden'; }; el.src = BASES.osm.url(zt, ((tx % n) + n) % n, ty); cache.set(key, el); tiles.appendChild(el); }
+      el.style.transform = `translate(${(tx * 256 / n - G.cx) * S2 + W() / 2}px,${(ty * 256 / n - G.cy) * S2 + H() / 2}px) scale(${ts / 256})`; }
+    for (const [k, el] of cache) if (!want.has(k)) { el.remove(); cache.delete(k); }
+    const P2 = r.pts.map(q => toPx(q.la, q.lo)), i = S.ui.rtI ?? -1;
+    svg.setAttribute('width', W()); svg.setAttribute('height', H()); svg.innerHTML = P2.length > 1 ? `<polyline points="${P2.map(p => p.join(',')).join(' ')}" />` : '';
+    pins.innerHTML = r.pts.map((q, k) => `<button class="rtpin${k === i ? ' on' : ''}" data-act="rt-pick" data-v="${k}" style="left:${P2[k][0]}px;top:${P2[k][1]}px" title="${esc(q.name)}"><b>${k + 1}</b><span>${RT_K[q.kind][0]}</span></button>`).join('');
+  };
+  G.paint = paint; paint();
+  let st = null;
+  box.onpointerdown = e => { if (e.target.closest('button')) return; box.setPointerCapture?.(e.pointerId); st = { x: e.clientX, y: e.clientY, cx: G.cx, cy: G.cy, moved: false }; };
+  box.onpointermove = e => { if (!st) return; const dx = e.clientX - st.x, dy = e.clientY - st.y; if (Math.abs(dx) + Math.abs(dy) > 4) st.moved = true; const S2 = 2 ** G.z; G.cx = st.cx - dx / S2; G.cy = st.cy - dy / S2; paint(); };
+  box.onpointerup = e => { const was = st; st = null; if (!was || was.moved || S.ui.rtEd !== r.id) return;
+    const b = box.getBoundingClientRect(), S2 = 2 ** G.z, wx = G.cx + (e.clientX - b.left - W() / 2) / S2, wy = G.cy + (e.clientY - b.top - H() / 2) / S2;
+    const lo = wx / 256 * 360 - 180, la = Math.atan(Math.sinh(Math.PI * (1 - 2 * wy / 256))) * 180 / Math.PI; rtPointForm(r, null, [la, lo]); };
+  box.onwheel = e => { e.preventDefault(); G.z = Math.max(4, Math.min(18, G.z - Math.sign(e.deltaY) * 0.5)); paint(); };
+}
+
 /* ───── «Наші слова»: говірка Вороньків, Веприка й сусідніх сіл — записує будь-хто з родичів ───── */
 function vWords() {
   const W = (CFG_().words || []).slice(), q = (S.ui.wq || '').toLowerCase().trim();
@@ -3092,6 +3166,20 @@ document.addEventListener('click', async e => {
     if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
     if (a === 'ask-open') return openAsk(id);
     if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: P[ph.person] ? [ph.person] : [] }); return; }
+    if (a === 'rt-new') { modal(`<h2>Новий маршрут</h2><div class="sec" style="gap:10px"><label class="f">Назва<input class="in" id="rn-t" maxlength="120" placeholder="Напр.: «Вороньки бабусі Насті»"></label><label class="f">Про маршрут <small class="muted">(не обов'язково)</small><textarea class="in" id="rn-i" maxlength="2000" placeholder="Чиї це місця, які роки…"></textarea></label><div class="btns"><button class="btn" data-act="rt-create">Створити й ставити точки</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="rn-m"></span></div></div>`); return; }
+    if (a === 'rt-create') { const t_ = $('#rn-t').value.trim(); if (!t_) { const m = $('#rn-m'); m.className = 'msg err'; m.textContent = 'Напишіть назву.'; return; } t.disabled = true; const res = await rtSave(null, { title: t_, intro: $('#rn-i').value.trim(), pts: [] }); closeLayer(); S.ui.rtEd = res.id; S.ui.rtI = -1; location.hash = href('routes', res.id); return; }
+    if (a === 'rt-edit') { S.ui.rtEd = S.arg; render(); return; }
+    if (a === 'rt-done') { const r = RTS().find(x => x.id === S.arg); t.disabled = true; try { await rtSave(r, { title: $('#rt-t').value.trim() || r.title, intro: $('#rt-i').value.trim() }); } catch (e) { toast(errText(e)); } S.ui.rtEd = null; S.ui.rtI = -1; render(); toast('Маршрут збережено'); return; }
+    if (a === 'rt-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити маршрут?'; return; } await api('/api/data', { body: { op: 'route.del', id: S.arg } }).then(res => { S.data.cfg.routes = res.routes; }); location.hash = '#/routes'; return; }
+    if (a === 'rt-z') { const G = S.ui.rtG; if (G) { G.z = Math.max(4, Math.min(18, G.z + +t.dataset.v)); G.paint(); } return; }
+    if (a === 'rt-pick' || a === 'rt-go') { const r = RTS().find(x => x.id === S.arg); if (!r?.pts.length) return; let i = a === 'rt-pick' ? +t.dataset.v : Math.max(0, Math.min(r.pts.length - 1, (S.ui.rtI ?? -1) + +t.dataset.v)); S.ui.rtI = i;
+      const G = S.ui.rtG; if (G) { const [wx, wy] = merc(r.pts[i].la, r.pts[i].lo); G.cx = wx; G.cy = wy; G.z = Math.max(G.z, 15); }
+      S.ui.keepScroll = true; render(); document.getElementById('rtp-' + i)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+    if (a === 'rt-pe') { const r = RTS().find(x => x.id === S.arg); rtPointForm(r, +t.dataset.v); return; }
+    if (a === 'rp-save') { t.disabled = true; try { await RTF?.(); } catch (e) { t.disabled = false; const m = $('#rp-m'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } } return; }
+    if (a === 'rt-up' || a === 'rt-dn' || a === 'rt-pd') { const r = RTS().find(x => x.id === S.arg), k = +t.dataset.v, pts = r.pts.slice();
+      if (a === 'rt-pd') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'видалити?'; return; } pts.splice(k, 1); } else { const j = a === 'rt-up' ? k - 1 : k + 1; [pts[k], pts[j]] = [pts[j], pts[k]]; }
+      await rtSave(r, { pts }); S.ui.keepScroll = true; render(); return; }
     if (a === 'w-save') { const m = $('#w-msg'), v = id => $('#' + id).value.trim(); if (!v('w-w') || !v('w-m')) { m.className = 'msg err'; m.textContent = 'Напишіть слово і що воно означає.'; return; }
       t.disabled = true; try { const r = await api('/api/data', { body: { op: 'word.save', id: t.dataset.id || '', w: v('w-w'), m: v('w-m'), ex: v('w-ex'), pl: v('w-pl') } }); S.data.cfg.words = r.words; S.ui.wEdit = null; S.ui.keepScroll = true; render(); toast('Слово збережено — дякуємо!'); } catch (e) { t.disabled = false; m.className = 'msg err'; m.textContent = errText(e); } return; }
     if (a === 'w-edit') { S.ui.wEdit = t.dataset.id; render(); $('#wform')?.scrollIntoView({ block: 'start' }); return; }
@@ -3251,7 +3339,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
+  const V = { routes: vRoutes, words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;
@@ -3259,6 +3347,7 @@ function render() {
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'geo') requestAnimationFrame(geoMount);
+  if (S.view === 'routes' && S.arg) requestAnimationFrame(rtMount);
   stickBars();
   if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');
   const bkNew = document.getElementById('bk');
