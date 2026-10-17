@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172320';
+const BUILD = '202610172324';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2218,15 +2218,62 @@ function openAsk(id) {
   S.ui.askOpen = id;
 }
 
+/* Редактор фото перед завантаженням: повернути, обрізати, яскравість і контраст. Оригінал не змінюється; на сайт іде оброблена копія. */
+let PED = null;
+async function pedOpen(f, box) {
+  box.hidden = false; box.innerHTML = '<p class="muted small">Відкриваю фото…</p>';
+  let bm; try { bm = await createImageBitmap(f, { imageOrientation: 'from-image' }); } catch { try { bm = await createImageBitmap(f); } catch { box.innerHTML = '<p class="msg err">Не вдалося відкрити фото. Спробуйте інший файл (JPEG, PNG).</p>'; return; } }
+  PED = { bm, rot: 0, br: 100, ct: 100, crop: null, cropOn: false };
+  box.innerHTML = `<div class="ped-st"><canvas id="ped-c"></canvas><div class="ped-cr" id="ped-r" hidden><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div>
+    <div class="ped-bar"><button type="button" class="btn line small" data-ped="l" title="Повернути ліворуч" aria-label="Повернути ліворуч">⟲</button><button type="button" class="btn line small" data-ped="r" title="Повернути праворуч" aria-label="Повернути праворуч">⟳</button><button type="button" class="btn line small" data-ped="crop" aria-pressed="false">✂ Обрізати</button><button type="button" class="btn line small" data-ped="reset" title="Повернути як було">↺ Скинути</button></div>
+    <div class="ped-sl"><label>☀ Яскравість<input type="range" min="50" max="170" value="100" data-pedv="br"></label><label>◐ Контраст<input type="range" min="50" max="170" value="100" data-pedv="ct"></label></div>`;
+  box.onclick = e => { const b = e.target.closest('[data-ped]'); if (!b || !PED) return; const k = b.dataset.ped;
+    if (k === 'l' || k === 'r') { PED.rot = (PED.rot + (k === 'r' ? 1 : 3)) % 4; if (PED.crop) { const c = PED.crop; PED.crop = k === 'r' ? { x: 1 - c.y - c.h, y: c.x, w: c.h, h: c.w } : { x: c.y, y: 1 - c.x - c.w, w: c.h, h: c.w }; } }
+    if (k === 'crop') { PED.cropOn = !PED.cropOn; if (PED.cropOn && !PED.crop) PED.crop = { x: .08, y: .08, w: .84, h: .84 }; if (!PED.cropOn && PED.crop && PED.crop.w > .995 && PED.crop.h > .995) PED.crop = null; }
+    if (k === 'reset') { Object.assign(PED, { rot: 0, br: 100, ct: 100, crop: null, cropOn: false }); box.querySelectorAll('[data-pedv]').forEach(x => x.value = 100); }
+    pedDraw(); };
+  box.oninput = e => { const r = e.target.closest('[data-pedv]'); if (r && PED) { PED[r.dataset.pedv] = +r.value; pedDraw(); } };
+  const cr = $('#ped-r'); let drag = null;
+  cr.onpointerdown = e => { e.preventDefault(); cr.setPointerCapture(e.pointerId); const R = $('#ped-c').getBoundingClientRect(); drag = { h: e.target.dataset.h || 'move', x0: e.clientX, y0: e.clientY, c0: { ...PED.crop }, W: R.width, H: R.height }; };
+  cr.onpointermove = e => { if (!drag) return; const dx = (e.clientX - drag.x0) / drag.W, dy = (e.clientY - drag.y0) / drag.H, c = { ...drag.c0 }, m = .05;
+    if (drag.h === 'move') { c.x = Math.min(1 - c.w, Math.max(0, c.x + dx)); c.y = Math.min(1 - c.h, Math.max(0, c.y + dy)); }
+    else { if (drag.h.includes('w')) { const nx = Math.min(c.x + c.w - m, Math.max(0, c.x + dx)); c.w += c.x - nx; c.x = nx; } if (drag.h.includes('e')) c.w = Math.min(1 - c.x, Math.max(m, c.w + dx));
+      if (drag.h.includes('n')) { const ny = Math.min(c.y + c.h - m, Math.max(0, c.y + dy)); c.h += c.y - ny; c.y = ny; } if (drag.h.includes('s')) c.h = Math.min(1 - c.y, Math.max(m, c.h + dy)); }
+    PED.crop = c; pedCrop(); };
+  cr.onpointerup = cr.onpointercancel = () => { drag = null; };
+  pedDraw();
+}
+function pedRot(src, rot, max) { // повернуте зображення на canvas (max — найбільша сторона)
+  const sw = src.width, sh = src.height, k = Math.min(1, max / Math.max(sw, sh)), w = Math.round(sw * k), h = Math.round(sh * k), c = document.createElement('canvas');
+  c.width = rot % 2 ? h : w; c.height = rot % 2 ? w : h; const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate(rot * Math.PI / 2); g.drawImage(src, -w / 2, -h / 2, w, h); return c;
+}
+function pedDraw() {
+  const cv = $('#ped-c'); if (!cv || !PED) return; const r = pedRot(PED.bm, PED.rot, 1000);
+  cv.width = r.width; cv.height = r.height; cv.getContext('2d').drawImage(r, 0, 0);
+  cv.style.filter = PED.br !== 100 || PED.ct !== 100 ? `brightness(${PED.br}%) contrast(${PED.ct}%)` : '';
+  $('[data-ped="crop"]')?.setAttribute('aria-pressed', PED.cropOn ? 'true' : 'false'); $('[data-ped="crop"]')?.classList.toggle('on', PED.cropOn);
+  pedCrop();
+}
+function pedCrop() { const cr = $('#ped-r'); if (!cr || !PED) return; const c = PED.crop; cr.hidden = !(PED.cropOn && c); if (cr.hidden) { $('#ped-c').style.clipPath = c ? `inset(${c.y * 100}% ${(1 - c.x - c.w) * 100}% ${(1 - c.y - c.h) * 100}% ${c.x * 100}%)` : ''; return; }
+  $('#ped-c').style.clipPath = ''; Object.assign(cr.style, { left: c.x * 100 + '%', top: c.y * 100 + '%', width: c.w * 100 + '%', height: c.h * 100 + '%' }); }
+async function pedExport() { // null — нічого не змінювали (іде оригінал)
+  if (!PED || (!PED.rot && PED.br === 100 && PED.ct === 100 && !PED.crop)) return null;
+  const r = pedRot(PED.bm, PED.rot, 4000), c = PED.crop || { x: 0, y: 0, w: 1, h: 1 };
+  const out = cropCanvas(r, c), g = out.getContext('2d');
+  if (PED.br !== 100 || PED.ct !== 100) { const im = g.getImageData(0, 0, out.width, out.height), d = im.data, b = PED.br / 100, k = PED.ct / 100;
+    const L = new Uint8ClampedArray(256); for (let v = 0; v < 256; v++) L[v] = ((v * b) - 128) * k + 128;
+    for (let i = 0; i < d.length; i += 4) { d[i] = L[d[i]]; d[i + 1] = L[d[i + 1]]; d[i + 2] = L[d[i + 2]]; } g.putImageData(im, 0, 0); }
+  return canvasJpeg(out, 0.92);
+}
 async function fileHash(f) { try { const b = await crypto.subtle.digest('SHA-256', await f.arrayBuffer()); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 40); } catch { return ''; } }
 ERR.dup = 'Це фото вже є на сайті (можливо, чекає підтвердження Максимом) — повторно надсилати не треба.';
 // «＋ Додати фото»: одразу питаємо, хто на фото. Знаєте — обираєте людей (фото потрапить у їхні картки); не знаєте — «Хто на фото?», родичі підкажуть.
-function openAskNew() {
-  let sel = [];
+function openAskNew(pre = {}) {
+  let sel = pre.person && P[pre.person] ? [pre.person] : []; PED = null;
   modal(`<h2>Додати фото</h2>
     <div class="sec" style="gap:10px" id="an-box">
       <label class="f">Фото<input class="in" type="file" id="an-f" accept="image/*"></label>
-      <div class="ask-prev" id="an-p" hidden></div>
+      <div class="ped" id="an-p" hidden></div>
       <div class="f"><span>Хто на фото <small class="muted">— оберіть людей з дерева, і фото з'явиться в їхніх картках</small></span><div class="tagl" id="an-l"></div>
         <input class="in" id="an-q" type="search" placeholder="🔍 Почніть писати ім'я, напр. «Надія» або «Шутий Яків»" autocomplete="off" enterkeyhint="search"><div class="tagres" id="an-r"></div></div>
       <label class="anunk"><input type="checkbox" id="an-u"> <span><b>Не знаю, хто на фото</b> (або не всіх) — попросити родичів упізнати. Фото з'явиться на Головній у «Хто на фото?».</span></label>
@@ -2238,17 +2285,20 @@ function openAskNew() {
   q.addEventListener('input', () => { const L = personFind(q.value).filter(p => !sel.includes(p.id)); res.innerHTML = q.value.trim() ? (L.length ? L.map(p => `<button type="button" class="tagopt" data-pick="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span><em>＋</em></button>`).join('') : '<p class="muted small">Нікого не знайдено. Немає людини в дереві — позначте «Не знаю» і напишіть у підписі, хто це.</p>') : ''; });
   res.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; sel.push(b.dataset.pick); paint(); q.value = ''; res.innerHTML = ''; q.focus(); });
   $('#an-l').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { sel = sel.filter(y => y !== b.dataset.rm); paint(); } });
-  $('#an-f').onchange = e => { const f = e.target.files[0], p = $('#an-p'); if (!f) { p.hidden = true; return; } p.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; p.hidden = false; };
+  const pick = f => { const p = $('#an-p'); if (!f) { p.hidden = true; PED = null; return; } openAskNew.file = f; pedOpen(f, p); };
+  $('#an-f').onchange = e => pick(e.target.files[0]);
+  openAskNew.file = null; if (pre.file) pick(pre.file);
+  paint();
   openAskNew.sel = () => sel;
 }
 async function askSend(btn) {
-  const f = $('#an-f').files[0], m = $('#an-m'), cap = $('#an-c').value.trim(), sel = openAskNew.sel ? openAskNew.sel() : [], unk = $('#an-u').checked;
+  const f = openAskNew.file, m = $('#an-m'), cap = $('#an-c').value.trim(), sel = openAskNew.sel ? openAskNew.sel() : [], unk = $('#an-u').checked;
   if (!f) { m.className = 'msg err'; m.textContent = 'Оберіть фото.'; return; }
   if (!sel.length && !unk) { m.className = 'msg err'; m.textContent = 'Оберіть, хто на фото, або позначте «Не знаю, хто на фото».'; return; }
   if (btn.disabled) return; btn.disabled = true; $('#an-f').disabled = true; m.className = 'msg'; m.textContent = '';
   const g = $('#an-g'), st = (pc, t) => { g.hidden = false; g.querySelector('i').style.width = pc + '%'; g.querySelector('span').textContent = t; };
   try {
-    st(10, 'Готую фото…'); const h = await fileHash(f); const full = await bestPhoto(f); const thumb = await toJpeg(f, 420, 0.78);
+    st(10, 'Готую фото…'); const h = await fileHash(f); const ed = await pedExport() || f; const full = await bestPhoto(ed); const thumb = await toJpeg(ed, 420, 0.78);
     st(40, 'Надсилаю на сайт… не закривайте вікно');
     const qs = `caption=${encodeURIComponent(cap)}&h=${h}`;
     const r = await api(sel.length ? `/api/upload?person=${encodeURIComponent(sel[0])}&${qs}` : `/api/upload?ask=1&${qs}`, { raw: full });
@@ -2261,7 +2311,7 @@ async function askSend(btn) {
     modal(`<div class="updone"><div class="updone-ic">✓</div><h2>Фото надіслано</h2>
       <div class="ask-prev"><img src="${URL.createObjectURL(thumb)}" alt=""></div>
       <p>${r.pending ? 'Його побачать усі після підтвердження Максимом. <b>Повторно надсилати не треба.</b>' : 'Фото вже на сайті.'}${sel.length ? ' Позначено: ' + sel.map(y => esc(short(P[y]))).join(', ') + '.' : ''}${unk ? ' Фото буде в «Хто на фото?» — родичі зможуть підказати.' : ''}</p>
-      <div class="btns" style="justify-content:center"><button class="btn" data-act="ask-new">＋ Додати ще фото</button><button class="btn line" data-act="close">Закрити</button></div></div>`);
+      <div class="btns" style="justify-content:center"><button class="btn" data-act="ask-new" data-p="${sel.length === 1 ? sel[0] : ''}">＋ Додати ще фото</button><button class="btn line" data-act="close">Закрити</button></div></div>`);
   } catch (err) {
     btn.disabled = false; $('#an-f').disabled = false; g.hidden = true; m.className = 'msg err'; m.textContent = errText(err);
     if (err.message === 'dup') { btn.disabled = true; btn.textContent = 'Уже завантажено'; }
@@ -2743,7 +2793,7 @@ document.addEventListener('click', async e => {
     if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
     if (a === 'ask-open') return openAsk(id);
     if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: P[ph.person] ? [ph.person] : [] }); return; }
-    if (a === 'ask-new') return openAskNew();
+    if (a === 'ask-new') return openAskNew({ person: t.dataset.p || '' });
     if (a === 'ask-send') return askSend(t);
     if (a === 'ask-off') { closeLayer();
       photoTag([id], 0, null, { title: 'Хто ж на фото?', save: 'Зберегти й прибрати з «Хто на фото?»', note: 'Оберіть людей з дерева — фото з’явиться в них на картці. Підказки родичів залишаться під фото.',
@@ -2931,7 +2981,7 @@ document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; render(); return; }
   if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
-  if (t.dataset.upload) return upload(t.dataset.upload, [...t.files]);
+  if (t.dataset.upload) { const fs = [...t.files]; t.value = ''; if (fs.length === 1 && /^image\//.test(fs[0].type)) return openAskNew({ person: t.dataset.upload, file: fs[0] }); return upload(t.dataset.upload, fs); }
   if (t.dataset.udate) { const v = t.value.trim(); try { await api('/api/data', { body: { op: 'union.date', id: t.dataset.udate, date: v } }); const u = S.data.unions.find(x => x.id === t.dataset.udate); if (u) u.date = v; index(); toast('Дату шлюбу збережено'); } catch (er) { toast('Не вдалося зберегти дату шлюбу'); } return; }
   if (t.dataset.docup) return uploadDoc(t.dataset.docup, [...t.files]);
   if (t.dataset.docbulk) return uploadBulk([...t.files]);

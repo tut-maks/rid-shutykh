@@ -1393,3 +1393,19 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 
 .recfile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:4px 0 10px;text-align:center}
 .recfile .btn{cursor:pointer}
+
+/* редактор фото перед завантаженням */
+.ped{display:grid;gap:8px}
+.ped-st{position:relative;justify-self:center;max-width:100%;line-height:0;touch-action:none}
+.ped-st canvas{max-width:100%;max-height:340px;display:block;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.ped-cr{position:absolute;border:2px solid #fff;outline:1px solid rgba(0,0,0,.5);box-shadow:0 0 0 9999px rgba(0,0,0,.45);cursor:move;touch-action:none}
+.ped-st{overflow:hidden}
+.ped-cr i{position:absolute;width:22px;height:22px;background:#fff;border:1px solid rgba(0,0,0,.4);border-radius:50%}
+.ped-cr i[data-h=nw]{left:-3px;top:-3px;cursor:nwse-resize}.ped-cr i[data-h=ne]{right:-3px;top:-3px;cursor:nesw-resize}
+.ped-cr i[data-h=sw]{left:-3px;bottom:-3px;cursor:nesw-resize}.ped-cr i[data-h=se]{right:-3px;bottom:-3px;cursor:nwse-resize}
+.ped-bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.ped-bar .btn{min-width:44px;min-height:40px;font-size:16px}
+.ped-bar .btn.on{background:var(--wine,#7A2E3B);color:#fff;border-color:var(--wine,#7A2E3B)}
+.ped-sl{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font-size:14px}
+.ped-sl label{display:flex;gap:8px;align-items:center}
+.ped-sl input{width:150px}
