@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172338';
+const BUILD = '202610172344';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -341,10 +341,11 @@ const MI = {
   q: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path d="M10.3 8.6a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M12 13.3v.1"/></svg>',
   admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.5h4.5v15H14M10 8l-4 4 4 4M6 12h9.5"/></svg>',
+  fbook: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14c-2.5-1.5-5.5-1.5-8 0zM20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg>',
   iv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5M9 20.5h6"/></svg>',
 };
 function mNav(cur) {
-  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv'].includes(cur) ? 'more' : cur;
+  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv', 'fbook'].includes(cur) ? 'more' : cur;
   const B = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
@@ -353,7 +354,7 @@ function mNav(cur) {
 const SURN = ['Шуті', 'Красновиди', 'Левченки', 'Янки', 'Семени', 'Вдовинці']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['iv', 'Питання для розмови з родичами', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['iv', 'Питання для розмови з родичами', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -699,7 +700,7 @@ function vPerson() {
     </div>
   </div>
   <div class="sec" style="align-content:start;gap:30px">
-    <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Запитати</button></span></h3>
+    <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Запитати</button><button class="btn line small" data-act="fb-open" data-id="${p.id}" title="Сімейна книга (PDF): ця людина, її предки й нащадки — з біографіями, фото й джерелами">📖 Книга</button></span></h3>
       ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
       ${birthPara(p, docs)}
       ${p.note ? `<div class="about">${glossify(mdLinks(esc(p.note)))}</div>` : ''}
@@ -2782,6 +2783,78 @@ function vTerms() {
   <div class="terms">${G.map(([g, L]) => `<div class="sec"><h3>${esc(g)}</h3>${L.map(([t, d, u]) => `<div class="term"><b>${esc(t)}</b><p>${esc(d)}</p><a class="small" href="${esc(u)}" target="_blank" rel="noopener">Джерело ↗</a></div>`).join('')}</div>`).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
 }
 
+/* ───── Сімейна книга (PDF): обрана гілка — біографії, фото, джерела. Верстається на сторінці й друкується браузером («Зберегти як PDF») ───── */
+function openFBook(pid) {
+  const x = P[pid] ? pid : startId(); FBX = x;
+  modal(`<h2>Сімейна книга</h2><p class="small muted" style="margin:0 0 10px">Книга для друку або PDF: дерево, біографії з фото, спогади й посилання на джерела. Після «Скласти» відкриється вікно друку — оберіть «Зберегти як PDF».</p>
+    <div class="sec" style="gap:10px">
+      <div class="f"><span>Від кого: <b id="fb-who">${esc(full(P[x]))}</b></span><input class="in" id="fb-q" type="search" placeholder="🔍 Інша людина — почніть писати ім'я" autocomplete="off"><div class="tagres" id="fb-r"></div></div>
+      <label class="f">Що включити<select class="in" id="fb-m"><option value="up">Предки (батьки, діди, прадіди…)</option><option value="down">Нащадки (діти, онуки…)</option><option value="both" selected>Предки й нащадки</option><option value="clan">Уся родина (з братами, сестрами, тітками, дядьками)</option></select></label>
+      <label class="f">Поколінь<select class="in" id="fb-g">${[2, 3, 4, 5, 6, 8, 10, 14].map(n => `<option value="${n}"${n === 5 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="anunk"><input type="checkbox" id="fb-ph" checked> <span>Фото людей (головне фото + інші, до 4 на людину)</span></label>
+      <label class="anunk"><input type="checkbox" id="fb-dc" checked> <span>Архівні документи: опис «який рядок наш» і посилання</span></label>
+      <label class="anunk"><input type="checkbox" id="fb-st" checked> <span>Спогади родичів</span></label>
+      <div class="btns"><button class="btn" data-act="fb-make">📖 Скласти книгу</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="fb-msg"></span></div></div>`);
+  const q = $('#fb-q'), r = $('#fb-r');
+  q.addEventListener('input', () => { const L = personFind(q.value); r.innerHTML = q.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-fbp="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') : ''; });
+  r.addEventListener('click', e => { const b = e.target.closest('[data-fbp]'); if (!b) return; FBX = b.dataset.fbp; $('#fb-who').textContent = full(P[FBX]); q.value = ''; r.innerHTML = ''; });
+}
+let FBX = null;
+function fbPeople(x, mode, G) { // [{id, gen}] — gen: 0 = від кого, +1 батьки, −1 діти
+  const out = new Map(), add = (id, g) => { if (P[id] && !out.has(id)) out.set(id, g); };
+  add(x, 0);
+  if (mode !== 'down') { let cur = [x]; for (let g = 1; g < G && cur.length; g++) { const nx = []; cur.forEach(id => [P[id].f, P[id].mo].forEach(y => { if (P[y] && !out.has(y)) { add(y, g); nx.push(y); } })); cur = nx; } }
+  if (mode !== 'up') { let cur = [x]; for (let g = 1; g < G && cur.length; g++) { const nx = []; cur.forEach(id => (KIDS[id] || []).forEach(y => { if (!out.has(y)) { add(y, -g); nx.push(y); } })); cur = nx; } }
+  if (mode === 'clan') [...out.entries()].filter(([, g]) => g >= 0).forEach(([id, g]) => { const p = P[id]; [p.f, p.mo].filter(y => P[y]).flatMap(y => KIDS[y] || []).forEach(s => add(s, g)); });
+  [...out.keys()].forEach(id => (SPOUSES[id] || []).forEach(s => { if (P[s.id] && !out.has(s.id)) out.set(s.id, out.get(id)); }));
+  return [...out.entries()].map(([id, gen]) => ({ id, gen }));
+}
+const genName = (g, f) => g === 0 ? 'Від кого починаємо' : g === 1 ? 'Батьки' : g === 2 ? 'Діди й баби' : g === 3 ? 'Прадіди' : g > 3 ? `${'пра'.repeat(g - 2)}діди`.replace(/^п/, 'П') : g === -1 ? 'Діти' : g === -2 ? 'Онуки' : g === -3 ? 'Правнуки' : `${'пра'.repeat(-g - 2)}внуки`.replace(/^п/, 'П');
+async function makeFBook() {
+  const x = FBX, mode = $('#fb-m').value, G = +$('#fb-g').value, wPh = $('#fb-ph').checked, wDc = $('#fb-dc').checked, wSt = $('#fb-st').checked, m = $('#fb-msg');
+  m.className = 'msg'; m.textContent = 'Складаю…';
+  const L = fbPeople(x, mode, G), ids = new Set(L.map(r => r.id));
+  const gens = [...new Set(L.map(r => r.gen))].sort((a, b) => b - a);
+  const srcs = [], srcIx = {}; const cite = d => { if (!(d.id in srcIx)) { srcIx[d.id] = srcs.length + 1; srcs.push(d); } return srcIx[d.id]; };
+  const pl = t => esc(plainLinks(t)).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>');
+  const ref = id => ids.has(id) ? `<a href="#fb-${id}">${esc(short(P[id]))}</a>` : esc(short(P[id]));
+  const pdate = p => [p.b ? `нар. ${esc(p.b)}${p.bp ? ', ' + esc(p.bp) : ''}` : p.bp ? `родом: ${esc(p.bp)}` : '', p.d ? `пом. ${esc(p.d)}${p.dp ? ', ' + esc(p.dp) : ''}` : p.dead || p.dp ? `${p.sex === 'f' ? 'померла' : 'помер'}${p.dp ? ', ' + esc(p.dp) : ''}` : '', p.lp ? `жив${p.sex === 'f' ? 'ла' : ''}: ${esc(p.lp)}` : ''].filter(Boolean).join(' · ');
+  const bio = id => { const p = P[id], r = relOf(p);
+    const par = [p.f, p.mo].filter(y => P[y]), sp = (SPOUSES[id] || []).filter(s => P[s.id]), ch = (KIDS[id] || []).slice().sort(byBirth);
+    const phs = wPh ? S.data.photos.filter(y => photoOf(y, id) && !isVoice(y) && !y.pending).sort((a, b) => (b.id === p.portrait) - (a.id === p.portrait)).slice(0, 4) : [];
+    const docs = wDc ? S.data.documents.filter(d => (d.people || []).includes(id) && d.type !== 'map').sort((a, b) => (yN(a.date) || 0) - (yN(b.date) || 0)) : [];
+    const st = wSt ? S.data.stories.filter(s => s.target === id || s.target === 'iv:' + id) : [];
+    return `<article class="fb-p" id="fb-${id}"><div class="fb-ph">${phs[0] ? `<img src="${img('photo=' + phs[0].id)}" alt="">` : `<span>${esc((p.n || '?')[0])}</span>`}</div>
+      <div class="fb-tx"><h3>${esc(full(p))}</h3><div class="fb-y">${esc(years(p) || '')} <span class="fb-rel rel-${r.k}">${RELK[r.k].i}${RELK[r.k].t}</span>${r.c ? ` <span class="fb-rel rel-con">${RELK.con.i}${RELK.con.t}</span>` : ''}</div>
+      ${pdate(p) ? `<p class="fb-d">${pdate(p)}</p>` : ''}
+      <p class="fb-k">${par.length ? `<b>Батьки:</b> ${par.map(ref).join(' і ')}. ` : ''}${sp.length ? `<b>${p.sex === 'f' ? 'Чоловік' : 'Дружина'}:</b> ${sp.map(s => ref(s.id) + (s.date && !/не підтвердж/i.test(s.date) ? ` (шлюб ${esc(s.date)})` : '')).join('; ')}. ` : ''}${ch.length ? `<b>Діти:</b> ${ch.map(ref).join(', ')}.` : ''}</p>
+      ${r.c ? `<p class="fb-c">Суперечливі версії: ${esc(r.c)}</p>` : ''}
+      ${p.note ? `<div class="fb-n"><p>${pl(p.note)}</p></div>` : ''}
+      ${st.length ? `<div class="fb-st"><h4>Спогади</h4>${st.map(s => `<blockquote>${pl(s.text)}<cite>— ${esc(who(s.by))}, ${esc(String(s.at || '').slice(0, 10))}</cite></blockquote>`).join('')}</div>` : ''}
+      ${docs.length ? `<div class="fb-dc"><h4>Що кажуть документи</h4><ul>${docs.map(d => `<li><b>${esc(d.title)}</b>${d.line ? ` — ${pl(d.line)}` : ''} <sup>[${cite(d)}]</sup></li>`).join('')}</ul></div>` : ''}
+      ${phs.length > 1 ? `<div class="fb-gal">${phs.slice(1).map(y => `<figure><img src="${img('photo=' + y.id)}" alt=""><figcaption>${esc(y.caption || '')}</figcaption></figure>`).join('')}</div>` : ''}
+      </div></article>`; };
+  const outline = gens.map(g => `<li><b>${genName(g)}</b>: ${L.filter(r => r.gen === g).map(r => esc(short(P[r.id])) + (life(P[r.id]) ? ` <i>(${esc(life(P[r.id]))})</i>` : '')).join(', ')}</li>`).join('');
+  const body = gens.map(g => `<section class="fb-gen"><h2>${genName(g)}</h2>${L.filter(r => r.gen === g).sort((a, b) => byBirth(a.id, b.id)).map(r => bio(r.id)).join('')}</section>`).join('');
+  const html = `<div class="fb-cover"><div class="fb-orn">◆ ◆ ◆</div><h1>Сімейна книга</h1><div class="fb-sub">${esc(full(P[x]))}${life(P[x]) ? ` · ${esc(life(P[x]))}` : ''}</div>
+      <div class="fb-sub2">${{ up: 'предки', down: 'нащадки', both: 'предки й нащадки', clan: 'уся родина' }[mode]} · ${L.length} людей · ${G} поколінь</div>
+      <div class="fb-surn">${SURN.join(' · ')}</div><div class="fb-date">Складено ${new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })} з сайту «Наш родовід» (${esc(location.host)})</div><div class="fb-by">Сайт створив і веде Максим Шутий</div></div>
+    <section class="fb-toc"><h2>Хто в книзі</h2><ul>${outline}</ul>
+      <p class="fb-legend">${['doc', 'mem', 'chk', 'con'].map(k => `<span class="fb-rel rel-${k}">${RELK[k].i}${RELK[k].t}</span>`).join(' ')}</p>
+      <p class="fb-note">Те, що записано в документах, подано як факт; відоме зі слів родичів — «за словами…»; здогадки — «Є припущення». Номери в дужках [1] — джерела в кінці книги.</p></section>
+    ${body}
+    ${srcs.length ? `<section class="fb-src"><h2>Джерела</h2><ol>${srcs.map(d => `<li><b>${esc(d.title)}</b>${d.date ? ', ' + esc(d.date) : ''}${d.src ? `. ${esc(d.src)}` : ''}${d.url ? ` <span class="fb-url">${esc(d.url)}</span>` : ''}</li>`).join('')}</ol></section>` : ''}`;
+  document.getElementById('fbook')?.remove();
+  const box = document.createElement('div'); box.id = 'fbook'; box.innerHTML = html; document.body.appendChild(box);
+  const ims = [...box.querySelectorAll('img')]; let n = 0;
+  m.textContent = ims.length ? `Завантажую фото: 0 з ${ims.length}…` : 'Готово';
+  await Promise.all(ims.map(im => new Promise(ok => { const d = () => { n++; m.textContent = `Завантажую фото: ${n} з ${ims.length}…`; ok(); }; if (im.complete) d(); else { im.onload = im.onerror = d; } setTimeout(ok, 20000); })));
+  closeLayer(); document.documentElement.classList.add('fb-print');
+  const done = () => { document.documentElement.classList.remove('fb-print'); box.remove(); removeEventListener('afterprint', done); };
+  addEventListener('afterprint', done); setTimeout(() => window.print(), 150);
+  ev('open', 'fbook', 'person:' + x);
+}
+
 /* ───── Питання для інтерв'ю з родичами: сайт сам складає питання з прогалин у дереві ───── */
 function ivRelatives(x) { // предки до прадідів + брати й сестри батьків + подружжя; lb — ким доводиться тому, кого розпитуємо
   const out = [], seen = new Set([x]), f = id => P[id]?.sex === 'f';
@@ -2999,6 +3072,8 @@ document.addEventListener('click', async e => {
     if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
     if (a === 'ask-open') return openAsk(id);
     if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: P[ph.person] ? [ph.person] : [] }); return; }
+    if (a === 'fb-open') { openFBook(t.dataset.id); return; }
+    if (a === 'fb-make') { t.disabled = true; makeFBook().catch(e => { t.disabled = false; const m = $('#fb-msg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } }); return; }
     if (a === 'iv-who') { S.ui.ivWho = t.dataset.id; scrollTo(0, 0); render(); return; }
     if (a === 'iv-me') { S.ui.ivWho = startId(); render(); return; }
     if (a === 'iv-print') { window.print(); return; }
@@ -3150,7 +3225,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
+  const V = { fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;
