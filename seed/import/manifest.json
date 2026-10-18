@@ -53834,5 +53834,49 @@
   "data": {
    "url": "https://www.familysearch.org/ark:/61903/1:1:6X3C-NGYD"
   }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18-src-illia_ilev",
+  "person": "illia_ilev",
+  "srcadd": [
+   {
+    "t": "Народження, 1834 (FamilySearch)",
+    "u": "https://www.familysearch.org/ark:/61903/1:1:6XQX-916F"
+   }
+  ]
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18-src-yakiv_olev",
+  "person": "yakiv_olev",
+  "srcadd": [
+   {
+    "t": "Народження, 1916 (FamilySearch)",
+    "u": "https://www.familysearch.org/ark:/61903/1:1:6XQ9-KT3Z"
+   }
+  ]
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18-src-danylo_olev",
+  "person": "danylo_olev",
+  "srcadd": [
+   {
+    "t": "Народження, 1918 (FamilySearch)",
+    "u": "https://www.familysearch.org/ark:/61903/1:1:6XQJ-R3V2"
+   }
+  ]
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18-src-yevdokia_my",
+  "person": "yevdokia_my",
+  "srcadd": [
+   {
+    "t": "Вінчання з Микитою Мироненком, 1908 (FamilySearch)",
+    "u": "https://www.familysearch.org/ark:/61903/1:1:6X3H-KWQW"
+   }
+  ]
  }
 ]
