@@ -198,6 +198,12 @@ for p in P.values():
     for f in ('pt', 'n'):
         if re.search(r'(Кузьмич|Фомич|Ильич|Лукич)\b', str(p.get(f) or '')): err('російська форма по батькові', nm(p), p.get(f))
     if p.get('n') and re.search(r'\d', str(p.get('n'))): err('цифри в імені', nm(p), p.get('n'))
+VMAP = {'Веприк': 'Веприк', 'Вороньки': 'Вороньки', 'Озеряни': 'Озеряни', 'Озерян': 'Озеряни'}
+for d in D.values():  # місце документа ↔ село з назви метричної книги в джерелі
+    mm = re.search(r'(?:церкви|книга)[^,(]*?с\.\s*([А-ЯІЇЄ][а-яіїє]+)', str(d.get('src') or ''))
+    pl = str(d.get('place') or '')
+    if mm and mm.group(1) in VMAP and pl in VMAP.values() and VMAP[mm.group(1)] != pl:
+        warn('місце документа ≠ село в джерелі', d['id'], pl, '≠', VMAP[mm.group(1)])
 for d in D.values():
     t = ' '.join(str(d.get(k) or '') for k in ('title', 'text'))
     if re.search(r'Народи(вся|лася) \d{1,2}\.(\s|$)|Народивсяла', t): err('обірвана фраза в документі', d['id'])
