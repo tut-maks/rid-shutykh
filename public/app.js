@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610181244';
+const BUILD = '202610182350';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -336,6 +336,7 @@ function ppClose() { S.ui.pp = null; S.ui.ppHist = []; ppPaint(); }
 
 /* ───── Телефон: нижнє меню й шторка «Ще» (як у KRental CRM: 4 розділи + «Ще», кнопки ≥44 px, під великим пальцем) ───── */
 const MI = {
+  voices: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>',
   terms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M9 8h7M9 12h5"/></svg>',
   hyp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.4 2.4 0 1 1 3.2 2.3c-.6.3-.8.8-.8 1.4M12 16.4v.1"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h4.5v-5h3v5H18V9.5"/></svg>',
@@ -369,7 +370,7 @@ function mNav(cur) {
 const SURN = ['Шуті', 'Красновиди', 'Левченки', 'Янки', 'Семени', 'Вдовинці']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ivOpen().length || ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['voices', 'Голоси роду — усі записи', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ivOpen().length || ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -2522,6 +2523,21 @@ async function voiceUrl(id) { // довгі записи сервер відда
   return (vcache[id] = URL.createObjectURL(new Blob(parts, { type: parts[0].type })));
 }
 const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${(isOwner() || x.by === S.me.id) && !x.pending ? `<button class="btn line small" data-delphoto="${x.id}" title="Видалити запис">✕</button>` : ''}</div>`;
+/* Усі голоси роду — #/voices: пошук, про кого, сортування */
+function vVoices() {
+  const all = voicesOf().filter(x => !x.pending || isOwner() || x.by === S.me.id);
+  const q = (S.ui.vq || '').trim().toLowerCase(), who_ = S.ui.vwho || '', so = S.ui.vso || 'new';
+  const about = x => P[x.person] ? full(P[x.person]) : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? FAM[x.person.slice(4)].title : '';
+  const subj = [...new Set(all.map(x => x.person).filter(Boolean))].map(id => [id, P[id] ? full(P[id]) : FAM[String(id).slice(4)] ? FAM[String(id).slice(4)].title + ' (загальна історія)' : '']).filter(x => x[1]).sort((a, b) => a[1].localeCompare(b[1], 'uk'));
+  let L = all.filter(x => (!who_ || x.person === who_) && (!q || ((x.caption || '') + ' ' + about(x) + ' ' + who(x.by)).toLowerCase().includes(q)));
+  L = L.slice().sort(so === 'old' ? (a, b) => String(a.at).localeCompare(String(b.at)) : so === 'az' ? (a, b) => (a.caption || '').localeCompare(b.caption || '', 'uk') : so === 'who' ? (a, b) => about(a).localeCompare(about(b), 'uk') || String(b.at).localeCompare(String(a.at)) : (a, b) => String(b.at).localeCompare(String(a.at)));
+  return `<div class="lede"><h1>Голоси роду</h1><p class="small muted">${all.length} ${all.length % 10 === 1 && all.length % 100 !== 11 ? 'запис' : [2, 3, 4].includes(all.length % 10) && ![12, 13, 14].includes(all.length % 100) ? 'записи' : 'записів'} — спогади рідних їхніми голосами.</p></div>
+  <div class="tbar vbar"><input class="in" id="vq" type="search" placeholder="Пошук: назва, про кого, хто записав" value="${esc(S.ui.vq || '')}">
+    <select class="in" data-vsel="vwho" title="Про кого"><option value="">Про всіх</option>${subj.map(([id, t]) => `<option value="${esc(id)}"${id === who_ ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+    <select class="in" data-vsel="vso" title="Сортування">${[['new', 'Спершу нові'], ['old', 'Спершу старі'], ['who', 'За людиною'], ['az', 'За назвою']].map(([k, t]) => `<option value="${k}"${k === so ? ' selected' : ''}>${t}</option>`).join('')}</select>
+    <button class="btn wine small" data-act="v-rec">🎙 Записати історію</button></div>
+  ${L.length ? `<div class="vlist" id="vlist-all">${L.map(voiceRow).join('')}</div>` : `<p class="small muted">${all.length ? 'Нічого не знайдено — змініть пошук.' : 'Ще немає жодного запису.'}</p>`}`;
+}
 function voiceSec(p) {
   const L = voicesOf(p.id);
   return `<div class="sec"><h3>Голос і розповіді ${S.me ? `<button class="btn line small" data-act="v-rec" data-id="${p.id}">🎙 Записати спогад</button>` : ''}</h3>
@@ -3287,7 +3303,7 @@ async function posterMake() {
 function vHome() {
   const me = P[S.me?.person_id], nm = String(S.me?.name || '').split(/\s+/)[0];
   const living = Object.values(P).filter(p => isLiving(p) && !accSet().has(p.id) && p.id !== S.me?.person_id).length;
-  const V = voicesOf().filter(x => !x.pending || isOwner() || x.by === S.me.id).slice(-3).reverse();
+  const VA = voicesOf().filter(x => !x.pending || isOwner() || x.by === S.me.id), VN = VA.length, V = VA.slice(-3).reverse();
   return `<div class="lede"><h1>Вітаємо${nm ? ', ' + esc(nm) : ''}!</h1><p class="small muted">Родинний архів: дерево, документи з архівів, фото, спогади й голоси наших.</p></div>
   ${statTiles()}
   <div class="hgrid">
@@ -3296,7 +3312,7 @@ function vHome() {
       ${tgCard()}
       <div class="h-today">${todayCard()}</div>
       <div class="hcard h-kin"><h3>Ким ми доводимось? <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
-      <div class="hcard h-voice"><h3>Голоси роду</h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Попросіть бабусю чи дідуся розповісти, як жили, — і запишіть просто з телефона. Це найцінніше, що можна зберегти.</p>'}<div class="btns"><button class="btn wine" data-act="v-rec">🎙 Записати історію</button></div></div>
+      <div class="hcard h-voice"><h3>Голоси роду <a class="small" href="#/voices">усі${VN > 3 ? ' ' + VN : ''} →</a></h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Попросіть бабусю чи дідуся розповісти, як жили, — і запишіть просто з телефона. Це найцінніше, що можна зберегти.</p>'}<div class="btns"><button class="btn wine" data-act="v-rec">🎙 Записати історію</button></div></div>
     </div>
     <div class="hcol">
       <div class="hcard h-hyp"><h3>Припущення <a class="small" href="#/hyp">усі →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${(() => { const all = hypItems().filter(x => x.cat === 'hyp' || x.cat === 'kin'), H = all.sort((a, b) => b.p - a.p).slice(0, 2); return H.length ? `<ul class="hypprev">${H.map(x => { const n = hypAns(x.id).length, pr = x.p >= 75 ? ['hi', 'Дуже ймовірно'] : x.p >= 50 ? ['mid', 'Ймовірно'] : ['lo', 'Можливо']; return `<li><button class="hpv" data-act="hyp-open" data-id="${esc(x.id)}"><span class="hpv-h"><span class="hyp-pr pr-${pr[0]}">${pr[1]}</span>${x.cat === 'kin' ? '<span class="hpv-k">можлива рідня</span>' : ''}</span><b>${esc(x.title)}</b><span class="hpv-t">${esc(String(x.text || '').slice(0, 140))}${String(x.text || '').length > 140 ? '…' : ''}</span><span class="hpv-f">${n ? '💬 ' + n + ' відповід.' : 'Ще ніхто не відповів — будьте першим'} <i>Щось знаю →</i></span></button></li>`; }).join('')}</ul><a class="btn line small hpv-all" href="#/hyp">Усі припущення (${all.length}) →</a>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : ''); })()}</div>
@@ -3319,6 +3335,7 @@ function vHome() {
 const kinShort = (a, b) => { if (!a || !b || a === b || !P[a] || !P[b]) return ''; const r = kinship(a, b); return r?.word || ''; };
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset?.vsel) { S.ui[t.dataset.vsel] = t.value; S.ui.keepScroll = true; render(); return; }
   if (t.id === 'kin-a' || t.id === 'kin-b') { const v = pickVal(t.id); if (!v && t.value.trim()) return; S.ui[t.id === 'kin-a' ? 'kinA' : 'kinB'] = v; ev('open', 'kin', 'kin:' + (S.ui.kinA || '') + ':' + (S.ui.kinB || '')); S.ui.keepScroll = true; render(); }
   if (t.dataset?.st) { const k = t.dataset.st; if (k === 'stPer') { S.ui.stPer = t.value; if (t.value && t.value !== 'own') { const [a, b] = t.value.split('-'); S.ui.stY0 = a; S.ui.stY1 = b; } else if (!t.value) { S.ui.stY0 = S.ui.stY1 = ''; } } else S.ui[k] = t.value; S.ui.keepScroll = true; render(); }
 });
@@ -3504,7 +3521,7 @@ function openHyp(id) {
       <textarea class="in" id="hyp-t" placeholder="Що знаєте? Звідки (хто розповідав, який документ, фото)? Навіть «здається, баба казала…» — теж допоможе."></textarea>
       <div class="btns"><button class="btn" data-act="hyp-send" data-id="${esc(id)}">Надіслати</button><button class="btn line" data-act="close">Закрити</button><span class="msg" id="hypmsg"></span></div></div>`);
 }
-document.addEventListener('input', e => { if (e.target.id === 'wq') { S.ui.wq = e.target.value; clearTimeout(S.ui.wqT); S.ui.wqT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#wq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); return; } if (e.target.id === 'iv-q') { const L = personFind(e.target.value), r = $('#iv-r'); if (r) r.innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-act="iv-who" data-id="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') || '<p class="muted small">Нікого не знайдено.</p>' : ''; return; } if (e.target.id === 'hyp-q') { S.ui.hypQ = e.target.value; clearTimeout(S.ui.hypT); S.ui.hypT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#hyp-q'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); } });
+document.addEventListener('input', e => { if (e.target.id === 'wq') { S.ui.wq = e.target.value; clearTimeout(S.ui.wqT); S.ui.wqT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#wq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); return; } if (e.target.id === 'iv-q') { const L = personFind(e.target.value), r = $('#iv-r'); if (r) r.innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-act="iv-who" data-id="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') || '<p class="muted small">Нікого не знайдено.</p>' : ''; return; } if (e.target.id === 'vq') { S.ui.vq = e.target.value; clearTimeout(S.ui.vqT); S.ui.vqT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#vq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); return; } if (e.target.id === 'hyp-q') { S.ui.hypQ = e.target.value; clearTimeout(S.ui.hypT); S.ui.hypT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#hyp-q'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); } });
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-act]'); if (!t) return; const a = t.dataset.act;
   if (a === 'hyp-cat') { S.ui.hypCat = t.dataset.v; S.ui.keepScroll = true; render(); return; }
@@ -3539,7 +3556,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { routes: vRoutes, words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
+  const V = { routes: vRoutes, words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, voices: vVoices, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;

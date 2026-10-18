@@ -1580,3 +1580,9 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .stgrid .tablebox.folded{max-height:23em;overflow:hidden;position:relative}
 .stgrid .tablebox.folded::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4em;background:linear-gradient(transparent,var(--paper));pointer-events:none}
 .stmore{margin-top:6px}
+
+/* #/voices */
+.vbar{position:sticky;top:0;z-index:5;background:var(--paper);padding:6px 0}
+.vbar #vq{flex:1 1 220px}
+.vbar select.in{max-width:220px}
+@media(max-width:820px){.vbar{flex-wrap:nowrap;overflow-x:auto}.vbar .in,.vbar select.in{font-size:16px;min-height:44px}.vbar #vq{min-width:180px}.vbar .btn{min-height:44px;white-space:nowrap}}
