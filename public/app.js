@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180640';
+const BUILD = '202610180742';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -237,6 +237,17 @@ const relBadge = (p, sm) => { const r = relOf(p); if (!r) return ''; const R = R
   return one(r.k, R.t, R.t + ' — ' + R.d + (r.k === 'doc' ? ` (документів: ${r.docs})` : '') + (r.auto ? '' : ' · позначено вручну')) + (r.c ? one('con', RELK.con.t, RELK.con.t + ': ' + r.c) : ''); };
 const relLegend = () => `<div class="rellg">${['doc', 'mem', 'chk', 'con'].map(k => `<span class="relb rel-${k}" title="${esc(RELK[k].d)}">${RELK[k].i}<em>${RELK[k].t}</em></span>`).join('')}</div>`;
 const kdBadge = p => { const a = childAge(p); return a ? `<i class="kd" title="${esc(a.txt)}">†</i>` : ''; };
+/* Померлі — позначка на дереві (чорний куточок). Померлий: є дата смерті, або народився понад 105 років тому
+   (рік народження — з картки, інакше оцінка від батьків +25 або від найстаршої дитини −25). */
+const yOf_ = s => { const m = String(s || '').match(/(\d{4})/); return m ? +m[1] : null; };
+function estBY(p, dep = 0, seen = new Set()) {
+  if (!p || seen.has(p.id)) return null; seen.add(p.id); const y = yOf_(p.b); if (y) return y; if (dep > 4) return null;
+  const pa = [P[p.f], P[p.mo]].map(q => estBY(q, dep + 1, seen)).filter(Boolean); if (pa.length) return Math.max(...pa) + 25;
+  const ks = (KIDS[p.id] || []).map(k => yOf_(P[k]?.b)).filter(Boolean); if (ks.length) return Math.min(...ks) - 25;
+  const sp = (SPOUSES[p.id] || []).map(x => yOf_(P[x?.id || x]?.b)).filter(Boolean); return sp.length ? sp[0] : null;
+}
+const isDead = p => !!(p && (p.d || (estBY(p) ?? 9999) < new Date().getFullYear() - 105));
+const deadCls = p => isDead(p) ? ' dead' : '';
 
 function famSelect(f) {
   return `<select class="in tfam" id="tfam" aria-label="Гілка"><option value="">Усі гілки</option>${Object.values(FAM).map(x => `<option value="${x.id}"${f.fam === x.id ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}</select>`;
@@ -381,7 +392,7 @@ function sheetSwipe(sh, onClose) {
 }
 
 /* ───── Дерево предків ───── */
-function node(id) { const p = P[id]; return `<a class="nd${p.hyp ? ' hyp' : ''}${p.root ? ' root' : ''}" href="${href('p', id)}">${ph(p)}<span><b>${esc(short(p))}</b><i>${esc(p.pt || '')}</i><span class="y">${esc(life(p))}</span></span></a>`; }
+function node(id) { const p = P[id]; return `<a class="nd${deadCls(p)}${p.hyp ? ' hyp' : ''}${p.root ? ' root' : ''}" href="${href('p', id)}">${ph(p)}<span><b>${esc(short(p))}</b><i>${esc(p.pt || '')}</i><span class="y">${esc(life(p))}</span></span></a>`; }
 let depthMax = 0;
 function branchHtml(id, d, seen) {
   if (seen.has(id)) return ''; seen.add(id); depthMax = Math.max(depthMax, d);
@@ -400,7 +411,7 @@ function vPedigree(tabs) {
   const L = ['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди', '4-ті прадіди', '5-ті прадіди', '6-ті прадіди', '7-мі прадіди', '8-мі прадіди', '9-ті прадіди'];
   const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
   return `${treeHead()}
-    ${treeBar(tabs, `<div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span></div>`)}
+    ${treeBar(tabs, `<div class="legend"><span><i class="sw r"></i>Від кого рахуємо</span><span><i class="sw"></i>Підтверджено документами</span><span><i class="sw h"></i>Гіпотеза</span><span><i class="sw dd"></i>Помер(ла)</span></div>`)}
     <div class="vp" id="vp" data-mode="ped"><div class="stage" id="stage"><div class="treebox ped"><div class="gens">${Array.from({ length: depthMax + 1 }, (_, i) => `<div><b>${R[i] || i + 1}</b>${i ? (L[i] || i + '-ті прадіди') : 'Покоління'}</div>`).join('')}</div>${t}</div></div>${vpCtl(false)}</div>`;
 }
 const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button>${mini ? `<button type="button" data-act="mini-tog" class="${S.ui.mini ? 'on' : ''}" title="Мінікарта: показати / сховати">▦</button>` : ''}</div>${mini ? `<canvas class="minimap" id="minimap" width="220" height="140"${S.ui.mini ? '' : ' hidden'}></canvas>` : ''}`;
@@ -528,7 +539,7 @@ function vAll(tabs) {
   const desc = new Set(); (function dn(id) { (KIDS[id] || []).forEach(k => { if (!desc.has(k)) { desc.add(k); dn(k); } }); })(center);
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q); const br = !anc.has(id) && !desc.has(id) && (KIDS[id] || []).some(k => !anc.has(k) && !desc.has(k)); /* бічна гілка, що має продовження */
     const dim = f.fam && !(p.fam || []).includes(f.fam);
-    return `<a class="nd t2${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (life(p) ? ', ' + life(p) : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}${(r => `<i class="ndrel rel-${r.k}${r.c ? ' con' : ''}" title="${esc(RELK[r.k].t + (r.c ? ' · ' + RELK.con.t : ''))}">${RELK[r.k].i}</i>`)(relOf(p))}</a>`; }).join('');
+    return `<a class="nd t2${deadCls(p)}${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (life(p) ? ', ' + life(p) : '') + (isDead(p) ? (p.d ? ' · помер(ла)' : ' · помер(ла), дати смерті не знаємо') : '') + (childAge(p) ? ' · ' + childAge(p).txt : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}${(r => `<i class="ndrel rel-${r.k}${r.c ? ' con' : ''}" title="${esc(RELK[r.k].t + (r.c ? ' · ' + RELK.con.t : ''))}">${RELK[r.k].i}</i>`)(relOf(p))}</a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 4}px;top:${n.y + T2.H - 13}px" title="Показати дітей">▾${h.kids}</button>`;

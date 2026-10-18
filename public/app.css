@@ -1537,3 +1537,9 @@ table.fxd input[type=checkbox]{width:20px;height:20px}
 }
 body:has(#layer .scrim) .ivnudge{display:none}
 @media (max-width:820px){.modal::after{content:"";height:calc(24px + env(safe-area-inset-bottom))}}
+/* Померлі — чорний куточок угорі ліворуч (як траурна стрічка) */
+.nd.dead{position:relative}.nd.t2.dead{position:absolute}
+.nd.dead::before{content:"";position:absolute;left:0;top:0;width:0;height:0;border-top:24px solid #2b2420;border-right:24px solid transparent;pointer-events:none;z-index:1}
+.nd.dead::after{content:"†";position:absolute;left:2px;top:0;font:700 11px/13px var(--f-body);color:#fff;pointer-events:none;z-index:2}
+.nd.t2.dead .kd{display:none}
+.legend .sw.dd{position:relative;overflow:hidden}.legend .sw.dd::before{content:"";position:absolute;left:0;top:0;border-top:9px solid #2b2420;border-right:9px solid transparent}
