@@ -11,7 +11,7 @@ const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
 const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
 
 /* Спільні налаштування родини (settings): група Telegram, «Хто на фото?», «Допоможіть знайти», ДНК-збіги, місця на карті */
-const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, words: [], routes: [] };
+const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, photo_faces: {}, words: [], routes: [] };
 async function cfgAll() {
   const out = {}; for (const k in CFG) out[k] = structuredClone(CFG[k]);
   try { for (const r of await db.list('settings', { in: { key: Object.keys(CFG) } })) out[r.key] = r.value ?? out[r.key]; } catch {}
@@ -112,7 +112,7 @@ async function bootstrap(ctx) {
     names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
     accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
     questions, qReady, joinPending,
-    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], routes: cfg.routes || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], routes: cfg.routes || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, photoFaces: cfg.photo_faces || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -171,7 +171,7 @@ export default handler(async (req, res, ctx, url) => {
     if (op === 'route.del') { if (!cur) return fail(res, 404, 'not_found'); v = v.filter(x => x.id !== id); }
     else {
       const num = (x, a, b) => { const n = Number(x); return Number.isFinite(n) && n >= a && n <= b ? Math.round(n * 1e6) / 1e6 : null; };
-      const pts = (Array.isArray(body.pts) ? body.pts : []).slice(0, 60).map(q => ({ id: S(q?.id, 20) || rid(), la: num(q?.la, -90, 90), lo: num(q?.lo, -180, 180), name: S(q?.name, 120), kind: ['home', 'school', 'work', 'church', 'grave', 'war', 'other'].includes(q?.kind) ? q.kind : 'other', people: (Array.isArray(q?.people) ? q.people : []).map(x => S(x, 60)).filter(Boolean).slice(0, 20), story: S(q?.story, 3000), yr: S(q?.yr, 40) })).filter(q => q.la != null && q.lo != null && q.name);
+      const pts = (Array.isArray(body.pts) ? body.pts : []).slice(0, 60).map(q => ({ id: S(q?.id, 20) || rid(), la: num(q?.la, -90, 90), lo: num(q?.lo, -180, 180), name: S(q?.name, 120), kind: ['home', 'school', 'work', 'church', 'grave', 'war', 'other'].includes(q?.kind) ? q.kind : 'other', people: (Array.isArray(q?.people) ? q.people : []).map(x => S(x, 60)).filter(Boolean).slice(0, 20), story: S(q?.story, 3000), yr: S(q?.yr, 40), media: (Array.isArray(q?.media) ? q.media : []).map(x => /^[0-9a-f-]{36}$/.test(String(x?.p || '')) ? { p: x.p } : /^[\w-]{11}$/.test(String(x?.yt || '')) ? { yt: x.yt } : null).filter(Boolean).slice(0, 20) })).filter(q => q.la != null && q.lo != null && q.name);
       const it = { title: S(body.title, 120), intro: S(body.intro, 2000), pts };
       if (!it.title) return fail(res, 400, 'empty');
       if (cur) Object.assign(cur, it, { upd: new Date().toISOString(), updBy: me.id });
@@ -417,6 +417,16 @@ export default handler(async (req, res, ctx, url) => {
   }
 
   /* ── фото ── */
+  if (op === 'photo.faces') { // де на фото чиє обличчя: {pid: {x,y,s,r}} — частки зображення (квадрат); лише позначені на фото люди
+    const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');
+    if (!editor && p.created_by !== me.id) return fail(res, 403, 'forbidden');
+    const allowed = new Set([p.person_id, ...(((await cfgGet('photo_people')) || {})[p.id] || [])]);
+    const n = v => Math.round(Math.max(0, Math.min(1, Number(v) || 0)) * 1e4) / 1e4, f = {};
+    for (const [pid, b] of Object.entries(body.faces && typeof body.faces === 'object' ? body.faces : {}).slice(0, 40)) if (allowed.has(pid) && b && typeof b === 'object' && n(b.s) >= 0.01) f[pid] = { x: n(b.x), y: n(b.y), s: n(b.s), r: Math.round(Math.max(0.05, Math.min(20, Number(b.r) || 1)) * 1e4) / 1e4 };
+    const before = await cfgGet('photo_faces'), v = { ...before };
+    if (Object.keys(f).length) v[p.id] = f; else delete v[p.id];
+    await cfgSet('photo_faces', v, me.id, before); return done({ photoFaces: v }, 'photo:' + p.id);
+  }
   if (op === 'photo.people') { // хто на фото: позначені люди з дерева (фото з'являється і в їхніх картках)
     const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');
     if (!editor && p.created_by !== me.id) return fail(res, 403, 'forbidden');

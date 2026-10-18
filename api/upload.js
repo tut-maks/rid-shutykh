@@ -139,10 +139,14 @@ export default handler(async (req, res, ctx, url) => {
   const personId = ask ? '_ask' : String(url.searchParams.get('person') || '').slice(0, 60);
   const famRec = !ask && personId.startsWith('fam:'); // загальна історія роду (лише голосові записи)
   if (famRec && !isAudio) return fail(res, 415, 'type');
-  const person = ask || famRec ? null : await db.get('persons', { eq: { id: personId, deleted: false } });
+  // фото до місця на сімейному маршруті: person_id = rt:<id маршруту>; автор маршруту й редактори — одразу, інші — після підтвердження власника
+  const rtRec = !ask && /^rt:[\w-]{1,20}$/.test(personId);
+  let route = null;
+  if (rtRec) { if (isAudio || mime === 'application/pdf') return fail(res, 415, 'type'); try { route = ((await db.get('settings', { eq: { key: 'routes' } }))?.value || []).find(x => x.id === personId.slice(3)); } catch {} if (!route) return fail(res, 404, 'not_found'); }
+  const person = ask || famRec || rtRec ? null : await db.get('persons', { eq: { id: personId, deleted: false } });
   if (famRec && !(await db.get('families', { eq: { id: personId.slice(4) } }))) return fail(res, 404, 'not_found');
-  if (!ask && !famRec && !person) return fail(res, 404, 'not_found');
-  const pending = ask ? !can(me, 'editor') : !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
+  if (!ask && !famRec && !rtRec && !person) return fail(res, 404, 'not_found');
+  const pending = ask ? !can(me, 'editor') : rtRec ? !(route.by === me.id || can(me, 'editor')) : !(await canAddTo(me, personId)); // не своя гілка — фото чекає підтвердження власника
   // той самий файл уже завантажували (хеш оригіналу з браузера ?h= і хеш стиснутого файлу) — не дублювати
   const hs = [crypto.createHash('sha256').update(buf).digest('hex').slice(0, 40), String(url.searchParams.get('h') || '').replace(/[^0-9a-f]/g, '').slice(0, 40)].filter(x => x.length === 40);
   let hmap = {}; try { hmap = (await db.get('settings', { eq: { key: 'photo_hash' } }))?.value || {}; } catch {}

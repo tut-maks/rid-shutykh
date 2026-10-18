@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180955';
+const BUILD = '202610181029';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -693,6 +693,7 @@ function vPerson() {
   <div class="sec" style="align-content:start">
     <div class="phead">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? pimg(p, ` data-photo="${esc(p.portrait)}" data-pctx="${p.id}" title="Відкрити фото"`) : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? pimg(p) : esc((p.n || '?')[0])}</div>`}
       <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1><div class="relrow">${relBadge(p)}</div>${fixBtn(p.id)}</div></div>
+    ${(() => { if (!canEdit()) return ''; const grp = photos.filter(x => x.person !== p.id && !x.pending && x.mime !== 'application/pdf'); const need = grp.find(x => !facesOf(x.id)[p.id]); if (!need || (pu && p.pc)) return ''; return `<button class="btn line small facebtn" data-act="face-tag" data-v="${esc(need.id)}" title="${esc(need.caption || '')}">🙂 ${esc(short(p))} є на спільному фото — обвести обличчя</button>`; })()}
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
       ${relOf(p).c ? `<dt>Версії</dt><dd class="relc">${RELK.con.i}${esc(relOf(p).c)}</dd>` : ''}
@@ -2850,7 +2851,7 @@ function vRoutes() {
     ${can_ && ed ? `<button class="btn line small danger" data-act="rt-del">Видалити маршрут</button>` : ''}</div>
   <div class="rtwrap"><div class="geomap rtmap" id="rtmap"><div class="gm-tiles"></div><svg class="rt-line"></svg><div class="gm-pins"></div><div class="gm-base">${Object.entries(BASES).map(([k, b]) => `<button type="button" data-act="map-base" data-v="${k}" class="${(S.ui.rtBase || 'sat') === k ? 'on' : ''}">${b.name}</button>`).join('')}</div><div class="gm-attr">${esc(BASES[S.ui.rtBase || 'sat'].attr)}</div><div class="gm-z"><button data-act="rt-z" data-v="1" aria-label="Збільшити">+</button><button data-act="rt-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
   <ol class="rtpts">${r.pts.map((q, k) => `<li class="${k === i ? 'on' : ''}" id="rtp-${k}"><button class="rtpt" data-act="rt-pick" data-v="${k}"><span class="rtn">${k + 1}</span><span><b>${RT_K[q.kind][0]} ${esc(q.name)}</b>${q.yr ? ` <i class="small muted">${esc(q.yr)}</i>` : ''}</span></button>
-    ${q.people.length ? `<div class="small">${q.people.filter(x => P[x]).map(pLink).join(', ')}</div>` : ''}${q.story ? `<p>${esc(q.story).replace(/\n/g, '<br>')}</p>` : ''}
+    ${q.people.length ? `<div class="small">${q.people.filter(x => P[x]).map(pLink).join(', ')}</div>` : ''}${q.story ? `<p>${esc(q.story).replace(/\n/g, '<br>')}</p>` : ''}${rtMedia(q, ed)}
     ${ed ? `<div class="btns"><button class="btn line small" data-act="rt-pe" data-v="${k}">✎</button><button class="btn line small" data-act="rt-up" data-v="${k}" ${k ? '' : 'disabled'}>↑</button><button class="btn line small" data-act="rt-dn" data-v="${k}" ${k < r.pts.length - 1 ? '' : 'disabled'}>↓</button><button class="btn line small" data-act="rt-pd" data-v="${k}">✕</button></div>` : ''}</li>`).join('') || '<li class="muted small">Точок ще немає.' + (can_ ? ' Натисніть «Редагувати» і клацніть на карті.' : '') + '</li>'}</ol></div>
   <div class="sec"><h3>Спогади про ці місця</h3>${S.data.stories.filter(x => x.target === 'rt:' + r.id).map(x => `<div class="story"><p>${esc(x.text)}</p><span class="small muted">— ${esc(who(x.by))}, ${esc(when(x.at))}</span></div>`).join('')}${S.me ? storyForm('rt:' + r.id) : ''}</div>`;
 }
@@ -2858,22 +2859,46 @@ async function rtSave(r, patch) {
   const body = { op: 'route.save', id: r?.id || '', title: r?.title || '', intro: r?.intro || '', pts: r?.pts || [], ...patch };
   const res = await api('/api/data', { body }); S.data.cfg.routes = res.routes; return res;
 }
+// YouTube: посилання будь-якого виду → id відео (11 символів)
+const ytId = t => { t = String(t || '').trim(); const m = t.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/) || t.match(/^([\w-]{11})$/); return m ? m[1] : ''; };
+// фото й відео біля точки маршруту
+function rtMedia(q, edit) {
+  const M = q.media || []; if (!M.length) return '';
+  return `<div class="rtmed">${M.map((x, j) => x.p ? (S.data.photos.some(y => y.id === x.p) ? `<button type="button" class="rtm" data-act="rt-ph" data-v="${esc(x.p)}" title="Відкрити фото"><img src="${img('photo=' + x.p, 1)}" alt="" loading="lazy"></button>` : edit ? `<span class="rtm rtm-wait" title="Фото чекає підтвердження власника">⏳</span>` : '')
+    : `<button type="button" class="rtm rtm-yt" data-act="rt-yt" data-v="${esc(x.yt)}" title="Дивитися відео"><img src="https://i.ytimg.com/vi/${esc(x.yt)}/mqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer"><span>▶</span></button>`).join('')}</div>`;
+}
 function rtPointForm(r, k, ll) {
-  const q = k != null ? r.pts[k] : { name: '', kind: 'home', people: [], story: '', yr: '', la: ll[0], lo: ll[1] }; let ppl = q.people.slice();
+  const q = k != null ? r.pts[k] : { name: '', kind: 'home', people: [], story: '', yr: '', la: ll[0], lo: ll[1], media: [] }; let ppl = q.people.slice(), med = (q.media || []).slice();
   modal(`<h2>${k != null ? 'Змінити точку' : 'Нова точка'}</h2><div class="sec" style="gap:10px">
     <label class="f">Що тут<input class="in" id="rp-n" maxlength="120" value="${esc(q.name)}" placeholder="Напр.: «Хата Терентія Шутого»"></label>
     <label class="f">Тип<select class="in" id="rp-k">${Object.entries(RT_K).map(([v, [ic, t]]) => `<option value="${v}"${q.kind === v ? ' selected' : ''}>${ic} ${t}</option>`).join('')}</select></label>
     <label class="f">Коли <small class="muted">(роки, не обов'язково)</small><input class="in" id="rp-y" maxlength="40" value="${esc(q.yr || '')}" placeholder="напр. 1930-ті"></label>
     <div class="f"><span>Хто з родини пов'язаний</span><div class="tagl" id="rp-l"></div><input class="in" id="rp-q" type="search" placeholder="🔍 Почніть писати ім'я" autocomplete="off"><div class="tagres" id="rp-r"></div></div>
     <label class="f">Історія<textarea class="in" id="rp-s" maxlength="3000" placeholder="Що тут було, що розповідали…">${esc(q.story || '')}</textarea></label>
+    <div class="f"><span>Фото й відео</span><div class="rtmed rtmed-ed" id="rp-md"></div>
+      <div class="btns" style="margin:0"><label class="btn line small">📷 Додати фото<input type="file" id="rp-f" accept="image/*" multiple hidden></label></div>
+      <span class="rtll"><input class="in" id="rp-yt" placeholder="Посилання на відео YouTube" autocomplete="off" inputmode="url"><button type="button" class="btn line small" id="rp-yb">＋ Відео</button></span>
+      <span class="msg" id="rp-fm"></span></div>
     <div class="btns"><button class="btn" data-act="rp-save">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="rp-m"></span></div></div>`);
   const paint = () => { $('#rp-l').innerHTML = ppl.map(y => `<span class="tagc">${esc(short(P[y]))}<button type="button" data-rm="${y}">×</button></span>`).join(''); }; paint();
+  const mpaint = () => { $('#rp-md').innerHTML = med.map((x, j) => `<span class="rtm">${x.p ? (x.prev || S.data.photos.some(y => y.id === x.p) ? `<img src="${x.prev || img('photo=' + x.p, 1)}" alt="">` : '⏳') : `<img src="https://i.ytimg.com/vi/${esc(x.yt)}/mqdefault.jpg" alt="" referrerpolicy="no-referrer"><span>▶</span>`}<button type="button" class="rtm-x" data-mrm="${j}" aria-label="Прибрати">×</button></span>`).join('') || '<span class="small muted">Ще немає. Додайте фото хати, школи, могили — або посилання на відео.</span>'; }; mpaint();
+  $('#rp-md').addEventListener('click', e => { const b = e.target.closest('[data-mrm]'); if (b) { med.splice(+b.dataset.mrm, 1); mpaint(); } });
+  const fm = (t, err) => { const m = $('#rp-fm'); m.className = 'msg' + (err ? ' err' : ''); m.textContent = t; };
+  $('#rp-yb').onclick = () => { const v = ytId($('#rp-yt').value); if (!v) { fm('Не схоже на посилання YouTube.', 1); return; } if (!med.some(x => x.yt === v)) med.push({ yt: v }); $('#rp-yt').value = ''; fm(''); mpaint(); };
+  $('#rp-f').onchange = async e => { const fs = [...e.target.files]; e.target.value = ''; let wait = 0;
+    for (let n = 0; n < fs.length; n++) { const f = fs[n]; fm(`Надсилаю фото ${n + 1} з ${fs.length}… не закривайте вікно`);
+      try { const h = await fileHash(f), full = await bestPhoto(f), thumb = await toJpeg(f, 420, 0.78);
+        let id; try { const res = await api(`/api/upload?person=${encodeURIComponent('rt:' + r.id)}&caption=${encodeURIComponent($('#rp-n').value.trim())}&h=${h}`, { raw: full }); id = res.id; if (res.pending) wait++; await api(`/api/upload?kind=thumb&photo=${res.id}`, { raw: thumb }).catch(() => {}); }
+        catch (er) { if (er?.data?.id || er?.id) id = er.data?.id || er.id; else throw er; }
+        if (id && !med.some(x => x.p === id)) med.push({ p: id, prev: URL.createObjectURL(thumb) }); mpaint();
+      } catch (er) { fm('Не вдалося надіслати фото. Спробуйте ще раз.', 1); return; } }
+    fm(wait ? 'Готово. Фото з’являться для всіх після підтвердження власника.' : 'Готово — не забудьте «Зберегти».'); };
   $('#rp-q').addEventListener('input', e => { const L = personFind(e.target.value).filter(p => !ppl.includes(p.id)); $('#rp-r').innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-pick="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span><em>＋</em></button>`).join('') : ''; });
   $('#rp-r').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { ppl.push(b.dataset.pick); paint(); $('#rp-q').value = ''; $('#rp-r').innerHTML = ''; } });
   $('#rp-l').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { ppl = ppl.filter(y => y !== b.dataset.rm); paint(); } });
   RTF = async () => { const n = $('#rp-n').value.trim(), m = $('#rp-m'); if (!n) { m.className = 'msg err'; m.textContent = 'Напишіть, що тут.'; return; }
-    const np = { ...q, name: n, kind: $('#rp-k').value, yr: $('#rp-y').value.trim(), people: ppl, story: $('#rp-s').value.trim() }; const pts = r.pts.slice(); if (k != null) pts[k] = np; else pts.push(np);
-    await rtSave(r, { pts }); closeLayer(); S.ui.rtI = k != null ? k : pts.length - 1; S.ui.keepScroll = true; render(); };
+    const np = { ...q, name: n, kind: $('#rp-k').value, yr: $('#rp-y').value.trim(), people: ppl, story: $('#rp-s').value.trim(), media: med.map(x => x.p ? { p: x.p } : { yt: x.yt }) }; const pts = r.pts.slice(); if (k != null) pts[k] = np; else pts.push(np);
+    await rtSave(r, { pts }); if (med.some(x => x.p)) await load(); closeLayer(); S.ui.rtI = k != null ? k : pts.length - 1; S.ui.keepScroll = true; render(); };
 }
 let RTF = null;
 function rtMount() {
@@ -3317,6 +3342,10 @@ document.addEventListener('click', async e => {
     if (a === 'rt-pick' || a === 'rt-go') { const r = RTS().find(x => x.id === S.arg); if (!r?.pts.length) return; let i = a === 'rt-pick' ? +t.dataset.v : Math.max(0, Math.min(r.pts.length - 1, (S.ui.rtI ?? -1) + +t.dataset.v)); S.ui.rtI = i;
       const G = S.ui.rtG; if (G) { const [wx, wy] = merc(r.pts[i].la, r.pts[i].lo); G.cx = wx; G.cy = wy; G.z = Math.max(G.z, 15); }
       S.ui.keepScroll = true; render(); document.getElementById('rtp-' + i)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+    if (a === 'face-tag') { faceTag(t.dataset.v); return; }
+    if (a === 'rt-ph') { openPhoto(t.dataset.v); return; }
+    if (a === 'rt-yt') { const v = t.dataset.v; if (!/^[\w-]{11}$/.test(v)) return; const w = document.createElement('div'); w.className = 'rtyt'; w.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v}?autoplay=1&rel=0" title="Відео" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><button type="button" class="btn line small" data-act="rt-ytx">Закрити відео</button>`; t.closest('.rtmed').after(w); return; }
+    if (a === 'rt-ytx') { t.closest('.rtyt')?.remove(); return; }
     if (a === 'rt-pe') { const r = RTS().find(x => x.id === S.arg); rtPointForm(r, +t.dataset.v); return; }
     if (a === 'rp-save') { t.disabled = true; try { await RTF?.(); } catch (e) { t.disabled = false; const m = $('#rp-m'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } } return; }
     if (a === 'rt-up' || a === 'rt-dn' || a === 'rt-pd') { const r = RTS().find(x => x.id === S.arg), k = +t.dataset.v, pts = r.pts.slice();
@@ -3769,6 +3798,47 @@ async function upload(personId, files) {
   if (n) { await load(); S.ui.keepScroll = true; render(); toast(pend ? `Надіслано фото: ${n}. Вони з'являться для всіх після підтвердження Максимом.` : `Додано фото: ${n}`); }
   const ids = upload.ids || []; upload.ids = []; if (ids.length) photoTag(ids, 0, personId);
 }
+// «Позначити обличчя»: на фото для кожної позначеної людини — квадрат на обличчі. Зберігається в settings.photo_faces,
+// а людям без головного фото (або з цим фото головним) обличчя стає аватаркою (person.portrait + pc).
+const facesOf = id => (CFG_().photoFaces || {})[id] || {};
+function faceTag(id, after) {
+  const x = S.data.photos.find(y => y.id === id); if (!x) return;
+  const people = [x.person, ...tagsOf(id)].filter(y => P[y]); if (!people.length) { toast('Спершу позначте, хто на фото.'); return; }
+  const F = JSON.parse(JSON.stringify(facesOf(id))); let act = people.find(y => !F[y]) || people[0];
+  const mk = {}; people.forEach(y => { mk[y] = !P[y].portrait || P[y].portrait === id; });
+  modal(`<h2>Чиє обличчя де?</h2><p class="muted small">Оберіть людину нижче й клацніть на її обличчя на фото. Рамку можна перетягнути; розмір — повзунком або коліщатком миші.</p>
+    <div class="crp fcbox" id="fc"><img src="${img('photo=' + id)}" alt="" draggable="false"><div id="fc-b"></div></div>
+    <label class="crp-z">Розмір рамки <input type="range" id="fc-z" min="2" max="60" value="12"></label>
+    <div class="fcppl" id="fc-p"></div>
+    <div class="btns"><button class="btn" id="fc-ok">Зберегти</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="fc-m"></span></div>`);
+  const box = $('#fc'), im = box.querySelector('img'), lay = $('#fc-b'), z = $('#fc-z');
+  let r = 1;
+  const cl = b => { b.s = Math.max(.01, Math.min(b.s, 1, 1 / r)); b.x = Math.max(0, Math.min(b.x, 1 - b.s)); b.y = Math.max(0, Math.min(b.y, 1 - b.s * r)); b.r = r; return b; };
+  const paint = () => { const W = im.clientWidth, H = im.clientHeight; if (!W) return;
+    lay.innerHTML = people.filter(y => F[y]).map(y => { const b = F[y]; return `<div class="fcb${y === act ? ' on' : ''}" data-fp="${y}" style="left:${b.x * W}px;top:${b.y * H}px;width:${b.s * W}px;height:${b.s * W}px"><span>${esc(short(P[y]))}</span></div>`; }).join('');
+    $('#fc-p').innerHTML = people.map(y => `<div class="fcrow${y === act ? ' on' : ''}"><button type="button" class="tagc fcpick" data-fa="${y}">${F[y] ? '✓' : '○'} ${esc(short(P[y]))}</button>${F[y] ? `<label class="small"><input type="checkbox" data-fm="${y}"${mk[y] ? ' checked' : ''}> головне фото${P[y].portrait && P[y].portrait !== id ? ' <span class="muted">(зараз інше)</span>' : ''}</label><button type="button" class="btn line small" data-fx="${y}">прибрати</button>` : '<span class="small muted">не позначено</span>'}</div>`).join('');
+    if (F[act]) z.value = Math.round(F[act].s * 100); };
+  const init = () => { r = im.naturalHeight / im.naturalWidth || 1; Object.values(F).forEach(cl); paint(); };
+  if (im.complete && im.naturalWidth) init(); else im.onload = init;
+  let drag = null;
+  box.addEventListener('pointerdown', e => { e.preventDefault(); const R_ = im.getBoundingClientRect(), fb = e.target.closest('[data-fp]');
+    if (fb) { act = fb.dataset.fp; const b = F[act]; drag = { px: e.clientX, py: e.clientY, x: b.x, y: b.y }; box.setPointerCapture(e.pointerId); paint(); return; }
+    const s0 = F[act]?.s || .12; F[act] = cl({ x: (e.clientX - R_.left) / R_.width - s0 / 2, y: (e.clientY - R_.top) / R_.height - s0 * r / 2, s: s0 }); paint(); });
+  box.addEventListener('pointermove', e => { if (!drag) return; const b = F[act]; b.x = drag.x + (e.clientX - drag.px) / im.clientWidth; b.y = drag.y + (e.clientY - drag.py) / im.clientHeight; cl(b); paint(); });
+  const end = () => { drag = null; }; box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+  const resize = ns => { const b = F[act]; if (!b) return; const cx = b.x + b.s / 2, cy = b.y + b.s * r / 2; b.s = ns; b.x = cx - b.s / 2; b.y = cy - b.s * r / 2; cl(b); paint(); };
+  z.addEventListener('input', () => resize(z.value / 100));
+  box.addEventListener('wheel', e => { if (!F[act]) return; e.preventDefault(); resize(F[act].s * (e.deltaY > 0 ? 1.08 : 1 / 1.08)); }, { passive: false });
+  $('#fc-p').addEventListener('click', e => { const a = e.target.closest('[data-fa]'), xb = e.target.closest('[data-fx]');
+    if (a) { act = a.dataset.fa; paint(); } if (xb) { delete F[xb.dataset.fx]; paint(); } });
+  $('#fc-p').addEventListener('change', e => { const c = e.target.closest('[data-fm]'); if (c) mk[c.dataset.fm] = c.checked; });
+  window.addEventListener('resize', paint, { once: true });
+  $('#fc-ok').onclick = async () => { const m = $('#fc-m'), btn = $('#fc-ok'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
+    try { const res = await api('/api/data', { body: { op: 'photo.faces', id, faces: F } }); S.data.cfg.photoFaces = res.photoFaces; let n = 0;
+      for (const y of people) if (F[y] && mk[y] && canEdit()) { const rr = await api('/api/data', { body: { op: 'person.portrait', id: y, photo: id, pc: { x: F[y].x, y: F[y].y, s: F[y].s, r } } }); Object.keys(P[y]).forEach(k => { if (k === 'pc') delete P[y].pc; }); Object.assign(P[y], rr.person); n++; }
+      closeLayer(); S.ui.keepScroll = true; render(); toast(n ? `Збережено. Обличчя стало головним фото: ${n}` : 'Збережено'); after?.(); }
+    catch (err) { btn.disabled = false; m.className = 'msg err'; m.textContent = errText(err); } };
+}
 // Одразу після завантаження: підпис і «хто на фото» (вибір людей з дерева)
 function photoTag(ids, k, personId, opt = {}) {
   const id = ids[k]; const x = S.data.photos.find(y => y.id === id); if (!x) { if (k + 1 < ids.length) photoTag(ids, k + 1, personId); return; }
@@ -3780,13 +3850,17 @@ function photoTag(ids, k, personId, opt = {}) {
       <label class="f">Підпис<textarea class="in" id="tg-c" maxlength="500" placeholder="Хто, коли, де. Напр.: «Весілля Івана й Ольги, Веприк, 1972»">${esc(x.caption || '')}</textarea></label>
       <div class="f"><span>Хто на фото <small class="muted">— оберіть людей з дерева</small></span><div class="tagl" id="tg-l">${chips()}</div>
         <input class="in" id="tg-q" type="search" placeholder="🔍 Почніть писати ім'я, напр. «Настя» або «Шутий Іван»" autocomplete="off" enterkeyhint="search"><div class="tagres" id="tg-r"></div></div>
-      ${opt.note ? `<p class="muted small">${opt.note}</p>` : ''}<div class="btns"><button class="btn" id="tg-save">${opt.save || (k + 1 < ids.length ? 'Зберегти й далі' : 'Зберегти')}</button><button class="btn line" data-act="close">${opt.done ? 'Скасувати' : 'Пропустити'}</button><span class="msg" id="tg-m"></span></div></div>`);
+      ${opt.note ? `<p class="muted small">${opt.note}</p>` : ''}<div class="btns"><button class="btn" id="tg-save">${opt.save || (k + 1 < ids.length ? 'Зберегти й далі' : 'Зберегти')}</button>${canEdit() || x.by === S.me?.id ? '<button class="btn line" id="tg-face" title="Обвести обличчя кожного — і воно стане фото в його картці">🙂 Позначити обличчя</button>' : ''}<button class="btn line" data-act="close">${opt.done ? 'Скасувати' : 'Пропустити'}</button><span class="msg" id="tg-m"></span></div></div>`);
   const paint = () => { $('#tg-l').innerHTML = chips(); };
   const q = $('#tg-q'), res = $('#tg-r');
   const find = () => { const L = personFind(q.value).filter(p => !sel.includes(p.id)); res.innerHTML = q.value.trim() ? (L.length ? L.map(p => `<button type="button" class="tagopt" data-pick="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span><em>＋</em></button>`).join('') : '<p class="muted small">Нікого не знайдено. Спробуйте інакше: лише ім’я або прізвище.</p>') : ''; };
   q.addEventListener('input', find);
   res.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; sel.push(b.dataset.pick); paint(); q.value = ''; res.innerHTML = ''; q.focus(); });
   $('#tg-l').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { sel = sel.filter(y => y !== b.dataset.rm); paint(); } });
+  if ($('#tg-face')) $('#tg-face').onclick = async () => { const m = $('#tg-m'); m.className = 'msg'; m.textContent = 'Зберігаю…';
+    try { const c = $('#tg-c').value.trim(); if (c !== (x.caption || '')) { await api('/api/data', { body: { op: 'photo.caption', id, caption: c } }); x.caption = c; }
+      const others = sel.filter(y => y !== x.person); if (others.join() !== tagsOf(id).join()) { const r = await api('/api/data', { body: { op: 'photo.people', id, people: others } }); S.data.cfg.photoPeople = r.photoPeople; (r.persons || []).forEach(q => { if (P[q.id]) Object.assign(P[q.id], q); }); }
+      closeLayer(); faceTag(id); } catch (err) { m.className = 'msg err'; m.textContent = errText(err); } };
   $('#tg-save').onclick = async () => { const b = $('#tg-save'), m = $('#tg-m'); b.disabled = true; m.className = 'msg'; m.textContent = 'Зберігаю…';
     try { if (opt.done && !sel.length && $('#tg-c').value.trim() === (x.caption || '').trim()) { b.disabled = false; m.className = 'msg err'; m.textContent = 'Напишіть, хто на фото, або оберіть людину з дерева'; return; }
       const c = $('#tg-c').value.trim(); if (c !== (x.caption || '')) { await api('/api/data', { body: { op: 'photo.caption', id, caption: c } }); x.caption = c; }
