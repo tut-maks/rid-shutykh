@@ -158,6 +158,12 @@ def derive(rows):
                 t = rows.get(f'd:{did}:date', {})
                 if t.get('who', '').startswith('Вінчання') and ok(t) and pid in dr['value'].split() and m[1] in dr['value'].split():
                     mark(r, did, 'запис про вінчання'); break
+    # ім'я — «звірено», якщо людину знайдено у звіреному складі людей хоча б одного документа
+    for r in rows.values():
+        if r['kind'] == 'p' and r['field'] == 'name' and r['status'] == 'є скан — не звірено':
+            for did, dr in D.items():
+                if ok(dr) and r['id'] in dr['value'].split():
+                    mark(r, did, "ім'я — у звіреному документі"); break
     return n
 
 
