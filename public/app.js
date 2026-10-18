@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180742';
+const BUILD = '202610180747';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -246,7 +246,7 @@ function estBY(p, dep = 0, seen = new Set()) {
   const ks = (KIDS[p.id] || []).map(k => yOf_(P[k]?.b)).filter(Boolean); if (ks.length) return Math.min(...ks) - 25;
   const sp = (SPOUSES[p.id] || []).map(x => yOf_(P[x?.id || x]?.b)).filter(Boolean); return sp.length ? sp[0] : null;
 }
-const isDead = p => !!(p && (p.d || (estBY(p) ?? 9999) < new Date().getFullYear() - 105));
+const isDead = p => !!(p && (p.d || p.dead || (estBY(p) ?? 9999) < new Date().getFullYear() - 105));
 const deadCls = p => isDead(p) ? ' dead' : '';
 
 function famSelect(f) {
