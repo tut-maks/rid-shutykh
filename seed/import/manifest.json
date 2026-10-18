@@ -53762,5 +53762,53 @@
     "Іоанн (1866–21.06.1883), Іван (1869; Є припущення — див. його картку), Петро (27.06.1871)"
    ]
   ]
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1848",
+  "id": "d1848",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6XQX-NJ91"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1871",
+  "id": "d1871",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6XQ6-WKX6"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1872",
+  "id": "d1872",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6XQ6-C5MS"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1874",
+  "id": "d1874",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6XQD-L4JW"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1896",
+  "id": "d1896",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6XQ6-C7QZ"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1911v",
+  "id": "d1911v",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6X31-BMFX"
+  }
  }
 ]
