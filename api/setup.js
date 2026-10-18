@@ -102,7 +102,12 @@ export default handler(async (req, res, _c, url) => {
         out.push(key + ': ok' + (mg ? ` (об'єднано з наявною карткою: ${mg})` : ''));
       } else if (it.kind === 'merge') { // прибрати дублі картки it.keep: усі картки тієї самої людини зводяться в неї
         const k = await db.get('persons', { eq: { id: String(it.keep), deleted: false } }); if (!k) { out.push(key + ': no person'); continue; }
-        if (it.drop) { const r = await mergePersons(k.id, String(it.drop), by); out.push(key + (r.ok ? ': ok' : ': ' + (r.error === 'not_found' ? 'вже є' : r.error))); continue; } // явно вказана друга картка (імена різняться: «Аня» = «Анна»)
+        if (it.drop) { const dr = String(it.drop); const r = await mergePersons(k.id, dr, by);
+          if (r.error === 'not_found') { // другу картку вже видалили вручну — переводимо на keep дітей і прибираємо її шлюби, щоб нічого не «висіло»
+            let n = 0; for (const p of await db.list('persons', { eq: { deleted: false } })) if (p.data.f === dr || p.data.mo === dr) { const nd = { ...p.data }; if (nd.f === dr) nd.f = k.id; if (nd.mo === dr) nd.mo = k.id; await db.update('persons', { eq: { id: p.id } }, { data: nd, version: (p.version || 1) + 1, updated_by: by, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, nd, by); n++; }
+            for (const u of await db.list('unions', { eq: { deleted: false } })) if (u.a === dr || u.b === dr) { await db.update('unions', { eq: { id: u.id } }, { deleted: true }); await revision('union', u.id, 'delete', u, null, by); n++; }
+            out.push(key + `: ok (картку вже видалено; переведено зв'язків: ${n})`); continue; }
+          out.push(key + (r.ok ? ': ok' : ': ' + r.error)); continue; } // явно вказана друга картка (імена різняться: «Аня» = «Анна»)
         const dd = (await findDupes({ id: k.id, ...k.data })).filter(d => !d.data.root);
         if (!dd.length) { out.push(key + ': вже є'); continue; }
         for (const d of dd) await mergePersons(k.id, d.id, by);
