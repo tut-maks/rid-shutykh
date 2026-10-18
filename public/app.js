@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180750';
+const BUILD = '202610180851';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -419,7 +419,7 @@ function vPedigree(tabs) {
 const vpCtl = mini => `<div class="vpctl"><button data-zoom-in title="Збільшити">+</button><button data-zoom-out title="Зменшити">−</button><button data-zoom-fit title="Показати все">⤢</button><button data-full title="На весь екран">⛶</button>${mini ? `<button type="button" data-act="mini-tog" class="${S.ui.mini ? 'on' : ''}" title="Мінікарта: показати / сховати">▦</button>` : ''}</div>${mini ? `<canvas class="minimap" id="minimap" width="220" height="140"${S.ui.mini ? '' : ' hidden'}></canvas>` : ''}`;
 
 /* ── Дерево згори вниз: людина в центрі, над нею батьки, діди…; біля кожного предка — брати й сестри ── */
-const T2 = { W: 216, H: 76, GX: 22, GY: 92, PAD: 60 };
+const T2 = { W: 236, H: 92, GX: 22, GY: 92, PAD: 60 }; /* картка дерева: фото 70 px (власник, 18.10 — більші фото) */
 const tname = p => [String(p.n || '').replace(/\s*\([^)]*\)/g, ''), p.s].filter(Boolean).join(' ') + (maidenOf(p) ? ` (${maidenOf(p)})` : '') || '(без імені)'; // у дереві — без «(Настя)», повне ім'я в підказці
 const P2 = T2.W + T2.GX;
 function treeCenter() { const f = S.ui.tf || {}; if (f.center && P[f.center]) return f.center; return startId(); }

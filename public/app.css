@@ -741,9 +741,9 @@ body{background:var(--paper)}
 .tbar2 .legend{margin-left:auto}
 /* полотно і картки */
 .vp{border:0!important;border-radius:16px;background-color:transparent!important;background-image:radial-gradient(rgba(60,40,30,.13) 1px,transparent 1.2px)!important;background-size:22px 22px!important}
-.nd.t2{width:216px!important;height:76px!important;padding:10px 14px!important;grid-template-columns:52px minmax(0,1fr)!important;gap:14px!important;background:var(--sheet);border:1px solid #EAE3D9!important;border-radius:var(--rr)!important;box-shadow:var(--sh1);transition:box-shadow .15s,border-color .15s,background .15s}
+.nd.t2{width:236px!important;height:92px!important;padding:10px 12px!important;grid-template-columns:70px minmax(0,1fr)!important;gap:12px!important;background:var(--sheet);border:1px solid #EAE3D9!important;border-radius:var(--rr)!important;box-shadow:var(--sh1);transition:box-shadow .15s,border-color .15s,background .15s}
 .nd.t2:hover{border-color:var(--wine3)!important;box-shadow:0 2px 4px rgba(60,40,30,.08),0 10px 28px -10px rgba(60,40,30,.24)}
-.nd.t2 .av{width:50px;height:50px;font-size:19px}
+.nd.t2 .av{width:70px;height:70px;font-size:24px}
 .nd.t2 b{font-family:var(--f-display);font-weight:400;font-size:17px!important;line-height:1.15;-webkit-line-clamp:2}
 .nd.t2 .y{font-family:var(--f-body);font-size:13px!important;color:var(--ink2)}
 .nd.t2.root{border:1.5px solid var(--wine)!important}
