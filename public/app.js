@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180003';
+const BUILD = '202610180007';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -702,7 +702,7 @@ function vPerson() {
     </div>
   </div>
   <div class="sec" style="align-content:start;gap:30px">
-    ${(() => { const Q = S.me ? ivQuestions(startId()).filter(q => q.id === p.id && p.id !== startId()) : []; const A = new Set(S.data.stories.filter(s => s.target === 'iv:' + p.id).map(s => (s.text.match(/^«([^»]*)»/) || [])[1])); const O = Q.filter(q => !A.has(q.t)); return O.length ? `<div class="sec ivp"><h3>🎙 Чого ми не знаємо про ${esc(short(p))}</h3><ul>${O.slice(0, 4).map(q => `<li>${esc(q.t)}</li>`).join('')}</ul><a class="btn small" href="#/iv" data-act="iv-who" data-id="${startId()}">Знаю відповідь</a></div>` : ''; })()}
+    ${(() => { const Q = S.me ? ivQuestions(startId()).filter(q => q.id === p.id && p.id !== startId()) : []; const A = new Set(S.data.stories.filter(s => s.target === 'iv:' + p.id).map(s => (s.text.match(/^«([^»]*)»/) || [])[1])); const O = Q.filter(q => !A.has(q.t)); return O.length ? `<div class="sec ivp"><h3>🎙 Чого ми не знаємо про ${esc(short(p))}</h3><ul>${O.slice(0, 5).map(q => { const key = q.id + ':' + q.k; return `<li><div>${esc(q.t)}</div><div class="ivbtn"><button class="btn line small" data-act="iv-open" data-k="${esc(key)}">✍ Знаю відповідь</button><button class="btn line small" data-act="iv-rec" data-id="${q.id}" data-q="${esc(q.t)}">🎙 Голосом</button></div><div class="ivform" id="ivf-${esc(key)}" hidden><textarea class="in" placeholder="Що знаєте? Хто розповідав?"></textarea><div class="btns"><button class="btn small" data-act="iv-save" data-id="${q.id}" data-k="${esc(key)}" data-q="${esc(q.t)}">Зберегти відповідь</button><span class="msg"></span></div></div></li>`; }).join('')}</ul>${O.length > 5 ? `<a class="small" href="#/iv">Ще ${O.length - 5} питань →</a>` : ''}</div>` : ''; })()}
     <div class="sec"><h3>Про людину <span class="btns" style="gap:6px">${canEdit() ? `<button class="btn line small" data-act="edit">Редагувати</button>` : ''}<button class="btn line small" data-act="q-ask">Запитати</button><button class="btn line small" data-act="fb-open" data-id="${p.id}" title="Сімейна книга (PDF): ця людина, її предки й нащадки — з біографіями, фото й джерелами">📖 Книга</button></span></h3>
       ${childAge(p) && !/малим|малою|немовл/.test(p.note || '') ? `<p class="about kd-line">† ${esc(childAge(p).txt)}</p>` : ''}
       ${birthPara(p, docs)}
