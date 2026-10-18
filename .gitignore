@@ -3,3 +3,5 @@ node_modules/
 *.mock.json
 .env*
 __pycache__/
+*live*.json
+live_*.json
