@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610181029';
+const BUILD = '202610181112';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -693,7 +693,7 @@ function vPerson() {
   <div class="sec" style="align-content:start">
     <div class="phead">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? pimg(p, ` data-photo="${esc(p.portrait)}" data-pctx="${p.id}" title="Відкрити фото"`) : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? pimg(p) : esc((p.n || '?')[0])}</div>`}
       <div><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1><div class="relrow">${relBadge(p)}</div>${fixBtn(p.id)}</div></div>
-    ${(() => { if (!canEdit()) return ''; const grp = photos.filter(x => x.person !== p.id && !x.pending && x.mime !== 'application/pdf'); const need = grp.find(x => !facesOf(x.id)[p.id]); if (!need || (pu && p.pc)) return ''; return `<button class="btn line small facebtn" data-act="face-tag" data-v="${esc(need.id)}" title="${esc(need.caption || '')}">🙂 ${esc(short(p))} є на спільному фото — обвести обличчя</button>`; })()}
+    ${(() => { if (!canEdit()) return ''; const grp = photos.filter(x => x.person !== p.id && !x.pending && x.mime !== 'application/pdf'); const need = grp.find(x => !facesOf(x.id)[p.id]); if (!need || (pu && p.pc)) return ''; return `<button class="btn line small facebtn" data-act="face-tag" data-v="${esc(need.id)}" data-p="${esc(p.id)}" title="${esc(need.caption || '')}">🙂 ${esc(short(p))} є на спільному фото — обвести обличчя</button>`; })()}
     <dl class="facts">
       ${p.b ? `<dt>Народження</dt><dd><span class="mono">${esc(p.b)}</span>${p.bp ? ' · ' + esc(p.bp) : ''}</dd>` : p.bp ? `<dt>Звідки</dt><dd>${esc(p.bp)}</dd>` : ''}
       ${relOf(p).c ? `<dt>Версії</dt><dd class="relc">${RELK.con.i}${esc(relOf(p).c)}</dd>` : ''}
@@ -3342,7 +3342,7 @@ document.addEventListener('click', async e => {
     if (a === 'rt-pick' || a === 'rt-go') { const r = RTS().find(x => x.id === S.arg); if (!r?.pts.length) return; let i = a === 'rt-pick' ? +t.dataset.v : Math.max(0, Math.min(r.pts.length - 1, (S.ui.rtI ?? -1) + +t.dataset.v)); S.ui.rtI = i;
       const G = S.ui.rtG; if (G) { const [wx, wy] = merc(r.pts[i].la, r.pts[i].lo); G.cx = wx; G.cy = wy; G.z = Math.max(G.z, 15); }
       S.ui.keepScroll = true; render(); document.getElementById('rtp-' + i)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
-    if (a === 'face-tag') { faceTag(t.dataset.v); return; }
+    if (a === 'face-tag') { faceTag(t.dataset.v, null, t.dataset.p); return; }
     if (a === 'rt-ph') { openPhoto(t.dataset.v); return; }
     if (a === 'rt-yt') { const v = t.dataset.v; if (!/^[\w-]{11}$/.test(v)) return; const w = document.createElement('div'); w.className = 'rtyt'; w.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v}?autoplay=1&rel=0" title="Відео" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><button type="button" class="btn line small" data-act="rt-ytx">Закрити відео</button>`; t.closest('.rtmed').after(w); return; }
     if (a === 'rt-ytx') { t.closest('.rtyt')?.remove(); return; }
@@ -3801,10 +3801,10 @@ async function upload(personId, files) {
 // «Позначити обличчя»: на фото для кожної позначеної людини — квадрат на обличчі. Зберігається в settings.photo_faces,
 // а людям без головного фото (або з цим фото головним) обличчя стає аватаркою (person.portrait + pc).
 const facesOf = id => (CFG_().photoFaces || {})[id] || {};
-function faceTag(id, after) {
+function faceTag(id, after, pid) {
   const x = S.data.photos.find(y => y.id === id); if (!x) return;
   const people = [x.person, ...tagsOf(id)].filter(y => P[y]); if (!people.length) { toast('Спершу позначте, хто на фото.'); return; }
-  const F = JSON.parse(JSON.stringify(facesOf(id))); let act = people.find(y => !F[y]) || people[0];
+  const F = JSON.parse(JSON.stringify(facesOf(id))); let act = people.includes(pid) ? pid : people.find(y => !F[y]) || people[0];
   const mk = {}; people.forEach(y => { mk[y] = !P[y].portrait || P[y].portrait === id; });
   modal(`<h2>Чиє обличчя де?</h2><p class="muted small">Оберіть людину нижче й клацніть на її обличчя на фото. Рамку можна перетягнути; розмір — повзунком або коліщатком миші.</p>
     <div class="crp fcbox" id="fc"><img src="${img('photo=' + id)}" alt="" draggable="false"><div id="fc-b"></div></div>
@@ -3823,7 +3823,7 @@ function faceTag(id, after) {
   let drag = null;
   box.addEventListener('pointerdown', e => { e.preventDefault(); const R_ = im.getBoundingClientRect(), fb = e.target.closest('[data-fp]');
     if (fb) { act = fb.dataset.fp; const b = F[act]; drag = { px: e.clientX, py: e.clientY, x: b.x, y: b.y }; box.setPointerCapture(e.pointerId); paint(); return; }
-    const s0 = F[act]?.s || .12; F[act] = cl({ x: (e.clientX - R_.left) / R_.width - s0 / 2, y: (e.clientY - R_.top) / R_.height - s0 * r / 2, s: s0 }); paint(); });
+    const isNew = !F[act], s0 = F[act]?.s || Object.values(F)[0]?.s || .12; F[act] = cl({ x: (e.clientX - R_.left) / R_.width - s0 / 2, y: (e.clientY - R_.top) / R_.height - s0 * r / 2, s: s0 }); if (isNew) { const nx = people.find(y => !F[y]); if (nx) act = nx; } paint(); }); // нова рамка — одразу наступна людина без рамки
   box.addEventListener('pointermove', e => { if (!drag) return; const b = F[act]; b.x = drag.x + (e.clientX - drag.px) / im.clientWidth; b.y = drag.y + (e.clientY - drag.py) / im.clientHeight; cl(b); paint(); });
   const end = () => { drag = null; }; box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
   const resize = ns => { const b = F[act]; if (!b) return; const cx = b.x + b.s / 2, cy = b.y + b.s * r / 2; b.s = ns; b.x = cx - b.s / 2; b.y = cy - b.s * r / 2; cl(b); paint(); };
