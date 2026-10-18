@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610181116';
+const BUILD = '202610181244';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2835,6 +2835,19 @@ function parseLL(t) {
   if (v[0].h === 'E' || v[0].h === 'W') v = [v[1], v[0]];
   const [la, lo] = [v[0].x, v[1].x]; return Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? [la, lo] : null;
 }
+// «Цифри роду»: довгі таблиці згорнуті до ~8 рядків, кнопка «Показати всі (N)» / «Згорнути»; стан пам'ятаємо в S.ui.stOpen
+function stFold() {
+  const open = (S.ui.stOpen ||= {});
+  document.querySelectorAll('.stgrid .tablebox').forEach((b, i) => {
+    if (b.dataset.fold) return; b.dataset.fold = '1';
+    const n = b.querySelectorAll('tbody tr').length; if (n <= 8) return;
+    const k = (b.closest('.sec')?.querySelector('h3')?.textContent || '') + ':' + i;
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn line small stmore';
+    const set = () => { const o = !!open[k]; b.classList.toggle('folded', !o); btn.textContent = o ? 'Згорнути ▲' : `Показати всі (${n}) ▼`; };
+    btn.onclick = () => { open[k] = !open[k]; set(); };
+    b.after(btn); set();
+  });
+}
 function vRoutes() {
   const R = RTS(), r = S.arg && R.find(x => x.id === S.arg);
   if (!r) return `<div class="lede"><h1>Сімейні маршрути</h1><p class="small muted">Прогулянка місцями родини: де стояла хата, куди ходили до школи, де працювали, де спочивають. Біля кожної точки — історія. Можна пройти маршрут удома на екрані або справді, з телефоном у руці.</p></div>
@@ -3535,6 +3548,7 @@ function render() {
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'geo') requestAnimationFrame(geoMount);
   if (S.view === 'routes' && S.arg) requestAnimationFrame(rtMount);
+  if (S.view === 'stats') requestAnimationFrame(stFold);
   if (S.data && S.me && !ivNudge.done) { ivNudge.done = 1; ivNudge(); }
   stickBars();
   if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');

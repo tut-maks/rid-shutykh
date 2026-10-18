@@ -1576,3 +1576,7 @@ body:has(#layer .scrim) .ivnudge{display:none}
 @media (max-width:820px){.fcpick{min-height:44px}}
 .fcnow{background:var(--wine,#7b2d3a);color:#fff;border-radius:8px;padding:8px 12px;margin:4px 0 8px;font-size:15px}
 .fcnow b{font-weight:700}
+/* «Цифри роду»: згорнуті таблиці */
+.stgrid .tablebox.folded{max-height:23em;overflow:hidden;position:relative}
+.stgrid .tablebox.folded::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4em;background:linear-gradient(rgba(246,243,237,0),var(--bg,#f6f3ed));pointer-events:none}
+.stmore{margin-top:6px}
