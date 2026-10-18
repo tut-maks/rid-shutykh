@@ -144,6 +144,32 @@ def main():
                     impl = dy - int(m.group(2))
                     if abs(impl - by) > (5 if approx(b) else 3): add('I', p, f"у {doc['id']} «{m.group(0)[:40]}» → нар. бл. {impl}, у картці {b}")
                     break
+    # M — по батькові не того роду (жінка «…ович», чоловік «…івна»)
+    for p in P.values():
+        pt = (p.get('pt') or '').split('(')[0].strip().lower()
+        if p.get('sex') == 'f' and re.search(r'(ович|евич|ич)$', pt): add('M', p, f"жінка, а по батькові «{p['pt']}»")
+        if p.get('sex') == 'm' and re.search(r'(івна|ївна|овна|ична)$', pt): add('M', p, f"чоловік, а по батькові «{p['pt']}»")
+        # N — дата в описі «у віці N днів/місяців» без документа про народження
+        if re.search(r'у віці \d+ (дн|тиж|міс)', p.get('note') or '') and not any(d.get('title', '').startswith(('Народж',)) for d in PD[p['id']]):
+            add('N', p, 'вік у днях/місяцях порахований від дати народження, якої немає в документах')
+    # O — рамка на сторінці, якої немає; P — той самий запис FamilySearch двічі
+    byurl = defaultdict(list)
+    for d in D.values():
+        pages = d.get('pages') or 0
+        pages = len(pages) if isinstance(pages, list) else pages
+        for mk in d.get('marks') or []:
+            if pages and mk.get('p', 0) >= pages: out.append(('O', d['id'], f"рамка на сторінці {mk.get('p')}, а сторінок {pages}"))
+        u = (d.get('url') or '').split('?')[0]
+        if '/ark:/61903/1:1:' in u: byurl[u].append(d['id'])
+    for u, ids in byurl.items():
+        if len(ids) > 1: out.append(('P', ', '.join(sorted(ids)), f'той самий запис FamilySearch у кількох документах: {u}'))
+    # Q — чоловіче ім'я в жіночому записі про смерть (дочь/жена) і навпаки
+    for d in D.values():
+        t = (d.get('title') or '')
+        if t.startswith('Смерть') and re.search(r'\bдочь\b', d.get('line') or '') and re.search(r'\bсынъ?\b', d.get('line') or '') is None:
+            for pid in (d.get('people') or [])[:1]:
+                q = P.get(pid)
+                if q and q.get('sex') == 'm': add('Q', q, f"у {d['id']} записано «дочь», а картка чоловіча")
     # B, C
     for par, ch in kids.items():
         q = P.get(par)
