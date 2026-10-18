@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610181112';
+const BUILD = '202610181116';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3807,6 +3807,7 @@ function faceTag(id, after, pid) {
   const F = JSON.parse(JSON.stringify(facesOf(id))); let act = people.includes(pid) ? pid : people.find(y => !F[y]) || people[0];
   const mk = {}; people.forEach(y => { mk[y] = !P[y].portrait || P[y].portrait === id; });
   modal(`<h2>Чиє обличчя де?</h2><p class="muted small">Оберіть людину нижче й клацніть на її обличчя на фото. Рамку можна перетягнути; розмір — повзунком або коліщатком миші.</p>
+    <div class="fcnow" id="fc-now"></div>
     <div class="crp fcbox" id="fc"><img src="${img('photo=' + id)}" alt="" draggable="false"><div id="fc-b"></div></div>
     <label class="crp-z">Розмір рамки <input type="range" id="fc-z" min="2" max="60" value="12"></label>
     <div class="fcppl" id="fc-p"></div>
@@ -3817,7 +3818,8 @@ function faceTag(id, after, pid) {
   const paint = () => { const W = im.clientWidth, H = im.clientHeight; if (!W) return;
     lay.innerHTML = people.filter(y => F[y]).map(y => { const b = F[y]; return `<div class="fcb${y === act ? ' on' : ''}" data-fp="${y}" style="left:${b.x * W}px;top:${b.y * H}px;width:${b.s * W}px;height:${b.s * W}px"><span>${esc(short(P[y]))}</span></div>`; }).join('');
     $('#fc-p').innerHTML = people.map(y => `<div class="fcrow${y === act ? ' on' : ''}"><button type="button" class="tagc fcpick" data-fa="${y}">${F[y] ? '✓' : '○'} ${esc(short(P[y]))}</button>${F[y] ? `<label class="small"><input type="checkbox" data-fm="${y}"${mk[y] ? ' checked' : ''}> головне фото${P[y].portrait && P[y].portrait !== id ? ' <span class="muted">(зараз інше)</span>' : ''}</label><button type="button" class="btn line small" data-fx="${y}">прибрати</button>` : '<span class="small muted">не позначено</span>'}</div>`).join('');
-    if (F[act]) z.value = Math.round(F[act].s * 100); };
+    if (F[act]) z.value = Math.round(F[act].s * 100);
+    $('#fc-now').innerHTML = `Зараз позначаєте: <b>${esc(short(P[act]))}</b> — ${F[act] ? 'рамку можна посунути або обрати іншу людину нижче' : 'торкніться його/її обличчя на фото'}`; };
   const init = () => { r = im.naturalHeight / im.naturalWidth || 1; Object.values(F).forEach(cl); paint(); };
   if (im.complete && im.naturalWidth) init(); else im.onload = init;
   let drag = null;
