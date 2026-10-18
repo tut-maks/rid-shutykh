@@ -10,6 +10,7 @@
   python3 tools/facts.py todo [поле] [N]     — що ще не перевірено (за пріоритетом)
   python3 tools/facts.py who <id|ім'я>       — усе про людину: факти, статуси, документи (контекст для нових знахідок)
   python3 tools/facts.py stats               — скільки чого перевірено
+  python3 tools/facts.py derive              — батьки/подружжя/місця, які називає вже звірений документ, → «звірено» (є і в build)
 
 live.json — вивантаження /api/data (+ texts), як для check.py --live.
 """
@@ -115,9 +116,49 @@ def build(live):
         if r['kind'] == 'p' and r['field'] in ('b', 'd') and r['docs'] and r['status'] in ('є скан — не звірено', 'за покажчиком FS — скан не звірено'):
             ds = new.get(f"d:{r['docs'].split()[0]}:date")
             if ds and ds['status'].startswith('звірено'): r.update(status=ds['status'], checked=ds['checked'], note=ds['note'] or 'за документом ' + r['docs'])
+    derive(new)
     gone = [k for k in old if k not in new]
     save_csv(new)
     print(f'рядків: {len(new)} (було {len(old)}, зникло {len(gone)})'); stats(new)
+
+
+def derive(rows):
+    """Батьки / подружжя / місце — «звірено», якщо їх називає вже звірений документ про саму людину:
+    метрика народження (f, mo, bp), запис про смерть (dp), запис про вінчання обох (sp)."""
+    ok = lambda r: r and r['status'].startswith('звірено')
+    D = {r['id']: r for r in rows.values() if r['kind'] == 'd' and r['field'] == 'people'}
+    PL = {r['id']: r['value'] for r in rows.values() if r['kind'] == 'd' and r['field'] == 'place'}
+    n = 0
+    def mark(r, did, how):
+        nonlocal n
+        dr = rows.get(f'd:{did}:date') or {}
+        r.update(status=dr.get('status', 'звірено зі сканом'), checked=dr.get('checked', ''), note=how + ' ' + did); n += 1
+    for r in list(rows.values()):
+        if r['kind'] != 'p' or r['status'] != 'без документа': continue
+        pid, f = r['id'], r['field']
+        if f in ('f', 'mo', 'bp'):
+            br = rows.get(f'p:{pid}:b')
+            if not ok(br) or not br['docs']: continue
+            did = br['docs'].split()[0]; ppl = (D.get(did) or {}).get('value', '').split()
+            if f in ('f', 'mo'):
+                m = re.search(r'\[([^\]]+)\]', r['value'])
+                if m and m[1] in ppl: mark(r, did, 'названо в метриці народження')
+            elif PL.get(did) and r['value'].split(',')[0].strip().lower().startswith(PL[did].split(',')[0].strip().lower()[:6]):
+                mark(r, did, 'місце — за метрикою народження')
+        elif f == 'dp':
+            dr = rows.get(f'p:{pid}:d')
+            if ok(dr) and dr['docs']:
+                did = dr['docs'].split()[0]
+                if PL.get(did) and r['value'].split(',')[0].strip().lower().startswith(PL[did].split(',')[0].strip().lower()[:6]):
+                    mark(r, did, 'місце — за записом про смерть')
+        elif f == 'sp':
+            m = re.search(r'\[([^\]]+)\]', r['value'])
+            if not m: continue
+            for did, dr in D.items():
+                t = rows.get(f'd:{did}:date', {})
+                if t.get('who', '').startswith('Вінчання') and ok(t) and pid in dr['value'].split() and m[1] in dr['value'].split():
+                    mark(r, did, 'запис про вінчання'); break
+    return n
 
 
 def stats(rows=None):
@@ -167,3 +208,5 @@ if __name__ == '__main__':
     elif a[0] == 'todo': todo(a[1] if len(a) > 1 and not a[1].isdigit() else None, int(a[-1]) if a[-1].isdigit() else 40)
     elif a[0] == 'who': who(' '.join(a[1:]))
     elif a[0] == 'stats': stats()
+    elif a[0] == 'derive':
+        rows = load_csv(); print('підтверджено документами:', derive(rows)); save_csv(rows); stats(rows)
