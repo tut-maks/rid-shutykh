@@ -62685,5 +62685,132 @@
   "kind": "personpatch",
   "person": "paraskeva_ftel",
   "append": "Метрика — [[d:fsx6xq63dxz|скан]]."
+ },
+ {
+  "key": "au19-ppl-fsx6xqqs213",
+  "kind": "docpatch",
+  "id": "fsx6xqqs213",
+  "data": {
+   "people": [
+    "p_981bad30dd",
+    "petro_m",
+    "p_eb60294a2c"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-fsx6xq67lhs",
+  "kind": "docpatch",
+  "id": "fsx6xq67lhs",
+  "data": {
+   "people": [
+    "p_09d211b973",
+    "kuzma",
+    "p_f190644f26"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-fsx6xq6c3rk",
+  "kind": "docpatch",
+  "id": "fsx6xq6c3rk",
+  "data": {
+   "people": [
+    "p_a6f2b42508",
+    "ivan_h",
+    "p_972a3c2abd"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-fsx6xqxkv9m",
+  "kind": "docpatch",
+  "id": "fsx6xqxkv9m",
+  "data": {
+   "people": [
+    "p_4e5f0c0c60",
+    "mykhailo_yu",
+    "p_b7d9a862d2"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-sc6xqx8n7q",
+  "kind": "docpatch",
+  "id": "sc6xqx8n7q",
+  "data": {
+   "people": [
+    "ivan_m45",
+    "mykyta",
+    "natalia_i"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-sc6xq6p9lf",
+  "kind": "docpatch",
+  "id": "sc6xq6p9lf",
+  "data": {
+   "people": [
+    "yuliana_m43",
+    "mykyta",
+    "natalia_i"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-sc6xqxv461",
+  "kind": "docpatch",
+  "id": "sc6xqxv461",
+  "data": {
+   "people": [
+    "yuliania_m46",
+    "mykyta",
+    "natalia_i"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-sclev1770y",
+  "kind": "docpatch",
+  "id": "sclev1770y",
+  "data": {
+   "people": [
+    "yakym_lev",
+    "ivan_khlev"
+   ]
+  }
+ },
+ {
+  "key": "au19-ppl-sclav1906m",
+  "kind": "docpatch",
+  "id": "sclav1906m",
+  "data": {
+   "people": [
+    "yakiv_mlav",
+    "yevdokia_lav",
+    "pavlo_mlav"
+   ]
+  }
+ },
+ {
+  "key": "au19-pavlo_mlav-f",
+  "kind": "personpatch",
+  "person": "pavlo_mlav",
+  "set": {
+   "f": "makar_lav",
+   "hyp": true
+  }
+ },
+ {
+  "key": "au19-nataliia_ih-cholovik",
+  "kind": "personpatch",
+  "person": "nataliia_ih",
+  "replace": [
+   [
+    "Є припущення, що батько — [[p:ihnatii_yu|Ігнатій Юхимович Шутий]] (нар. 1851) — на підставі імені й по батькові батька («Игнатъ Евфимовъ Шутый») та віку;",
+    "Є припущення, що її чоловік «Игнатъ Евфимовъ Шутый» — це [[p:ihnatii_yu|Ігнатій Юхимович Шутий]] (нар. 1851), — на підставі імені, по батькові та віку;"
+   ]
+  ]
  }
 ]
