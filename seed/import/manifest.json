@@ -53810,5 +53810,29 @@
   "data": {
    "url": "https://www.familysearch.org/ark:/61903/1:1:6X31-BMFX"
   }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1902",
+  "id": "d1902",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6X35-XVDP"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1911g",
+  "id": "d1911g",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6XQM-W1F4"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-url-d1897",
+  "id": "d1897",
+  "data": {
+   "url": "https://www.familysearch.org/ark:/61903/1:1:6X3C-NGYD"
+  }
  }
 ]
