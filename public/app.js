@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180852';
+const BUILD = '202610180856';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2688,7 +2688,7 @@ function vGeo() {
   <div class="geobar"><input type="range" id="geo-y" min="${y0}" max="${y1}" value="${yr}" aria-label="Рік"><b class="mono" id="geo-yl">${yr}</b>
     <div class="seg"><button data-act="geo-w" data-v="upto" class="${win === 'upto' ? 'on' : ''}">усе до цього року</button><button data-act="geo-w" data-v="dec" class="${win === 'dec' ? 'on' : ''}">лише ±10 років</button></div>
     <button class="btn line small" data-act="geo-play">▶ Програти історію</button></div>
-  <div class="geomap" id="geomap"><div class="gm-tiles"></div><div class="gm-pins"></div><div class="gm-attr">© учасники OpenStreetMap</div><div class="gm-z"><button data-act="geo-z" data-v="1" aria-label="Збільшити">+</button><button data-act="geo-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
+  <div class="geomap" id="geomap"><div class="gm-tiles"></div><div class="gm-pins"></div><div class="gm-base">${Object.entries(BASES).map(([k, b]) => `<button type="button" data-act="map-base" data-v="${k}" class="${(S.ui.rtBase || 'sat') === k ? 'on' : ''}">${b.name}</button>`).join('')}</div><div class="gm-attr">${esc(BASES[S.ui.rtBase || 'sat'].attr)}</div><div class="gm-z"><button data-act="geo-z" data-v="1" aria-label="Збільшити">+</button><button data-act="geo-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
   <div class="geolist" id="geolist"></div>
   ${miss.length ? `<div class="sec"><p class="small muted">Ще не стоять на карті: ${miss.map(k => `<b>${esc(k)}</b>`).join(', ')}.${canEdit() ? ' Натисніть назву нижче, потім клацніть на карті, де це місце.' : ''}</p>${canEdit() ? `<div class="btns">${miss.map(k => `<button class="btn line small" data-act="geo-place" data-k="${esc(k)}">📍 ${esc(k)}</button>`).join('')}</div>` : ''}</div>` : ''}
   ${canEdit() && Object.keys(CFG_().places || {}).length ? `<details class="small"><summary>Поставлені вручну місця</summary>${Object.entries(CFG_().places).map(([k, v]) => `<div>${esc(k)} — ${v.join(', ')} <button class="btn line small" data-act="geo-unplace" data-k="${esc(k)}">прибрати</button></div>`).join('')}</details>` : ''}`;
@@ -2701,10 +2701,10 @@ function geoMount() {
   if (G.cx == null) { const xs = pts.map(([la, lo]) => merc(la, lo)); const mx = xs.length ? xs.reduce((a, b) => [a[0] + b[0], a[1] + b[1]]).map(v => v / xs.length) : merc(50.68, 31.6); G.cx = mx[0]; G.cy = mx[1]; const spread = xs.length > 1 ? Math.max(...xs.map(x => Math.abs(x[0] - mx[0])), ...xs.map(x => Math.abs(x[1] - mx[1]))) : 0; G.z = spread ? Math.max(5, Math.min(12, Math.log2((Math.min(box.clientWidth, box.clientHeight) / 2.6) / spread))) : 11; }
   const W = () => box.clientWidth, H = () => box.clientHeight; const cache = new Map();
   const paint = () => {
-    const zt = Math.max(0, Math.min(18, Math.round(G.z))), S2 = 2 ** G.z, ts = 256 * 2 ** (G.z - zt), n = 2 ** zt;
+    const zt = Math.max(0, Math.min(BASES[S.ui.rtBase || 'sat'].max, Math.round(G.z))), S2 = 2 ** G.z, ts = 256 * 2 ** (G.z - zt), n = 2 ** zt;
     const x0 = (G.cx - W() / 2 / S2) / 256 * n, y0 = (G.cy - H() / 2 / S2) / 256 * n, x1 = (G.cx + W() / 2 / S2) / 256 * n, y1 = (G.cy + H() / 2 / S2) / 256 * n; const want = new Set();
-    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) { if (ty < 0 || ty >= n) continue; const key = zt + '/' + tx + '/' + ty; want.add(key); let el = cache.get(key);
-      if (!el) { el = new Image(); el.alt = ''; el.draggable = false; el.onerror = () => { el.style.visibility = 'hidden'; }; el.referrerPolicy = 'strict-origin-when-cross-origin'; el.src = BASES.osm.url(zt, ((tx % n) + n) % n, ty); cache.set(key, el); tiles.appendChild(el); }
+    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) { if (ty < 0 || ty >= n) continue; const bk = S.ui.rtBase || 'sat', key = bk + '/' + zt + '/' + tx + '/' + ty; want.add(key); let el = cache.get(key);
+      if (!el) { el = new Image(); el.alt = ''; el.draggable = false; el.onerror = () => { el.style.visibility = 'hidden'; }; el.referrerPolicy = 'strict-origin-when-cross-origin'; el.src = BASES[bk].url(zt, ((tx % n) + n) % n, ty); cache.set(key, el); tiles.appendChild(el); }
       el.style.transform = `translate(${(tx * 256 / n - G.cx) * S2 + W() / 2}px,${(ty * 256 / n - G.cy) * S2 + H() / 2}px) scale(${ts / 256})`; }
     for (const [k, el] of cache) if (!want.has(k)) { el.remove(); cache.delete(k); }
     // точки
@@ -2802,6 +2802,17 @@ function vTerms() {
 /* ───── Сімейні маршрути: прогулянка місцями родини з історіями біля кожної точки (своя проста карта OSM) ───── */
 const RT_K = { home: ['🏠', 'Дім'], school: ['🏫', 'Школа'], work: ['🛠', 'Робота'], church: ['⛪', 'Церква'], grave: ['✝', 'Кладовище'], war: ['🎖', 'Пам\'ять війни'], other: ['📍', 'Інше'] };
 const RTS = () => CFG_().routes || [];
+/* Координати: «50°41'10.2"N 31°38'02.9"E», «50 41 10.2 N 31 38 2.9 E», «50.68617, 31.63414» → [широта, довгота] */
+function parseLL(t) {
+  t = String(t || '').trim().replace(/[′’‘`]/g, "'").replace(/[″“”]/g, '"').replace(/''/g, '"');
+  if (/^-?\d+,\d+\s+-?\d+,\d+$/.test(t)) t = t.replace(/(\d),(\d)/g, '$1.$2');
+  if (!/[°']/.test(t) && /[NSEW]/i.test(t)) { const parts = t.match(/[^NSEW]+[NSEW]/gi) || []; if (parts.length >= 2) t = parts.slice(0, 2).map(q => { const n = q.match(/\d+(?:\.\d+)?/g) || []; return (n[0] || '') + '°' + (n[1] ? n[1] + "'" : '') + (n[2] ? n[2] + '"' : '') + q.slice(-1); }).join(' '); }
+  const re = /(-?\d+(?:\.\d+)?)\s*°?\s*(?:(\d+(?:\.\d+)?)\s*'\s*(?:(\d+(?:\.\d+)?)\s*"?)?)?\s*([NSEW])?/gi;
+  let v = [...t.matchAll(re)].slice(0, 2).map(m => { let x = Math.abs(+m[1]) + (+m[2] || 0) / 60 + (+m[3] || 0) / 3600; if (+m[1] < 0 || /[SW]/i.test(m[4] || '')) x = -x; return { x, h: (m[4] || '').toUpperCase() }; });
+  if (v.length < 2 || v.some(o => !isFinite(o.x))) return null;
+  if (v[0].h === 'E' || v[0].h === 'W') v = [v[1], v[0]];
+  const [la, lo] = [v[0].x, v[1].x]; return Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? [la, lo] : null;
+}
 function vRoutes() {
   const R = RTS(), r = S.arg && R.find(x => x.id === S.arg);
   if (!r) return `<div class="lede"><h1>Сімейні маршрути</h1><p class="small muted">Прогулянка місцями родини: де стояла хата, куди ходили до школи, де працювали, де спочивають. Біля кожної точки — історія. Можна пройти маршрут удома на екрані або справді, з телефоном у руці.</p></div>
@@ -2814,9 +2825,9 @@ function vRoutes() {
   ${ed ? `<div class="sec" style="gap:8px"><label class="f">Назва<input class="in" id="rt-t" value="${esc(r.title)}"></label><label class="f">Про маршрут<textarea class="in" id="rt-i">${esc(r.intro || '')}</textarea></label></div>` : ''}
   <div class="rtbar">${r.pts.length ? `<button class="btn small" data-act="rt-go" data-v="-1">◀</button><button class="btn small" data-act="rt-go" data-v="1">${i < 0 ? '▶ Пройти маршрут' : 'Далі ▶'}</button>` : ''}
     ${gm ? `<a class="btn line small" href="${esc(gm)}" target="_blank" rel="noopener">🧭 Прокласти в Google Картах</a>` : ''}
-    ${can_ ? (ed ? `<button class="btn small" data-act="rt-done">✓ Готово</button><span class="small muted">Клацніть на карті, щоб додати точку</span>` : `<button class="btn line small" data-act="rt-edit">✎ Редагувати</button>`) : ''}
+    ${can_ ? (ed ? `<button class="btn small" data-act="rt-done">✓ Готово</button><span class="small muted">Клацніть на карті або вставте координати:</span><span class="rtll"><input class="in" id="rt-ll" placeholder="50°41'10.2&quot;N 31°38'02.9&quot;E" title="Формат як у Google Картах: 50°41'10.2&quot;N 31°38'02.9&quot;E або 50.68617, 31.63414" autocomplete="off"><button class="btn small" data-act="rt-ll">＋ Точка</button></span>` : `<button class="btn line small" data-act="rt-edit">✎ Редагувати</button>`) : ''}
     ${can_ && ed ? `<button class="btn line small danger" data-act="rt-del">Видалити маршрут</button>` : ''}</div>
-  <div class="rtwrap"><div class="geomap rtmap" id="rtmap"><div class="gm-tiles"></div><svg class="rt-line"></svg><div class="gm-pins"></div><div class="gm-attr">© учасники OpenStreetMap</div><div class="gm-z"><button data-act="rt-z" data-v="1" aria-label="Збільшити">+</button><button data-act="rt-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
+  <div class="rtwrap"><div class="geomap rtmap" id="rtmap"><div class="gm-tiles"></div><svg class="rt-line"></svg><div class="gm-pins"></div><div class="gm-base">${Object.entries(BASES).map(([k, b]) => `<button type="button" data-act="map-base" data-v="${k}" class="${(S.ui.rtBase || 'sat') === k ? 'on' : ''}">${b.name}</button>`).join('')}</div><div class="gm-attr">${esc(BASES[S.ui.rtBase || 'sat'].attr)}</div><div class="gm-z"><button data-act="rt-z" data-v="1" aria-label="Збільшити">+</button><button data-act="rt-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
   <ol class="rtpts">${r.pts.map((q, k) => `<li class="${k === i ? 'on' : ''}" id="rtp-${k}"><button class="rtpt" data-act="rt-pick" data-v="${k}"><span class="rtn">${k + 1}</span><span><b>${RT_K[q.kind][0]} ${esc(q.name)}</b>${q.yr ? ` <i class="small muted">${esc(q.yr)}</i>` : ''}</span></button>
     ${q.people.length ? `<div class="small">${q.people.filter(x => P[x]).map(pLink).join(', ')}</div>` : ''}${q.story ? `<p>${esc(q.story).replace(/\n/g, '<br>')}</p>` : ''}
     ${ed ? `<div class="btns"><button class="btn line small" data-act="rt-pe" data-v="${k}">✎</button><button class="btn line small" data-act="rt-up" data-v="${k}" ${k ? '' : 'disabled'}>↑</button><button class="btn line small" data-act="rt-dn" data-v="${k}" ${k < r.pts.length - 1 ? '' : 'disabled'}>↓</button><button class="btn line small" data-act="rt-pd" data-v="${k}">✕</button></div>` : ''}</li>`).join('') || '<li class="muted small">Точок ще немає.' + (can_ ? ' Натисніть «Редагувати» і клацніть на карті.' : '') + '</li>'}</ol></div>
@@ -2852,10 +2863,10 @@ function rtMount() {
   const W = () => box.clientWidth, H = () => box.clientHeight, cache = new Map();
   const toPx = (la, lo) => { const [wx, wy] = merc(la, lo), S2 = 2 ** G.z; return [(wx - G.cx) * S2 + W() / 2, (wy - G.cy) * S2 + H() / 2]; };
   const paint = () => {
-    const zt = Math.max(0, Math.min(18, Math.round(G.z))), S2 = 2 ** G.z, ts = 256 * 2 ** (G.z - zt), n = 2 ** zt;
+    const zt = Math.max(0, Math.min(BASES[S.ui.rtBase || 'sat'].max, Math.round(G.z))), S2 = 2 ** G.z, ts = 256 * 2 ** (G.z - zt), n = 2 ** zt;
     const x0 = (G.cx - W() / 2 / S2) / 256 * n, y0 = (G.cy - H() / 2 / S2) / 256 * n, x1 = (G.cx + W() / 2 / S2) / 256 * n, y1 = (G.cy + H() / 2 / S2) / 256 * n, want = new Set();
-    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) { if (ty < 0 || ty >= n) continue; const key = zt + '/' + tx + '/' + ty; want.add(key); let el = cache.get(key);
-      if (!el) { el = new Image(); el.alt = ''; el.draggable = false; el.referrerPolicy = 'strict-origin-when-cross-origin'; el.onerror = () => { el.style.visibility = 'hidden'; }; el.src = BASES.osm.url(zt, ((tx % n) + n) % n, ty); cache.set(key, el); tiles.appendChild(el); }
+    for (let ty = Math.floor(y0); ty <= Math.floor(y1); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1); tx++) { if (ty < 0 || ty >= n) continue; const bk = S.ui.rtBase || 'sat', key = bk + '/' + zt + '/' + tx + '/' + ty; want.add(key); let el = cache.get(key);
+      if (!el) { el = new Image(); el.alt = ''; el.draggable = false; el.referrerPolicy = 'strict-origin-when-cross-origin'; el.onerror = () => { el.style.visibility = 'hidden'; }; el.src = BASES[bk].url(zt, ((tx % n) + n) % n, ty); cache.set(key, el); tiles.appendChild(el); }
       el.style.transform = `translate(${(tx * 256 / n - G.cx) * S2 + W() / 2}px,${(ty * 256 / n - G.cy) * S2 + H() / 2}px) scale(${ts / 256})`; }
     for (const [k, el] of cache) if (!want.has(k)) { el.remove(); cache.delete(k); }
     const P2 = r.pts.map(q => toPx(q.la, q.lo)), i = S.ui.rtI ?? -1;
@@ -3278,6 +3289,9 @@ document.addEventListener('click', async e => {
     if (a === 'rt-edit') { S.ui.rtEd = S.arg; render(); return; }
     if (a === 'rt-done') { const r = RTS().find(x => x.id === S.arg); t.disabled = true; try { await rtSave(r, { title: $('#rt-t').value.trim() || r.title, intro: $('#rt-i').value.trim() }); } catch (e) { toast(errText(e)); } S.ui.rtEd = null; S.ui.rtI = -1; render(); toast('Маршрут збережено'); return; }
     if (a === 'rt-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити маршрут?'; return; } await api('/api/data', { body: { op: 'route.del', id: S.arg } }).then(res => { S.data.cfg.routes = res.routes; }); location.hash = '#/routes'; return; }
+    if (a === 'map-base') { S.ui.rtBase = t.dataset.v; S.ui.keepScroll = true; render(); return; }
+    if (a === 'rt-ll') { const r = RTS().find(x => x.id === S.arg), ll = parseLL($('#rt-ll')?.value); if (!ll) { toast('Не розпізнав координати. Приклад: 50°41\'10.2"N 31°38\'02.9"E або 50.68617, 31.63414'); return; }
+      const G = S.ui.rtG; if (G) { [G.cx, G.cy] = merc(ll[0], ll[1]); G.z = Math.max(G.z, 16); G.paint?.(); } rtPointForm(r, null, ll); return; }
     if (a === 'rt-z') { const G = S.ui.rtG; if (G) { G.z = Math.max(4, Math.min(18, G.z + +t.dataset.v)); G.paint(); } return; }
     if (a === 'rt-pick' || a === 'rt-go') { const r = RTS().find(x => x.id === S.arg); if (!r?.pts.length) return; let i = a === 'rt-pick' ? +t.dataset.v : Math.max(0, Math.min(r.pts.length - 1, (S.ui.rtI ?? -1) + +t.dataset.v)); S.ui.rtI = i;
       const G = S.ui.rtG; if (G) { const [wx, wy] = merc(r.pts[i].la, r.pts[i].lo); G.cx = wx; G.cy = wy; G.z = Math.max(G.z, 15); }

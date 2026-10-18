@@ -1543,3 +1543,10 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .nd.dead::after{content:"†";position:absolute;left:2px;top:0;font:700 11px/13px var(--f-body);color:#fff;pointer-events:none;z-index:2}
 .nd.t2.dead .kd{display:none}
 .legend .sw.dd{position:relative;overflow:hidden}.legend .sw.dd::before{content:"";position:absolute;left:0;top:0;border-top:9px solid #2b2420;border-right:9px solid transparent}
+
+/* Карти: перемикач «Схема / Супутник» і поле координат у маршрутах */
+.gm-base{position:absolute;left:8px;top:8px;display:flex;background:rgba(255,255,255,.92);border:1px solid var(--rule);border-radius:10px;overflow:hidden;z-index:3}
+.gm-base button{border:0;background:none;padding:8px 12px;font:500 13px/1 var(--f-body);cursor:pointer;color:var(--ink2);min-height:36px}
+.gm-base button.on{background:var(--wine);color:#fff}
+.rtll{display:inline-flex;gap:6px;align-items:center;flex:1 1 320px;min-width:0}
+.rtll .in{flex:1;min-width:0;font-size:16px}
