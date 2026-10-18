@@ -49,9 +49,33 @@ async function addKids(pid, kids, by) {
       else if (isPt(w[1])) { n = w[0]; pt = w.slice(1).join(' '); } // «Ім'я По батькові»
       else if (w.length === 2) { ks = ks || w[0]; n = w[1]; } } // «Прізвище Ім'я»
     // така дитина вже є в дереві (у цього з батьків або в його чоловіка/дружини) — не дублюємо
-    if (all.some(p => [pid, other].filter(Boolean).some(x => p.data.f === x || p.data.mo === x) && low(p.data.n) === low(n))) continue;
+    const ex = all.find(p => [pid, other].filter(Boolean).some(x => p.data.f === x || p.data.mo === x) && low(p.data.n) === low(n));
+    if (ex) { // уже є під чоловіком/дружиною — доповнюємо другого з батьків, якщо порожньо
+      const slot = isF ? 'mo' : 'f';
+      if (!ex.data[slot]) { const nd = { ...ex.data, [slot]: pid }; if (k.b && !nd.b) nd.b = S(k.b, 40); await db.update('persons', { eq: { id: ex.id } }, { data: nd, updated_by: by, version: (ex.version || 1) + 1, updated_at: new Date().toISOString() }); await revision('person', ex.id, 'update', ex.data, nd, by); }
+      continue;
+    }
     const sex = k.sex === 'f' ? 'f' : k.sex === 'm' ? 'm' : /[ая]$/i.test(n.split(' ')[0]) ? 'f' : 'm';
     const data = cleanPerson({ n, s: ks || par.data.s || '', pt, b: S(k.b, 40), sex, f: isF ? other : pid, mo: isF ? pid : other, fam: par.data.fam || [], note: 'Додано з анкети реєстрації (підтвердив власник).' });
+    const id = slugId(); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by);
+    made.push(id); all.push({ id, data });
+  }
+  return made;
+}
+
+/* Брати й сестри з анкети → картки під тими самими батьками (після того, як людину прив'язано до батьків). Повтори пропускаються. */
+async function addSibs(pid, sibs, by) {
+  const me = await db.get('persons', { eq: { id: pid, deleted: false } }); if (!me || !(me.data.f || me.data.mo)) return [];
+  const all = await db.list('persons', { eq: { deleted: false } });
+  const low = t => String(t || '').toLowerCase().replace(/\s*\(.*\)/, '').trim().split(/\s+/)[0] || '';
+  const par = await db.get('persons', { eq: { id: me.data.f || me.data.mo } });
+  const made = [];
+  for (const k of (Array.isArray(sibs) ? sibs : []).slice(0, 15)) {
+    const n = S(k.n, 60).split(/\s+/)[0]; if (!n) continue;
+    if (all.some(p => p.id !== pid && ((me.data.f && p.data.f === me.data.f) || (me.data.mo && p.data.mo === me.data.mo)) && low(p.data.n) === low(n))) continue;
+    const sex = k.sex === 'f' ? 'f' : k.sex === 'm' ? 'm' : /[ая]$/i.test(n) ? 'f' : 'm';
+    const fa = me.data.f ? await db.get('persons', { eq: { id: me.data.f } }) : null;
+    const data = cleanPerson({ n, s: fa?.data?.s || par?.data?.s || '', b: S(k.b, 40), sex, f: me.data.f || '', mo: me.data.mo || '', fam: me.data.fam || [], note: `Додано з анкети реєстрації: ${sex === 'f' ? 'сестра' : 'брат'} ${[me.data.n, me.data.s].filter(Boolean).join(' ')} — з її/його слів (підтвердив власник).` });
     const id = slugId(); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by);
     made.push(id); all.push({ id, data });
   }
@@ -73,7 +97,7 @@ async function relMake(rel, by) {
     }
     if (!x.make) return '';
     const m = x.make, rp = await get(f || mo);
-    const data = cleanPerson({ s: S(m.s, 60), n: S(m.n, 60), pt: S(m.pt, 60), m: S(m.m, 60), b: S(m.b, 40), sex, f, mo, fam: rp?.data?.fam || [], note: 'Додано з анкети реєстрації (підтвердив власник).' });
+    const data = cleanPerson({ s: S(m.s, 60), n: S(m.n, 60), pt: S(m.pt, 60), m: S(m.m, 60), b: S(m.b, 40), d: S(m.d, 40), sex, f, mo, fam: rp?.data?.fam || [], note: 'Додано з анкети реєстрації (підтвердив власник).' });
     if (!data.n) return '';
     const dd = await findDupes(data); if (dd.length === 1) return dd[0].id;
     const id = slugId(); await db.insert('persons', { id, data, created_by: by, updated_by: by }); await revision('person', id, 'create', null, data, by); made.push(id); return id;
@@ -168,7 +192,8 @@ export default handler(async (req, res, ctx, url) => {
     await db.update('join_requests', { eq: { id: r.id } }, { status: 'approved', decided_by: me.id, decided_at: now, member_id: m.id, person_id: pid || null });
     if (pid && b.person_id && b.rel) await linkParents(pid, b.rel, me.id);
     const kids = pid ? await addKids(pid, b.kids, me.id) : [];
-    return send(res, 200, { ok: true, person_id: pid || null, kids: kids.length });
+    const sibs = pid ? await addSibs(pid, b.sibs, me.id) : [];
+    return send(res, 200, { ok: true, person_id: pid || null, kids: kids.length, sibs: sibs.length });
   }
   if (a === 'parents' && req.method === 'POST') { // батьки й діди з уже прийнятої заявки
     const b = await readJSON(req, 20_000);
@@ -176,6 +201,13 @@ export default handler(async (req, res, ctx, url) => {
     if (!r || r.status !== 'approved' || !r.person_id) return fail(res, 404, 'not_found');
     const rr = await linkParents(r.person_id, b.rel, me.id);
     return send(res, 200, { ok: true, made: rr.made.length });
+  }
+  if (a === 'sibs' && req.method === 'POST') { // брати й сестри з уже прийнятої заявки
+    const b = await readJSON(req, 20_000);
+    const r = await db.get('join_requests', { eq: { id: S(b.id, 60) } });
+    if (!r || r.status !== 'approved' || !r.person_id) return fail(res, 404, 'not_found');
+    const sibs = await addSibs(r.person_id, b.sibs, me.id);
+    return send(res, 200, { ok: true, sibs: sibs.length });
   }
   if (a === 'kids' && req.method === 'POST') { // діти з уже прийнятої заявки
     const b = await readJSON(req, 20_000);

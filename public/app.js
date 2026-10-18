@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180856';
+const BUILD = '202610180955';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1170,13 +1170,25 @@ function jrText(r) { const d = r.data || {}; return `Заявка на реєс�
 // діти з анкети: структуровані (нова форма) або розібрані зі старого тексту «Іван 2001, Марія 2005»
 function jrKids(d) {
   if (Array.isArray(d.kidsL) && d.kidsL.length) return d.kidsL;
-  return String(d.kids || '').split(/[;\n]+|,(?!\s*\d)/).map(x => x.trim()).filter(Boolean).map(x => {
+  return jrList(d.kids);
+}
+function jrList(t) {
+  return String(t || '').split(/[;\n]+|,(?!\s*\d)/).map(x => x.trim()).filter(Boolean).map(x => {
     const b = (x.match(/\b(19|20)\d\d\b/) || [''])[0];
     const n = x.replace(/\b(19|20)\d\d\b/, '').replace(/\b(син|донька|дочка|р\.?\s*н\.?|року|р\.)\b/gi, '').replace(/[(),.–—-]+/g, ' ').replace(/\s+/g, ' ').trim();
     const sex = /\b(донька|дочка)\b/i.test(x) ? 'f' : /\b(син)\b/i.test(x) ? 'm' : /[ая]$/i.test(n.split(' ')[0] || '') ? 'f' : 'm';
     return { n, b, sex };
   }).filter(k => k.n && k.n.length < 60);
 }
+// брати й сестри з анкети: «Юрій(1984),Єва(1981)» → [{n,b,sex}]; стать — за закінченням імені (Юрій, Олег — брат; Єва, Олена — сестра)
+const jrSibs = d => jrList(d.sibs).map(k => ({ ...k, sex: /\b(сестра)\b/i.test(k.n) ? 'f' : /\b(брат)\b/i.test(k.n) ? 'm' : k.sex })).map(k => ({ ...k, n: k.n.replace(/\b(брат|сестра)\b/gi, '').trim() })).filter(k => k.n);
+const sibHas = (pid, n) => { const p = P[pid]; if (!p) return false; return [p.f, p.mo].filter(Boolean).some(x => kidHas(x, n)); };
+function jrSibsBlock(r, pid) {
+  const ks = jrSibs(r.data || {}); if (!ks.length) return '';
+  const rows = ks.map((k, i) => { const has = pid && sibHas(pid, k.n); return `<label class="kidc${has ? ' has' : ''}"><input type="checkbox" data-kid="${i}"${has ? ' disabled' : ' checked'}><span>${kidRow(k).replace('син / донька', 'брат / сестра').replace('>син<', '>брат<').replace('>донька<', '>сестра<')}</span>${has ? '<em class="small muted">вже є в дереві</em>' : ''}</label>`; }).join('');
+  return `<div class="kidbox" id="jsb-${r.id}"><b class="small">Брати й сестри з анкети — додати в дерево під тими ж батьками:</b>${rows}</div>`;
+}
+const jrSibsRead = id => [...document.querySelectorAll(`#jsb-${id} .kidc`)].filter(l => l.querySelector('[data-kid]')?.checked).map(l => Object.fromEntries([...l.querySelectorAll('[data-kf]')].map(i => [i.dataset.kf, i.value.trim()]))).filter(k => k.n);
 const kidHas = (pid, n) => Object.values(P).some(p => (p.f === pid || p.mo === pid) && String(p.n || '').toLowerCase().replace(/\s*\(.*\)/, '').trim() === String(n).toLowerCase().split(' ')[0]);
 function jrKidsBlock(r, pid) {
   const ks = jrKids(r.data || {}); if (!ks.length) return '';
@@ -1186,20 +1198,21 @@ function jrKidsBlock(r, pid) {
 const jrKidsRead = id => [...document.querySelectorAll(`#jk-${id} .kidc`)].filter(l => l.querySelector('[data-kid]')?.checked).map(l => Object.fromEntries([...l.querySelectorAll('[data-kf]')].map(i => [i.dataset.kf, i.value.trim()]))).filter(k => k.n);
 // «Перчета (Шута) Парасковія Яківна 1946» → {s, m, n, pt, b}
 function parseFio(t) {
-  t = String(t || ''); const b = (t.match(/\b(1[6-9]\d\d|20\d\d)\b/) || [''])[0], m = ((t.match(/\(([^)]+)\)/) || [])[1] || '').trim();
+  t = String(t || ''); const ys = t.match(/\b(1[6-9]\d\d|20\d\d)\b/g) || [], b = ys[0] || '', dd = ys[1] || '';
+  const m = ([...t.matchAll(/\(([^)]+)\)/g)].map(x => x[1].trim()).find(x => !/\d/.test(x)) || ''); // у дужках — дівоче прізвище; «(1935-2023)» — роки життя
   const cap = x => x ? x[0].toUpperCase() + x.slice(1).toLowerCase() : '';
   const w = t.replace(/\([^)]*\)/g, ' ').replace(/\b(1[6-9]\d\d|20\d\d)\b/g, ' ').replace(/[,.;:–—]+/g, ' ').split(/\s+/).filter(x => /[a-zа-яіїєґ']/i.test(x)).map(cap);
   const isPt = x => /(вич|ич|вна|івна|ївна)$/i.test(x || ''); let s = '', n = '', pt = '';
   if (w.length >= 3) { if (isPt(w[2])) [s, n, pt] = [w[0], w[1], w.slice(2).join(' ')]; else if (isPt(w[1])) [n, pt, s] = [w[0], w[1], w[2]]; else [s, n] = [w[0], w.slice(1).join(' ')]; }
   else if (w.length === 2) { if (isPt(w[1])) [n, pt] = w; else [s, n] = w; } else n = w[0] || '';
-  return { s, m: cap(m), n, pt, b };
+  return { s, m: cap(m), n, pt, b, d: dd };
 }
 const fioSex = o => /(вна|івна|ївна)$/i.test(o.pt) ? 'f' : /(вич|ич)$/i.test(o.pt) ? 'm' : /[ая]$/i.test(o.n) ? 'f' : '';
 const REL = [['F', 'Батько', 'father', 'm'], ['MO', 'Мати', 'mother', 'f'], ['FF', 'Дід (батько батька)', 'gpf', 'm'], ['FM', 'Баба (мати батька)', 'gpf', 'f'], ['MF', 'Дід (батько матері)', 'gpm', 'm'], ['MM', 'Баба (мати матері)', 'gpm', 'f']];
 function relTexts(d) { // текст для кожного рядка; діди розкладаються за статтю
   const T = { F: d.father || '', MO: d.mother || '' };
   for (const [k, a, b] of [['gpf', 'FF', 'FM'], ['gpm', 'MF', 'MM']]) {
-    const L = String(d[k] || '').split(/\n|;/).map(x => x.trim()).filter(Boolean); const left = [];
+    const L = String(d[k] || '').split(/\n|;|,/).map(x => x.trim()).filter(Boolean).reduce((a, x) => { if (a.length && !/[a-zа-яіїєґ]{2}/i.test(x)) a[a.length - 1] += ', ' + x; else a.push(x); return a; }, []); const left = [];
     L.forEach(x => { const sx = fioSex(parseFio(x)); if (sx === 'm' && !T[a]) T[a] = x; else if (sx === 'f' && !T[b]) T[b] = x; else left.push(x); });
     left.forEach(x => { if (!T[a]) T[a] = x; else if (!T[b]) T[b] = x; });
   }
@@ -1236,11 +1249,14 @@ function jrCard(r) {
   const d = r.data || {}, id = r.id;
   const self = guessPeople([d.s, d.n, d.pt, d.m, d.b].join(' '));
   const sG = guessPeople(d.spouse, 1)[0];
+  // у чоловіка/дружини з анкети вже є картка подружжя («Аня» = «Анна»)? — це, найімовірніше, та сама людина
+  if (sG) { const n2 = String(d.n || '').toLowerCase().slice(0, 2); const sp = (S.data.unions || []).filter(u => u.a === sG.id || u.b === sG.id).map(u => u.a === sG.id ? u.b : u.a).map(x => P[x]).filter(q => q && (!d.sex || q.sex === d.sex) && n2 && String(q.n || '').toLowerCase().startsWith(n2) && !self.includes(q)); self.unshift(...sp); }
   const dl = `<dl class="jrd">${JRF.filter(([k]) => d[k] && !['s', 'n', 'pt'].includes(k)).map(([k, t]) => `<dt>${t}</dt><dd>${esc(k === 'sex' ? (d[k] === 'f' ? 'жінка' : 'чоловік') : d[k]).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>`;
   if (r.status !== 'pending') {
-    const pid = r.person_id && P[r.person_id] ? r.person_id : '', miss = pid ? jrKids(d).filter(k => !kidHas(pid, k.n)) : [];
+    const pid = r.person_id && P[r.person_id] ? r.person_id : '', miss = pid ? jrKids(d).filter(k => !kidHas(pid, k.n)) : [], smiss = pid && (P[pid].f || P[pid].mo) ? jrSibs(d).filter(k => !sibHas(pid, k.n)) : [];
     return `<div class="jr done"><b>${esc(r.name)}</b> · <span class="small muted">${esc(r.email)} · ${r.status === 'approved' ? 'прийнято' : 'відхилено'} ${esc(when(r.decided_at))}${pid ? ` · <a href="${href('p', pid)}">${esc(short(P[pid]))}</a>` : ''}</span>
       ${miss.length ? `${jrKidsBlock(r, pid)}<div class="btns"><button class="btn small" data-act="jr-kids" data-id="${id}">Додати вибраних дітей у дерево</button><span class="msg" id="jr-m-${id}"></span></div>` : ''}
+      ${smiss.length ? `${jrSibsBlock(r, pid)}<div class="btns"><button class="btn small" data-act="jr-sibs" data-id="${id}">Додати вибраних братів і сестер у дерево</button><span class="msg" id="jr-sm-${id}"></span></div>` : ''}
       ${pid && r.status === 'approved' && (!P[pid].f || !P[pid].mo) && jrRelBlock(r, pid) ? `${jrRelBlock(r, pid)}<div class="btns"><button class="btn small" data-act="jr-par" data-id="${id}">Додати батьків і дідів у дерево</button><span class="msg" id="jr-pm-${id}"></span></div>` : ''}</div>`;
   }
   return `<article class="jr" data-jr="${id}">
@@ -1255,6 +1271,7 @@ function jrCard(r) {
         </div><p class="small muted" style="margin:4px 0 0">Підставлено найсхожіших — перевірте. Порожнє поле = не прив'язувати.</p></details>
       ${jrRelBlock(r, self[0]?.id || '')}
       ${jrKidsBlock(r, self[0]?.id || '')}
+      ${jrSibsBlock(r, self[0]?.id || '')}
       <div class="btns"><label class="f" style="margin:0">Права<select class="in" id="jr-role-${id}" style="width:auto"><option value="viewer">глядач — дивиться, доповнює свою гілку</option><option value="editor">редактор — змінює картки</option></select></label></div>
       <div class="btns"><button class="btn" data-act="jr-ok" data-id="${id}">Прийняти й відкрити доступ</button><button class="btn line" data-act="jr-no" data-id="${id}">Відхилити</button><button class="btn line small" data-act="copy" data-v="${esc(jrText(r))}">Скопіювати для Claude</button><span class="msg" id="jr-m-${id}"></span></div>
     </div>
@@ -1290,6 +1307,10 @@ async function joinHandle(act, t, d) {
     if (t.disabled) return true; t.disabled = true;
     const r = await api('/api/admin?a=parents', { body: { id: d.id, rel } }); await load(); S.ui.keepScroll = true; await loadAdmin(); toast(r.made ? `Створено нових карток: ${r.made}; людину з'єднано з деревом` : 'Людину з\'єднано з рідними в дереві'); return true;
   }
+  if (act === 'jr-sibs') {
+    const sibs = jrSibsRead(d.id); if (!sibs.length) return true; if (t.disabled) return true; t.disabled = true;
+    const r = await api('/api/admin?a=sibs', { body: { id: d.id, sibs } }); await load(); S.ui.keepScroll = true; await loadAdmin(); toast(r.sibs ? `Додано в дерево братів і сестер: ${r.sibs}` : 'Вони вже є в дереві (або в людини ще немає батьків у дереві)'); return true;
+  }
   if (act === 'jr-kids') {
     const kids = jrKidsRead(d.id); if (!kids.length) return true; if (t.disabled) return true; t.disabled = true;
     const r = await api('/api/admin?a=kids', { body: { id: d.id, kids } }); await load(); S.ui.keepScroll = true; await loadAdmin(); toast(r.kids ? `Додано в дерево дітей: ${r.kids}` : 'Ці діти вже є в дереві'); return true;
@@ -1302,7 +1323,7 @@ async function joinHandle(act, t, d) {
       if (pick && !person_id) { m.className = 'msg err'; m.textContent = 'Оберіть людину зі списку-підказки (або очистіть поле, щоб створити нову картку).'; return true; }
       const bad = [...document.querySelectorAll(`#jrel-${d.id} .relr[data-relk]`)].find(el => { const v = el.querySelector('[data-rk="pick"]').value.trim(); return v && !personByLabel(v); });
       if (bad) { m.className = 'msg err'; m.textContent = `«${bad.querySelector('b').textContent}»: оберіть людину зі списку або очистіть поле.`; bad.querySelector('[data-rk="pick"]').focus(); return true; }
-      const body = { id: d.id, role: $('#jr-role-' + d.id).value, kids: jrKidsRead(d.id), rel: jrRelRead(d.id) };
+      const body = { id: d.id, role: $('#jr-role-' + d.id).value, kids: jrKidsRead(d.id), sibs: jrSibsRead(d.id), rel: jrRelRead(d.id) };
       const gap = (body.rel.MF || body.rel.MM) && !body.rel.MO ? 'матері' : (body.rel.FF || body.rel.FM) && !body.rel.F ? 'батька' : '';
       if (gap && t.dataset.armed !== 'gap') { t.dataset.armed = 'gap'; m.className = 'msg err'; m.textContent = `Не вказано ${gap} (ні з дерева, ні «нова картка») — діди з цього боку будуть окремо від людини. Натисніть ще раз, якщо так і треба.`; return true; }
       if (person_id) body.person_id = person_id;
@@ -1313,7 +1334,7 @@ async function joinHandle(act, t, d) {
       }
       if (t.disabled) return true; t.disabled = true;
       const r = await api('/api/admin?a=approve', { body });
-      if (body.create || r.kids || Object.keys(body.rel).length) await load();
+      if (body.create || r.kids || r.sibs || Object.keys(body.rel).length) await load();
     }
     S.admin.reqs = (await api('/api/admin?a=requests')).requests; S.admin.members = null; S.data.joinPending = S.admin.reqs.filter(r => r.status === 'pending').length;
     S.ui.keepScroll = true; await loadAdmin(); toast(act === 'jr-ok' ? 'Доступ відкрито. Людина вже може увійти зі своєю поштою й паролем.' : 'Заявку відхилено'); return true;

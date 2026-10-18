@@ -102,6 +102,7 @@ export default handler(async (req, res, _c, url) => {
         out.push(key + ': ok' + (mg ? ` (об'єднано з наявною карткою: ${mg})` : ''));
       } else if (it.kind === 'merge') { // прибрати дублі картки it.keep: усі картки тієї самої людини зводяться в неї
         const k = await db.get('persons', { eq: { id: String(it.keep), deleted: false } }); if (!k) { out.push(key + ': no person'); continue; }
+        if (it.drop) { const r = await mergePersons(k.id, String(it.drop), by); out.push(key + (r.ok ? ': ok' : ': ' + (r.error === 'not_found' ? 'вже є' : r.error))); continue; } // явно вказана друга картка (імена різняться: «Аня» = «Анна»)
         const dd = (await findDupes({ id: k.id, ...k.data })).filter(d => !d.data.root);
         if (!dd.length) { out.push(key + ': вже є'); continue; }
         for (const d of dd) await mergePersons(k.id, d.id, by);
