@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610172358';
+const BUILD = '202610180003';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2881,7 +2881,7 @@ function vWords() {
 /* ───── Сімейна книга (PDF): обрана гілка — біографії, фото, джерела. Верстається на сторінці й друкується браузером («Зберегти як PDF») ───── */
 function openFBook(pid) {
   const x = P[pid] ? pid : startId(); FBX = x;
-  modal(`<h2>Сімейна книга</h2><p class="small muted" style="margin:0 0 10px">Книга для друку або PDF: дерево, біографії з фото, спогади й посилання на джерела. Після «Скласти» відкриється вікно друку — оберіть «Зберегти як PDF».</p>
+  modal(`<h2>Сімейна книга</h2><p class="small muted" style="margin:0 0 10px">Книга для друку або PDF: дерево, біографії з фото, спогади й посилання на джерела. «Завантажити PDF» — готовий файл одразу в «Завантаження» (на телефоні теж).</p>
     <div class="sec" style="gap:10px">
       <div class="f"><span>Від кого: <b id="fb-who">${esc(full(P[x]))}</b></span><input class="in" id="fb-q" type="search" placeholder="🔍 Інша людина — почніть писати ім'я" autocomplete="off"><div class="tagres" id="fb-r"></div></div>
       <label class="f">Що включити<select class="in" id="fb-m"><option value="up">Предки (батьки, діди, прадіди…)</option><option value="down">Нащадки (діти, онуки…)</option><option value="both" selected>Предки й нащадки</option><option value="clan">Уся родина (з братами, сестрами, тітками, дядьками)</option></select></label>
@@ -2889,7 +2889,7 @@ function openFBook(pid) {
       <label class="anunk"><input type="checkbox" id="fb-ph" checked> <span>Фото людей (головне фото + інші, до 4 на людину)</span></label>
       <label class="anunk"><input type="checkbox" id="fb-dc" checked> <span>Архівні документи: опис «який рядок наш» і посилання</span></label>
       <label class="anunk"><input type="checkbox" id="fb-st" checked> <span>Спогади родичів</span></label>
-      <div class="btns"><button class="btn" data-act="fb-make">📖 Скласти книгу</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="fb-msg"></span></div></div>`);
+      <div class="btns"><button class="btn" data-act="fb-pdf">⬇ Завантажити PDF</button><button class="btn line" data-act="fb-make">🖨 Друкувати</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="fb-msg"></span></div></div>`);
   const q = $('#fb-q'), r = $('#fb-r');
   q.addEventListener('input', () => { const L = personFind(q.value); r.innerHTML = q.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-fbp="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') : ''; });
   r.addEventListener('click', e => { const b = e.target.closest('[data-fbp]'); if (!b) return; FBX = b.dataset.fbp; $('#fb-who').textContent = full(P[FBX]); q.value = ''; r.innerHTML = ''; });
@@ -2905,6 +2905,92 @@ function fbPeople(x, mode, G) { // [{id, gen}] — gen: 0 = від кого, +1 
   return [...out.entries()].map(([id, gen]) => ({ id, gen }));
 }
 const genName = (g, f) => g === 0 ? 'Від кого починаємо' : g === 1 ? 'Батьки' : g === 2 ? 'Діди й баби' : g === 3 ? 'Прадіди' : g > 3 ? `${'пра'.repeat(g - 2)}діди`.replace(/^п/, 'П') : g === -1 ? 'Діти' : g === -2 ? 'Онуки' : g === -3 ? 'Правнуки' : `${'пра'.repeat(-g - 2)}внуки`.replace(/^п/, 'П');
+/* PDF без бібліотек: кожна сторінка малюється на canvas (A4, 150 dpi) і вкладається в PDF як JPEG */
+function pdfFromJpegs(pages) { // pages: [{data: Uint8Array (JPEG), w, h}]
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const put = x => { const u = typeof x === 'string' ? enc.encode(x) : x; parts.push(u); len += u.length; };
+  const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put('\nendobj\n'); };
+  put('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'); const N = pages.length, kids = pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+  obj(1, () => put('<< /Type /Catalog /Pages 2 0 R >>')); obj(2, () => put(`<< /Type /Pages /Count ${N} /Kids [${kids}] >>`));
+  pages.forEach((pg, i) => { const o = 3 + i * 3, PW = 595.28, PH = 841.89, cs = `q ${PW} 0 0 ${PH} 0 0 cm /Im0 Do Q`;
+    obj(o, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${o + 2} 0 R >> >> /Contents ${o + 1} 0 R >>`));
+    obj(o + 1, () => { put(`<< /Length ${cs.length} >>\nstream\n`); put(cs); put('\nendstream'); });
+    obj(o + 2, () => { put(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.data.length} >>\nstream\n`); put(pg.data); put('\nendstream'); }); });
+  const xref = len, total = 3 + N * 3; put(`xref\n0 ${total}\n0000000000 65535 f \n`); for (let n = 1; n < total; n++) put(String(offs[n]).padStart(10, '0') + ' 00000 n \n');
+  put(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+async function fbPdf() {
+  const x = FBX, mode = $('#fb-m').value, G = +$('#fb-g').value, wPh = $('#fb-ph').checked, wDc = $('#fb-dc').checked, wSt = $('#fb-st').checked, m = $('#fb-msg');
+  const say = t => { if (m) { m.className = 'msg'; m.textContent = t; } };
+  say('Складаю книгу…'); try { await document.fonts?.load('20px "Old Standard TT"'); await document.fonts?.load('bold 20px "Old Standard TT"'); } catch {}
+  const L = fbPeople(x, mode, G), ids = new Set(L.map(r => r.id)), gens = [...new Set(L.map(r => r.gen))].sort((a, b) => b - a);
+  const srcs = [], srcIx = {}, cite = d => { if (!(d.id in srcIx)) { srcIx[d.id] = srcs.length + 1; srcs.push(d); } return srcIx[d.id]; };
+  // фото
+  const imgs = {}; const want = []; if (wPh) L.forEach(r => S.data.photos.filter(y => photoOf(y, r.id) && !isVoice(y) && !y.pending).sort((a, b) => (b.id === P[r.id].portrait) - (a.id === P[r.id].portrait)).slice(0, 4).forEach(y => want.push(y.id)));
+  let nI = 0; for (const id of [...new Set(want)]) { say(`Завантажую фото: ${++nI} з ${want.length}…`); try { imgs[id] = await createImageBitmap(await (await fetch(img('photo=' + id), { credentials: 'same-origin' })).blob()); } catch {} }
+  const W = 1240, H = 1754, ML = 115, MR = 115, MT = 125, MB = 140, FF = '"Old Standard TT", Georgia, "Times New Roman", serif', SF = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const pages = []; let c, g, y = MT, pno = 0, float = null;
+  const finish = async () => { if (!c) return; g.font = `20px ${FF}`; g.fillStyle = '#8a7d70'; g.textAlign = 'center'; if (pno > 1) { g.fillText(String(pno), W / 2, H - 70); g.fillText('Сімейна книга · ' + short(P[x]), W / 2, 70); } g.textAlign = 'left';
+    const b = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.82)); pages.push({ data: new Uint8Array(await b.arrayBuffer()), w: W, h: H }); };
+  const newPage = async () => { await finish(); c = document.createElement('canvas'); c.width = W; c.height = H; g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.textBaseline = 'alphabetic'; y = MT; pno++; float = null; say(`Верстаю сторінку ${pno}…`); };
+  const lines = (text, font, width) => { g.font = font; const out = []; String(text || '').split('\n').forEach(par => { const words = par.split(/\s+/).filter(Boolean); let ln = ''; for (const w of words) { const t = ln ? ln + ' ' + w : w; if (g.measureText(t).width <= width || !ln) { if (g.measureText(t).width > width && !ln) { let cut = w; while (cut.length > 1 && g.measureText(cut).width > width) cut = cut.slice(0, -1); out.push(cut); ln = w.slice(cut.length); } else ln = t; } else { out.push(ln); ln = w; } } out.push(ln); }); return out; };
+  // текст з обтіканням фото: leftAt(y) — де починається рядок на цій висоті
+  const xAt = yy => float && yy < float.bottom ? float.x : ML, wAt = yy => W - MR - xAt(yy);
+  const para = async (text, { size = 24, lh = 35, color = '#1d1a17', bold = false, italic = false, font = FF, gap = 10, indent = 0 } = {}) => {
+    const f = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${size}px ${font}`; g.font = f;
+    const words = String(text || '').split(/\s+/).filter(Boolean); let ln = '';
+    const flush = async () => { if (y + lh > H - MB) { await newPage(); g.font = f; } g.fillStyle = color; g.fillText(ln, xAt(y) + indent, y + size); y += lh; ln = ''; };
+    for (const w of words) { const t = ln ? ln + ' ' + w : w; if (g.measureText(t).width > wAt(y) - indent && ln) { await flush(); ln = w; } else ln = t; }
+    if (ln) await flush(); y += gap; };
+  const need = async h => { if (y + h > H - MB) await newPage(); };
+  const cover = (im, dx, dy, dw, dh) => { const s_ = Math.max(dw / im.width, dh / im.height), sw = dw / s_, sh = dh / s_; g.drawImage(im, (im.width - sw) / 2, Math.max(0, (im.height - sh) * 0.3), sw, sh, dx, dy, dw, dh); };
+  const RELC = { doc: '#2f6b3a', mem: '#2d5d8a', chk: '#a0670a', con: '#a8322d' }, RELI = { doc: '✓', mem: '💬', chk: '?', con: '⇄' };
+  // обкладинка
+  await newPage(); const cx = W / 2; g.textAlign = 'center'; g.fillStyle = '#6b2433'; g.font = `30px ${FF}`; g.fillText('◆   ◆   ◆', cx, 520);
+  g.fillStyle = '#1d1a17'; g.font = `bold 78px ${FF}`; g.fillText('Сімейна книга', cx, 640); g.font = `36px ${FF}`; g.fillText(full(P[x]), cx, 730); g.font = `26px ${FF}`; g.fillStyle = '#6b5f55';
+  g.fillText(`${life(P[x]) ? life(P[x]) + ' · ' : ''}${{ up: 'предки', down: 'нащадки', both: 'предки й нащадки', clan: 'уся родина' }[mode]} · ${L.length} людей`, cx, 785);
+  if (P[x].portrait && imgs[P[x].portrait]) { g.save(); g.beginPath(); g.arc(cx, 1010, 150, 0, Math.PI * 2); g.clip(); cover(imgs[P[x].portrait], cx - 150, 860, 300, 300); g.restore(); }
+  g.fillStyle = '#1d1a17'; g.font = `26px ${FF}`; g.fillText(SURN.join(' · '), cx, 1290); g.fillStyle = '#6b5f55'; g.font = `22px ${FF}`;
+  g.fillText(`Складено ${new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })} з сайту «Наш родовід» (${location.host})`, cx, H - 220); g.fillText('Сайт створив і веде Максим Шутий', cx, H - 185); g.textAlign = 'left';
+  // хто в книзі
+  await newPage(); g.fillStyle = '#6b2433'; g.font = `bold 40px ${FF}`; g.fillText('Хто в книзі', ML, y + 40); y += 75;
+  for (const gn of gens) { await para(genName(gn), { size: 26, bold: true, gap: 2 }); await para(L.filter(r => r.gen === gn).map(r => short(P[r.id]) + (life(P[r.id]) ? ` (${life(P[r.id])})` : '')).join(', '), { size: 23, lh: 33, gap: 14 }); }
+  y += 10; await para('Позначки: ✓ підтверджено документом · 💬 зі спогадів · ? потребує перевірки · ⇄ суперечливі версії. Те, що записано в документах, подано як факт; відоме зі слів родичів — «за словами…»; здогадки — «Є припущення». Номери [1] — джерела в кінці книги.', { size: 20, lh: 29, color: '#6b5f55' });
+  // біографії
+  for (const gn of gens) {
+    await newPage(); g.fillStyle = '#6b2433'; g.font = `bold 44px ${FF}`; g.fillText(genName(gn), ML, y + 44); g.fillRect(ML, y + 62, W - ML - MR, 2); y += 95;
+    for (const r of L.filter(q => q.gen === gn).sort((a, b) => byBirth(a.id, b.id))) {
+      const p = P[r.id], rl = relOf(p), par = [p.f, p.mo].filter(z => P[z]), sp = (SPOUSES[r.id] || []).filter(z => P[z.id]), ch = (KIDS[r.id] || []).slice().sort(byBirth);
+      const phs = wPh ? S.data.photos.filter(z => photoOf(z, r.id) && !isVoice(z) && !z.pending && imgs[z.id]).sort((a, b) => (b.id === p.portrait) - (a.id === p.portrait)).slice(0, 4) : [];
+      await need(300); const top = y;
+      if (phs[0]) { cover(imgs[phs[0].id], ML, top, 200, 250); g.strokeStyle = '#c9bfb3'; g.strokeRect(ML, top, 200, 250); float = { x: ML + 230, bottom: top + 265 }; }
+      else { g.fillStyle = '#efe9e0'; g.fillRect(ML, top, 110, 130); g.fillStyle = '#8a7d70'; g.font = `48px ${FF}`; g.textAlign = 'center'; g.fillText((p.n || '?')[0], ML + 55, top + 85); g.textAlign = 'left'; float = { x: ML + 140, bottom: top + 145 }; }
+      await para(full(p), { size: 34, lh: 44, bold: true, gap: 0 });
+      await para(`${years(p) || ''}   ${RELI[rl.k]} ${RELK[rl.k].t}${rl.c ? '   ⇄ ' + RELK.con.t : ''}`, { size: 21, lh: 31, color: RELC[rl.k], font: SF, gap: 4 });
+      const dt = [p.b ? `нар. ${p.b}${p.bp ? ', ' + p.bp : ''}` : p.bp ? `родом: ${p.bp}` : '', p.d ? `пом. ${p.d}${p.dp ? ', ' + p.dp : ''}` : p.dead || p.dp ? `${p.sex === 'f' ? 'померла' : 'помер'}${p.dp ? ', ' + p.dp : ''}` : '', p.lp ? `жив${p.sex === 'f' ? 'ла' : ''}: ${p.lp}` : ''].filter(Boolean).join(' · ');
+      if (dt) await para(dt, { size: 22, lh: 32, color: '#3d3530', gap: 2 });
+      const kin = [par.length ? 'Батьки: ' + par.map(z => short(P[z])).join(' і ') + '.' : '', sp.length ? (p.sex === 'f' ? 'Чоловік: ' : 'Дружина: ') + sp.map(z => short(P[z.id]) + (z.date && !/не підтвердж/i.test(z.date) ? ` (шлюб ${z.date})` : '')).join('; ') + '.' : '', ch.length ? 'Діти: ' + ch.map(z => short(P[z])).join(', ') + '.' : ''].filter(Boolean).join(' ');
+      if (kin) await para(kin, { size: 22, lh: 32, color: '#3d3530', gap: 6 });
+      if (rl.c) await para('Суперечливі версії: ' + rl.c, { size: 21, lh: 30, color: '#a8322d', gap: 6 });
+      if (p.note) for (const pp of plainLinks(p.note).split(/\n+/)) await para(pp, { size: 23, lh: 34, gap: 8 });
+      const st = wSt ? S.data.stories.filter(z => z.target === r.id || z.target === 'iv:' + r.id) : [];
+      if (st.length) { await para('СПОГАДИ', { size: 18, bold: true, color: '#6b5f55', font: SF, gap: 2 }); for (const z of st) await para(`«${plainLinks(z.text)}» — ${who(z.by)}, ${String(z.at || '').slice(0, 10)}`, { size: 22, lh: 32, italic: true, indent: 20, gap: 6 }); }
+      const docs = wDc ? S.data.documents.filter(d => (d.people || []).includes(r.id) && d.type !== 'map').sort((a, b) => (yN(a.date) || 0) - (yN(b.date) || 0)) : [];
+      if (docs.length) { await para('ЩО КАЖУТЬ ДОКУМЕНТИ', { size: 18, bold: true, color: '#6b5f55', font: SF, gap: 2 }); for (const d of docs) await para(`• ${d.title}${d.line ? ' — ' + plainLinks(d.line) : ''} [${cite(d)}]`, { size: 20, lh: 29, indent: 10, gap: 4 }); }
+      if (float && y < float.bottom) y = float.bottom; float = null;
+      if (phs.length > 1) { const gw = 300, gh = 225; await need(gh + 50); let gx = ML; for (const z of phs.slice(1)) { cover(imgs[z.id], gx, y, gw, gh); if (z.caption) { g.font = `17px ${SF}`; g.fillStyle = '#6b5f55'; g.fillText(lines(z.caption, `17px ${SF}`, gw)[0] || '', gx, y + gh + 22); } gx += gw + 25; } y += gh + 40; }
+      y += 20; if (y + 40 < H - MB) { g.fillStyle = '#e4dcd1'; g.fillRect(ML, y, W - ML - MR, 1); y += 30; }
+    }
+  }
+  if (srcs.length) { await newPage(); g.fillStyle = '#6b2433'; g.font = `bold 44px ${FF}`; g.fillText('Джерела', ML, y + 44); y += 85;
+    for (const [i, d] of srcs.entries()) await para(`${i + 1}. ${d.title}${d.date ? ', ' + d.date : ''}${d.src ? '. ' + d.src : ''}${d.url ? ' ' + d.url : ''}`, { size: 19, lh: 27, gap: 8 }); }
+  await finish(); say('Збираю PDF…');
+  const blob = pdfFromJpegs(pages), fn = `simeina-knyha-${(short(P[x]) || 'rid').replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase()}.pdf`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+  say(`Готово: ${pages.length} сторінок, ${(blob.size / 1e6).toFixed(1)} МБ — файл у «Завантаженнях».`); const b_ = $('[data-act="fb-pdf"]'); if (b_) b_.disabled = false;
+  ev('open', 'fbook-pdf', 'person:' + x);
+}
 async function makeFBook() {
   const x = FBX, mode = $('#fb-m').value, G = +$('#fb-g').value, wPh = $('#fb-ph').checked, wDc = $('#fb-dc').checked, wSt = $('#fb-st').checked, m = $('#fb-msg');
   m.className = 'msg'; m.textContent = 'Складаю…';
@@ -3195,6 +3281,7 @@ document.addEventListener('click', async e => {
     if (a === 'w-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'точно видалити?'; return; } const r = await api('/api/data', { body: { op: 'word.del', id: t.dataset.id } }); S.data.cfg.words = r.words; S.ui.keepScroll = true; render(); toast('Видалено'); return; }
     if (a === 'w-jump') { document.getElementById('w-' + t.dataset.l)?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
     if (a === 'fb-open') { openFBook(t.dataset.id); return; }
+    if (a === 'fb-pdf') { t.disabled = true; fbPdf().catch(e => { console.warn(e); t.disabled = false; const m = $('#fb-msg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } }); return; }
     if (a === 'fb-make') { t.disabled = true; makeFBook().catch(e => { t.disabled = false; const m = $('#fb-msg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } }); return; }
     if (a === 'iv-who') { S.ui.ivWho = t.dataset.id; scrollTo(0, 0); render(); return; }
     if (a === 'iv-me') { S.ui.ivWho = startId(); render(); return; }
