@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610180747';
+const BUILD = '202610180750';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -246,7 +246,9 @@ function estBY(p, dep = 0, seen = new Set()) {
   const ks = (KIDS[p.id] || []).map(k => yOf_(P[k]?.b)).filter(Boolean); if (ks.length) return Math.min(...ks) - 25;
   const sp = (SPOUSES[p.id] || []).map(x => yOf_(P[x?.id || x]?.b)).filter(Boolean); return sp.length ? sp[0] : null;
 }
-const isDead = p => !!(p && (p.d || p.dead || (estBY(p) ?? 9999) < new Date().getFullYear() - 105));
+let docY_ = null, docYsrc_ = null; /* найраніший рік документа, де згадано людину */
+const docYr_ = id => { const ds = S.data?.documents || []; if (docYsrc_ !== ds) { docYsrc_ = ds; docY_ = {}; ds.forEach(d => { const y = yOf_(d.date); if (y) (d.people || []).forEach(pid => { if (!docY_[pid] || y < docY_[pid]) docY_[pid] = y; }); }); } return docY_[id] || null; };
+const isDead = p => { if (!p) return false; if (p.d || p.dead) return true; const lim = new Date().getFullYear() - 105; return (estBY(p) ?? 9999) < lim || (docYr_(p.id) ?? 9999) < lim; };
 const deadCls = p => isDead(p) ? ' dead' : '';
 
 function famSelect(f) {

@@ -54430,5 +54430,29 @@
   "set": {
    "bp": "Веприк"
   }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18i-dead-valentyn_mar",
+  "person": "valentyn_mar",
+  "set": {
+   "dead": true
+  }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18i-dead-valentyn_k",
+  "person": "valentyn_k",
+  "set": {
+   "dead": true
+  }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18i-dead-hryhorii_mi21",
+  "person": "hryhorii_mi21",
+  "set": {
+   "dead": true
+  }
  }
 ]
