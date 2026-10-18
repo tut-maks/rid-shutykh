@@ -1578,5 +1578,5 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .fcnow b{font-weight:700}
 /* «Цифри роду»: згорнуті таблиці */
 .stgrid .tablebox.folded{max-height:23em;overflow:hidden;position:relative}
-.stgrid .tablebox.folded::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4em;background:linear-gradient(rgba(246,243,237,0),var(--bg,#f6f3ed));pointer-events:none}
+.stgrid .tablebox.folded::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4em;background:linear-gradient(transparent,var(--paper));pointer-events:none}
 .stmore{margin-top:6px}
