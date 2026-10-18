@@ -54012,7 +54012,7 @@
   "key": "rr18-dp-omelian_fg",
   "person": "omelian_fg",
   "set": {
-   "dp": "Вороньки"
+   "dp": "Веприк"
   }
  },
  {
@@ -54052,7 +54052,7 @@
   "key": "rr18-dp-mariia_fg",
   "person": "mariia_fg",
   "set": {
-   "dp": "Вороньки"
+   "dp": "Веприк"
   }
  },
  {
@@ -54068,7 +54068,7 @@
   "key": "rr18-dp-fedosiia_hg",
   "person": "fedosiia_hg",
   "set": {
-   "dp": "Вороньки"
+   "dp": "Веприк"
   }
  },
  {
@@ -54076,7 +54076,7 @@
   "key": "rr18-dp-stepan_fg",
   "person": "stepan_fg",
   "set": {
-   "dp": "Вороньки"
+   "dp": "Веприк"
   }
  },
  {
@@ -54084,7 +54084,7 @@
   "key": "rr18-dp-kseniia_hg",
   "person": "kseniia_hg",
   "set": {
-   "dp": "Вороньки"
+   "dp": "Веприк"
   }
  },
  {
@@ -54180,7 +54180,7 @@
   "key": "rr18-dp-yevfrosyniia_fg",
   "person": "yevfrosyniia_fg",
   "set": {
-   "dp": "Вороньки"
+   "dp": "Веприк"
   }
  },
  {
@@ -54189,6 +54189,62 @@
   "person": "afanasii_ie",
   "set": {
    "dp": "Вороньки"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3w36mz",
+  "id": "sc6x3w36mz",
+  "data": {
+   "place": "Веприк"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3kwbpq",
+  "id": "sc6x3kwbpq",
+  "data": {
+   "place": "Веприк"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3k968x",
+  "id": "sc6x3k968x",
+  "data": {
+   "place": "Веприк"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3vf14j",
+  "id": "sc6x3vf14j",
+  "data": {
+   "place": "Веприк"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3k6td7",
+  "id": "sc6x3k6td7",
+  "data": {
+   "place": "Веприк"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3kq8n4",
+  "id": "sc6x3kq8n4",
+  "data": {
+   "place": "Веприк"
+  }
+ },
+ {
+  "kind": "docpatch",
+  "key": "rr18-place-sc6x3km88n",
+  "id": "sc6x3km88n",
+  "data": {
+   "place": "Веприк"
   }
  }
 ]
