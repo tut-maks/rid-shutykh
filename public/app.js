@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610182350';
+const BUILD = '202610182352';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2535,7 +2535,7 @@ function vVoices() {
   <div class="tbar vbar"><input class="in" id="vq" type="search" placeholder="Пошук: назва, про кого, хто записав" value="${esc(S.ui.vq || '')}">
     <select class="in" data-vsel="vwho" title="Про кого"><option value="">Про всіх</option>${subj.map(([id, t]) => `<option value="${esc(id)}"${id === who_ ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
     <select class="in" data-vsel="vso" title="Сортування">${[['new', 'Спершу нові'], ['old', 'Спершу старі'], ['who', 'За людиною'], ['az', 'За назвою']].map(([k, t]) => `<option value="${k}"${k === so ? ' selected' : ''}>${t}</option>`).join('')}</select>
-    <button class="btn wine small" data-act="v-rec">🎙 Записати історію</button></div>
+    <button class="btn wine small" data-act="v-rec" title="Записати історію">🎙<span class="vbl"> Записати історію</span></button></div>
   ${L.length ? `<div class="vlist" id="vlist-all">${L.map(voiceRow).join('')}</div>` : `<p class="small muted">${all.length ? 'Нічого не знайдено — змініть пошук.' : 'Ще немає жодного запису.'}</p>`}`;
 }
 function voiceSec(p) {
