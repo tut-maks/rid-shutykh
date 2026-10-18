@@ -54375,5 +54375,29 @@
   "data": {
    "people": []
   }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18h-sex-p_669aaf156b",
+  "person": "p_669aaf156b",
+  "set": {
+   "sex": "f"
+  }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18h-sex-p_3a31cf8a83",
+  "person": "p_3a31cf8a83",
+  "set": {
+   "sex": "m"
+  }
+ },
+ {
+  "kind": "personpatch",
+  "key": "rr18h-sex-p_ab8152765b",
+  "person": "p_ab8152765b",
+  "set": {
+   "sex": "m"
+  }
  }
 ]
