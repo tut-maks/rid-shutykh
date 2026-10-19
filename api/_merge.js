@@ -18,6 +18,7 @@ export function sameMan(a, b) {
   if (a.sex && b.sex && a.sex !== b.sex) return false;
   if (a.pt && b.pt && norm(a.pt) !== norm(b.pt)) return false;
   if (yr(a.d) && yr(b.d) && yr(a.d) !== yr(b.d)) return false;
+  if ((yr(a.d) && yr(b.b) && +yr(a.d) < +yr(b.b)) || (yr(b.d) && yr(a.b) && +yr(b.d) < +yr(a.b))) return false; // один помер раніше, ніж народився інший
   const ya = yr(a.b), yb = yr(b.b);
   if (ya && yb) return ya === yb;
   return !!((a.f && a.f === b.f) || (a.mo && a.mo === b.mo));

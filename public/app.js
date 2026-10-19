@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610182352';
+const BUILD = '202610191242';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -187,6 +187,7 @@ function sameMan(a, b) {
   if (a.sex && b.sex && a.sex !== b.sex) return false;
   if (a.pt && b.pt && dNorm(a.pt) !== dNorm(b.pt)) return false;
   if (dYr(a.d) && dYr(b.d) && dYr(a.d) !== dYr(b.d)) return false;
+  if ((dYr(a.d) && dYr(b.b) && +dYr(a.d) < +dYr(b.b)) || (dYr(b.d) && dYr(a.b) && +dYr(b.d) < +dYr(a.b))) return false;
   const ya = dYr(a.b), yb = dYr(b.b); if (ya && yb) return ya === yb;
   return !!((a.f && a.f === b.f) || (a.mo && a.mo === b.mo));
 }
