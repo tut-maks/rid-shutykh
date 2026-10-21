@@ -73,7 +73,7 @@ def build(live):
         key = f'{kind}:{id_}:{field}'; h = H(value)
         r = {'key': key, 'kind': kind, 'id': id_, 'who': who, 'field': field, 'value': str(value), 'docs': ' '.join(docs), 'h': h}
         o = old.get(key)
-        if o and o.get('h') == h and o.get('status'):
+        if o and o.get('h') == h and o.get('status') and not (o['status'] == 'без документа' and auto != 'без документа' and not o.get('checked')):
             r.update(status=o['status'], checked=o.get('checked', ''), note=o.get('note', ''))
         elif o and o.get('status') and o.get('h') != h and o['status'] not in ('без документа',):
             r.update(status='змінилось — перевірити', checked='', note=f"було: {o.get('value', '')[:80]} ({o['status']}, {o.get('checked', '')})")
