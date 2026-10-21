@@ -1586,3 +1586,9 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .vbar #vq{flex:1 1 220px}
 .vbar select.in{max-width:220px}
 @media(max-width:820px){.vbar{flex-wrap:nowrap;overflow-x:auto}.vbar .in,.vbar select.in{font-size:16px;min-height:44px}.vbar #vq{min-width:140px;flex:1 1 140px}.vbar select.in{flex:0 0 auto;width:118px;max-width:118px}.vbar .vbl{display:none}.vbar .btn{min-width:44px}.vbar .btn{min-height:44px;white-space:nowrap}}
+
+/* стать на дереві (22.10): легкий блакитний / рожевий */
+.nd.sx-m:not(.sel){background:#eef4fb}
+.nd.sx-f:not(.sel){background:#fbeff3}
+.nd.sx-m:not(.sel):not(.root):not(.hyp){border-color:#c9daee!important}
+.nd.sx-f:not(.sel):not(.root):not(.hyp){border-color:#ebcad6!important}

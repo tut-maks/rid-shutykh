@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610212115';
+const BUILD = '202610212228';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -396,7 +396,9 @@ function sheetSwipe(sh, onClose) {
 }
 
 /* ───── Дерево предків ───── */
-function node(id) { const p = P[id]; return `<a class="nd${deadCls(p)}${p.hyp ? ' hyp' : ''}${p.root ? ' root' : ''}" href="${href('p', id)}">${ph(p)}<span><b>${esc(short(p))}</b><i>${esc(p.pt || '')}</i><span class="y">${esc(life(p))}</span></span></a>`; }
+// стать — легкий колір картки на дереві (власник, 22.10): чоловіки блакитні, жінки рожеві
+function sxCls(p) { return p && p.sex === 'm' ? ' sx-m' : p && p.sex === 'f' ? ' sx-f' : ''; }
+function node(id) { const p = P[id]; return `<a class="nd${sxCls(p)}${deadCls(p)}${p.hyp ? ' hyp' : ''}${p.root ? ' root' : ''}" href="${href('p', id)}">${ph(p)}<span><b>${esc(short(p))}</b><i>${esc(p.pt || '')}</i><span class="y">${esc(life(p))}</span></span></a>`; }
 let depthMax = 0;
 function branchHtml(id, d, seen) {
   if (seen.has(id)) return ''; seen.add(id); depthMax = Math.max(depthMax, d);
@@ -543,7 +545,7 @@ function vAll(tabs) {
   const desc = new Set(); (function dn(id) { (KIDS[id] || []).forEach(k => { if (!desc.has(k)) { desc.add(k); dn(k); } }); })(center);
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q); const br = !anc.has(id) && !desc.has(id) && (KIDS[id] || []).some(k => !anc.has(k) && !desc.has(k)); /* бічна гілка, що має продовження */
     const dim = f.fam && !(p.fam || []).includes(f.fam);
-    return `<a class="nd t2${deadCls(p)}${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (life(p) ? ', ' + life(p) : '') + (isDead(p) ? (p.d ? ' · помер(ла)' : ' · помер(ла), дати смерті не знаємо') : '') + (childAge(p) ? ' · ' + childAge(p).txt : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}${(r => `<i class="ndrel rel-${r.k}${r.c ? ' con' : ''}" title="${esc(RELK[r.k].t + (r.c ? ' · ' + RELK.con.t : ''))}">${RELK[r.k].i}</i>`)(relOf(p))}</a>`; }).join('');
+    return `<a class="nd t2${sxCls(p)}${deadCls(p)}${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (life(p) ? ', ' + life(p) : '') + (isDead(p) ? (p.d ? ' · помер(ла)' : ' · помер(ла), дати смерті не знаємо') : '') + (childAge(p) ? ' · ' + childAge(p).txt : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}${(r => `<i class="ndrel rel-${r.k}${r.c ? ' con' : ''}" title="${esc(RELK[r.k].t + (r.c ? ' · ' + RELK.con.t : ''))}">${RELK[r.k].i}</i>`)(relOf(p))}</a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
     if (h.kids) s += `<button class="tg kid" data-kidx="${id}" style="left:${n.x + T2.W / 2 - 4}px;top:${n.y + T2.H - 13}px" title="Показати дітей">▾${h.kids}</button>`;
@@ -597,8 +599,8 @@ async function treePng(PO) {
     if (out.length > lines) { out.length = lines; let l = out[lines - 1]; while (l && g.measureText(l + '…').width > maxW) l = l.slice(0, -1); out[lines - 1] = l + '…'; } return out; };
   const center = treeCenter();
   for (const [id, n] of Object.entries(L.N)) { const p = P[id]; const x = n.x, y = n.y, W = T2.W, H = T2.H;
-    g.save(); g.shadowColor = 'rgba(60,40,30,.12)'; g.shadowBlur = 10; g.shadowOffsetY = 3; rr(x, y, W, H, 12); g.fillStyle = '#fff'; g.fill(); g.restore();
-    rr(x, y, W, H, 12); g.lineWidth = id === center ? 2 : 1; g.strokeStyle = p.hyp ? HYP : id === center ? WINE : '#EAE3D9'; if (p.hyp) g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]);
+    g.save(); g.shadowColor = 'rgba(60,40,30,.12)'; g.shadowBlur = 10; g.shadowOffsetY = 3; rr(x, y, W, H, 12); g.fillStyle = p.sex === 'm' ? '#eef4fb' : p.sex === 'f' ? '#fbeff3' : '#fff'; g.fill(); g.restore();
+    rr(x, y, W, H, 12); g.lineWidth = id === center ? 2 : 1; g.strokeStyle = p.hyp ? HYP : id === center ? WINE : p.sex === 'm' ? '#c9daee' : p.sex === 'f' ? '#ebcad6' : '#EAE3D9'; if (p.hyp) g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]);
     const ax = x + 14 + 25, ay = y + H / 2; g.save(); g.beginPath(); g.arc(ax, ay, 25, 0, 7); g.closePath(); g.fillStyle = '#EADFD8'; g.fill(); g.clip();
     if (ims[id]) { const im = ims[id], c = pcOf(p); if (c) { const sw = c.s * im.width; g.drawImage(im, c.x * im.width, c.y * im.height, sw, sw, ax - 25, ay - 25, 50, 50); } else { const s2 = Math.max(50 / im.width, 50 / im.height); g.drawImage(im, ax - im.width * s2 / 2, ay - im.height * s2 / 2, im.width * s2, im.height * s2); } }
     else { g.fillStyle = '#4B3A35'; g.font = `19px ${fD}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(initials(p), ax, ay + 1); g.textAlign = 'left'; }
