@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610212228';
+const BUILD = '202610212233';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -397,6 +397,7 @@ function sheetSwipe(sh, onClose) {
 
 /* ───── Дерево предків ───── */
 // стать — легкий колір картки на дереві (власник, 22.10): чоловіки блакитні, жінки рожеві
+function sxCount() { let m = 0, w = 0; for (const x of Object.values(P)) { if (x.sex === 'm') m++; else if (x.sex === 'f') w++; } return `<div class="sxcnt" title="Усього в родоводі: чоловіків — ${m}, жінок — ${w}"><span class="sxm"><i></i>${m} чол.</span><span class="sxf"><i></i>${w} жін.</span></div>`; }
 function sxCls(p) { return p && p.sex === 'm' ? ' sx-m' : p && p.sex === 'f' ? ' sx-f' : ''; }
 function node(id) { const p = P[id]; return `<a class="nd${sxCls(p)}${deadCls(p)}${p.hyp ? ' hyp' : ''}${p.root ? ' root' : ''}" href="${href('p', id)}">${ph(p)}<span><b>${esc(short(p))}</b><i>${esc(p.pt || '')}</i><span class="y">${esc(life(p))}</span></span></a>`; }
 let depthMax = 0;
@@ -517,7 +518,7 @@ function treeBar(tabs, extra = '') {
       <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
         <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
         <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
-        <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button>${extra}</div></details></div>`;
+        <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button>${extra}</div></details>${sxCount()}</div>`;
 }
 function vAll(tabs) {
   const center = treeCenter(); const L = layoutTD(center); S.ui.tl = L; const f = S.ui.tf || {}; const V = new Set(Object.keys(L.N));

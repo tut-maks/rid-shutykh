@@ -1592,3 +1592,11 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .nd.sx-f:not(.sel){background:#fbeff3}
 .nd.sx-m:not(.sel):not(.root):not(.hyp){border-color:#c9daee!important}
 .nd.sx-f:not(.sel):not(.root):not(.hyp){border-color:#ebcad6!important}
+.sxcnt{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:14px;color:var(--mut,#6f655c);white-space:nowrap}
+.sxcnt span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid}
+.sxcnt .sxm{background:#eef4fb;border-color:#c9daee}
+.sxcnt .sxf{background:#fbeff3;border-color:#ebcad6}
+.sxcnt i{width:8px;height:8px;border-radius:50%}
+.sxcnt .sxm i{background:#7da3cf}
+.sxcnt .sxf i{background:#d68aa6}
+@media (max-width:820px){.sxcnt{margin-left:0;font-size:13px}.sxcnt span{padding:4px 8px}}
