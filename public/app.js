@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610191242';
+const BUILD = '202610212115';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -461,6 +461,12 @@ function layoutTD(center) {
   seen.add(center);
   const A = S.ui.tmode === 'desc' ? (() => { const B = mk(); add(B, center, 0, 0); return B; })() : up(center, 0, (SPOUSES[center] || []).some(x => P[x.id]) ? 'L' : 'C', (SPOUSES[center] || []).some(x => EXP[x.id] && P[x.id]) ? 1 : 0); /* відкрита рідня дружини/чоловіка — власні предки центру згортаються до батьків, щоб гілки не переплітались (розгорнути знову — ▲) */ /* є подружжя праворуч — брати й сестри ліворуч, щоб не накладались */ const D = down(center, 0); D.n = D.n.filter(o => o.id !== center); // центр уже в A
   D.n.forEach(o => add(A, o.id, o.x, o.r));
+  // інші шлюби, розгорнуті кнопкою «⚭ +N» (до дітей бічних — щоб «▾N» у другої дружини/чоловіка теж працювала): ставимо поруч із людиною в тому самому ряду, решту дерева розсуваємо
+  const SPX = S.ui.spx ||= {};
+  Object.keys(SPX).forEach(id => { if (!SPX[id]) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id)); if (!extra.length) return;
+    const k = extra.length, rightTaken = A.n.some(x => x.r === o.r && Math.abs(x.x - (o.x + P2)) < 1 && (SPOUSES[id] || []).some(y => y.id === x.id));
+    if (!rightTaken) { A.n.forEach(x => { if (x.x > o.x) x.x += k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
+    else { A.n.forEach(x => { if (x.x < o.x) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
   // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
   const KX = S.ui.kidx ||= {};
   const hasHidden = id => (KIDS[id] || []).some(k => !seen.has(k));
@@ -481,12 +487,6 @@ function layoutTD(center) {
     if (d > 0) right.forEach(n => n.x += d);
     Sb.n.forEach(n => add(A, n.id, n.x, n.r));
   }
-  // інші шлюби, розгорнуті кнопкою «⚭ +N»: ставимо поруч із людиною в тому самому ряду, решту дерева розсуваємо
-  const SPX = S.ui.spx ||= {};
-  Object.keys(SPX).forEach(id => { if (!SPX[id]) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id)); if (!extra.length) return;
-    const k = extra.length, rightTaken = A.n.some(x => x.r === o.r && Math.abs(x.x - (o.x + P2)) < 1 && (SPOUSES[id] || []).some(y => y.id === x.id));
-    if (!rightTaken) { A.n.forEach(x => { if (x.x > o.x) x.x += k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
-    else { A.n.forEach(x => { if (x.x < o.x) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
   // батьки й рідня подружжя (невістки, зяті, свати): кнопка «▲» над карткою; розгорнуті — ставимо над людиною, решту дерева розсуваємо
   const upHidden = id => { const p = P[id]; return !!p && [p.f, p.mo].some(x => x && P[x] && !seen.has(x)); };
   A.n.slice().forEach(o0 => { const id = o0.id; if (id === center || !upHidden(id)) return;
