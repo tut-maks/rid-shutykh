@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610222131';
+const BUILD = '202610222135';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -978,7 +978,7 @@ const personOpts = () => `<datalist id="qpeople">${Object.values(P).sort((a, b) 
 // Пошук людей за будь-якими частинами імені: «настя шута», «Іван Пархомович», «1931»
 const nrm_ = t => String(t || '').toLowerCase().replace(/[ʼ’'`]/g, '').replace(/ё/g, 'е');
 const personFind = (v, n = 8) => { const w = nrm_(v).split(/\s+/).filter(Boolean); if (!w.length) return [];
-  return Object.values(P).map(p => { const h = nrm_([p.n, p.s, p.pt, p.m, p.nick, full(p), life(p)].join(' ')); if (!w.every(x => h.includes(x))) return null; const sc = w.reduce((a, x) => a + (new RegExp('(^|\\s|\\()' + x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(h) ? 2 : 1), 0); return [sc, p]; })
+  return Object.values(P).map(p => { const h = nrm_([p.n, p.s, p.pt, p.m, p.nick, full(p), life(p)].join(' ')); if (!w.every(x => h.includes(x))) return null; const nn = nrm_(p.n || '').split(/\s+/), ns = nrm_([p.s, p.m].filter(Boolean).join(' ')).split(/\s+/); const sc = w.reduce((a, x) => { const e = x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return a + (nn.includes(x) ? 6 : ns.includes(x) ? 5 : new RegExp('(^|\\s|\\()' + e + '($|\\s|\\))').test(h) ? 3 : new RegExp('(^|\\s|\\()' + e).test(h) ? 2 : 1); }, 0); return [sc, p]; })
     .filter(Boolean).sort((a, b) => b[0] - a[0] || full(a[1]).localeCompare(full(b[1]), 'uk')).slice(0, n).map(x => x[1]); };
 const personByLabel = v => { v = String(v || '').trim(); if (!v) return ''; const p = Object.values(P).find(p => full(p) + (life(p) ? ' (' + life(p) + ')' : '') === v) || Object.values(P).find(p => full(p) === v); return p ? p.id : ''; };
 function qForm(pid, kind) {
@@ -3906,7 +3906,7 @@ function photoTag(ids, k, personId, opt = {}) {
   const id = ids[k]; const x = S.data.photos.find(y => y.id === id); if (!x) { if (k + 1 < ids.length) photoTag(ids, k + 1, personId); return; }
   let sel = [personId, ...tagsOf(id)].filter(y => P[y]);
   const chips = () => sel.map(y => `<span class="tagc">${esc(short(P[y]))}${y === personId ? '' : `<button type="button" data-rm="${y}" aria-label="Прибрати">×</button>`}</span>`).join('');
-  modal(`<h2>${opt.title || 'Що на фото?'}${ids.length > 1 ? ` <small class="muted">${k + 1} з ${ids.length}</small>` : ''}</h2>
+  modal(`<h2>${opt.title || 'Хто на фото?'}${ids.length > 1 ? ` <small class="muted">${k + 1} з ${ids.length}</small>` : ''}</h2>
     <div class="ask-prev"><img src="${img('photo=' + id, true)}" alt=""></div>
     <div class="sec" style="gap:10px">
       <label class="f">Підпис<textarea class="in" id="tg-c" maxlength="500" placeholder="Хто, коли, де. Напр.: «Весілля Івана й Ольги, Веприк, 1972»">${esc(x.caption || '')}</textarea></label>
