@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610222054';
+const BUILD = '202610222119';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2295,11 +2295,12 @@ function askGrid(max) {
   if (!L.length) return `${addB}<p class="muted small">Поки немає фото, на яких треба когось упізнати. Маєте старе фото й не знаєте, хто на ньому? Натисніть «＋ Додати фото» і позначте «Не знаю, хто на фото» — родичі підкажуть.</p>`;
   return `${addB}<div class="askg">${L.slice(0, max || 999).map(x => `<button class="askc" data-act="ask-open" data-id="${x.ph.id}"><img src="${img('photo=' + x.ph.id, true)}" alt="" loading="lazy"><span><b>${esc(x.ph.caption || (P[x.ph.person] ? short(P[x.ph.person]) : 'Хто це?'))}</b><i>${x.ph.pending ? 'чекає підтвердження · ' : ''}${hintsOf(x.ph.id).length ? hintsOf(x.ph.id).length + ' підказ.' : 'ще ніхто не підказав'}</i></span></button>`).join('')}</div>`;
 }
+const canRot = ph => !!ph && /^image\//.test(ph.mime || 'image/jpeg') && (canEdit() || (S.me && ph.by === S.me.id)); // повернути фото: редактор або той, хто фото додав
 function openAsk(id) {
   const ph = S.data.photos.find(x => x.id === id), a = (CFG_().photoAsk || {})[id]; if (!ph) return;
   const hs = hintsOf(id);
   modal(`<h2>Хто на фото?</h2>
-    <div class="ask-im"><img src="${img('photo=' + id)}" alt="" data-act="ask-zoom" data-id="${id}"></div>
+    <div class="ask-im"><img src="${img('photo=' + id)}" alt="" data-act="ask-zoom" data-id="${id}">${canRot(ph) ? `<div class="ask-rot"><button class="btn line small" data-act="ask-rot" data-dir="l" data-id="${id}" title="Повернути ліворуч">⟲ Повернути ліворуч</button><button class="btn line small" data-act="ask-rot" data-dir="r" data-id="${id}" title="Повернути праворуч">⟳ Повернути праворуч</button></div>` : ''}</div>
     <p class="small muted">${esc(ph.caption || '')}${P[ph.person] ? ` · фото з картки ${pLink(ph.person)}` : ''}${a?.note ? ` · ${esc(a.note)}` : ''}</p>
     <h3>Підказки родичів</h3>${hs.length ? storiesHtml(hs) : '<p class="muted small">Ще ніхто не підказав. Будьте першим!</p>'}
     <div class="sec" style="gap:8px"><textarea class="in" id="st-photo:${id}" placeholder="Напр.: «Друга зліва в другому ряду — баба Вівдя, поруч її сестра Маня. Фото приблизно 1955 р., Веприк»"></textarea>
@@ -3369,6 +3370,10 @@ document.addEventListener('click', async e => {
     if (a === 'kin-swap') { const x = S.ui.kinA || pickVal('kin-a'), y = S.ui.kinB || pickVal('kin-b'); S.ui.kinA = y; S.ui.kinB = x; S.ui.keepScroll = true; render(); return; }
     if (a === 'kin-go') { e.preventDefault(); S.ui.kinA = S.me?.person_id; S.ui.kinB = id; location.hash = '#/kin'; return; }
     if (a === 'ask-open') return openAsk(id);
+    if (a === 'ask-rot') { const ph = S.data.photos.find(x => x.id === id); if (!canRot(ph)) return; t.closest('.ask-rot')?.querySelectorAll('button').forEach(b => { b.disabled = true; }); toast('Повертаю…');
+      try { const bm = await photoBitmap(id); const c = document.createElement('canvas'); c.width = bm.height; c.height = bm.width; const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate((t.dataset.dir === 'r' ? 1 : -1) * Math.PI / 2); g.drawImage(bm, -bm.width / 2, -bm.height / 2); bm.close?.();
+        await photoReplace(id, await canvasJpeg(c)); closeLayer(); await load(); S.ui.keepScroll = true; render(); openAsk(id); toast('Фото повернуто. Оригінал лишився.'); }
+      catch (err) { t.closest('.ask-rot')?.querySelectorAll('button').forEach(b => { b.disabled = false; }); toast(errText(err)); } return; }
     if (a === 'ask-zoom') { const ph = S.data.photos.find(x => x.id === id); if (ph) viewer({ title: ph.caption || 'Хто на фото?', pages: [img('photo=' + id)], people: P[ph.person] ? [ph.person] : [] }); return; }
     if (a === 'rt-new') { modal(`<h2>Новий маршрут</h2><div class="sec" style="gap:10px"><label class="f">Назва<input class="in" id="rn-t" maxlength="120" placeholder="Напр.: «Вороньки бабусі Насті»"></label><label class="f">Про маршрут <small class="muted">(не обов'язково)</small><textarea class="in" id="rn-i" maxlength="2000" placeholder="Чиї це місця, які роки…"></textarea></label><div class="btns"><button class="btn" data-act="rt-create">Створити й ставити точки</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="rn-m"></span></div></div>`); return; }
     if (a === 'rt-create') { const t_ = $('#rn-t').value.trim(); if (!t_) { const m = $('#rn-m'); m.className = 'msg err'; m.textContent = 'Напишіть назву.'; return; } t.disabled = true; const res = await rtSave(null, { title: t_, intro: $('#rn-i').value.trim(), pts: [] }); closeLayer(); S.ui.rtEd = res.id; S.ui.rtI = -1; location.hash = href('routes', res.id); return; }

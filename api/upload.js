@@ -83,10 +83,11 @@ export default handler(async (req, res, ctx, url) => {
   const isImg = /^image\//.test(mime);
   const replaceId = url.searchParams.get('replace'), splitId = url.searchParams.get('splitFrom');
   if (replaceId != null || splitId != null) {
-    if (!can(me, 'editor')) return fail(res, 403, 'forbidden');
     if (!isImg) return fail(res, 415, 'type');
     const src = await db.get('photos', { eq: { id: String(replaceId ?? splitId).slice(0, 60), deleted: false } });
     if (!src || !/^image\//.test(src.mime || 'image/jpeg')) return fail(res, 404, 'not_found');
+    // редактор — будь-яке фото; автор фото — лише заміна/поворот свого (не розрізання)
+    if (!can(me, 'editor') && !(replaceId != null && src.created_by === me.id)) return fail(res, 403, 'forbidden');
     const now = new Date().toISOString();
     const dir = src.path.replace(/[^/]+$/, ''); // та сама тека, що й у джерела
     if (replaceId != null && kind === 'thumb') { // мініатюра обробленої версії
