@@ -1605,7 +1605,7 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .dthumbs img{flex:1 1 0;min-width:0;width:auto!important;height:100%;object-fit:cover}
 .pp-doc .dthumbs{width:110px;height:78px}.pp-doc .dthumbs img{border-radius:4px}
 .dthumbs em{position:absolute;right:4px;bottom:4px;font-style:normal;font-size:11px;line-height:1;padding:3px 5px;border-radius:5px;background:rgba(20,16,12,.72);color:#fff}
-.pv-pgs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.pv-pgs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;min-height:54px;flex:none}
 .pv-pg{position:relative;flex:none;width:64px;height:48px;min-height:44px;padding:0;border:2px solid #3B352C;border-radius:6px;background:#1E1A15;cursor:pointer;overflow:hidden}
 .pv-pg img{width:100%;height:100%;object-fit:cover;display:block;opacity:.75}
 .pv-pg span{position:absolute;left:3px;bottom:2px;font-size:11px;color:#fff;text-shadow:0 0 3px #000}

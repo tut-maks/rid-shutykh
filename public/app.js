@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610221335';
+const BUILD = '202610221338';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1816,7 +1816,7 @@ function vPeople() {
 // Кілька сторінок документа (бланк і його зворот, розворот книги) — видно одразу: мініатюри поруч і «2 стор.»
 const pgWord = n => n > 1 ? n + ' стор.' : '';
 const docThumbs = d => d.pages > 1 ? `<span class="dthumbs">${Array.from({ length: Math.min(d.pages, 3) }, (_, k) => `<img src="${img('doc=' + d.id + '&page=' + k, true)}" alt="" loading="lazy">`).join('')}<em>${d.pages} стор.</em></span>` : `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">`;
-const docCard = d => `<button class="doc" data-doc="${d.id}"><span class="im">${d.pages ? docThumbs(d) : '<span class="ph" style="width:100%;height:100%">скан ще не додано</span>'}</span><b>${esc(d.title)}</b><span class="mono">${esc(d.date || '')}${d.place ? ' · ' + esc(d.place) : ''}${d.pages > 1 ? ' · ' + pgWord(d.pages) : ''}</span></button>`;
+const docCard = d => `<button class="doc" data-doc="${d.id}"><span class="im">${d.pages ? docThumbs(d) : '<span class="ph" style="width:100%;height:100%">скан ще не додано</span>'}</span><b>${esc(d.title)}</b><span class="mono">${esc(d.date || '')}${d.place ? ' · ' + esc(d.place) : ''}</span></button>`;
 function vDocs() {
   const s = S.data.documents.filter(d => d.type !== 'map').sort((a, b) => yearOf(a.date).localeCompare(yearOf(b.date)));
   return `<div class="lede"><div class="eyebrow">Архів</div><h1>Документи</h1><p>Метричні книги Покровської церкви села Вороньки, записи ЗАГС і сімейні документи. Під кожним указано, яка саме строчка стосується нашої родини.</p></div>
