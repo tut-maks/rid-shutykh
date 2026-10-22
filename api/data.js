@@ -457,7 +457,7 @@ export default handler(async (req, res, ctx, url) => {
   }
   if (op === 'photo.delete') {
     const p = await db.get('photos', { eq: { id: S(body.id, 60), deleted: false } }); if (!p) return fail(res, 404, 'not_found');
-    if (!owner && p.created_by !== me.id) return fail(res, 403, 'forbidden');
+    if (!owner) return fail(res, 403, 'forbidden'); // видаляти фото й голоси — лише власник сайту
     await db.update('photos', { eq: { id: p.id } }, { deleted: true }); await revision('photo', p.id, 'delete', p, null, me.id); { const pd = await pendGet(); if (pd[p.id]) { delete pd[p.id]; await pendSet(pd, me.id); } }
     return done({ ok: true }, p.person_id);
   }

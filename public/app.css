@@ -1618,3 +1618,5 @@ body:has(#layer .scrim) .ivnudge{display:none}
 
 .pv-cap .pv-line,.pv-cap .pv-text,.pv-cap .pv-src,.pv-cap .pv-verl{-webkit-user-select:text;user-select:text;cursor:text}
 .pv-copy{align-self:flex-start;margin-top:6px;background:transparent;border:1px solid rgba(237,232,223,.35);color:inherit;border-radius:8px;padding:8px 12px;min-height:40px;font:inherit;font-size:13px;cursor:pointer}.pv-copy:hover{border-color:rgba(237,232,223,.7)}
+
+.vmore{position:relative;flex:none}.vmore>summary{list-style:none;cursor:pointer;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--muted);font-size:18px;line-height:1}.vmore>summary::-webkit-details-marker{display:none}.vmore>summary:hover{background:rgba(0,0,0,.05)}.vmore-m{position:absolute;right:0;top:36px;z-index:5;background:#fff;border:1px solid var(--rule);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:6px;min-width:170px}.vdel{width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:8px;color:#a3241a;font:inherit;font-size:14px;cursor:pointer}.vdel:hover{background:#fbecea}

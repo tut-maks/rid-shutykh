@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610222135';
+const BUILD = '202610222206';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1851,7 +1851,7 @@ function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId,
       ${canPhoto && canEdit() ? `<button class="pv-mi" data-portrait="${photoId || ''}">Зробити головним фото</button><button class="pv-mi" data-phask="${photoId || ''}">${(CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'}</button>` : ''}
       ${photoId && canEdit() ? `<a class="pv-mi" data-pvdl href="${img('photo=' + photoId)}${verOf(photoId)?.orig ? '&v=orig' : ''}&dl=1" download>⬇ Завантажити оригінал</a>` : ''}
       ${canPhoto && canEdit() ? `<label class="pv-mi pv-ed">🖼 Замінити на оброблену версію<input type="file" accept="image/jpeg,image/png,image/webp" data-pvrep hidden></label><button class="pv-mi pv-ed" data-pv="rotl">⟲ Повернути ліворуч</button><button class="pv-mi pv-ed" data-pv="rotr">⟳ Повернути праворуч</button><button class="pv-mi pv-ed" data-pv="crop">✂ Обрізати</button><button class="pv-mi pv-ed" data-pv="split">Розрізати на окремі фото</button>` : ''}
-      ${canPhoto ? `<button class="pv-mi" data-pv="who">👥 Хто на фото — позначити людей</button><button class="pv-mi" data-pv="cap">Змінити підпис</button><button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}
+      ${canPhoto ? `<button class="pv-mi" data-pv="who">👥 Хто на фото — позначити людей</button><button class="pv-mi" data-pv="cap">Змінити підпис</button>${isOwner() ? `<button class="pv-mi danger" data-delphoto="${photoId || ''}">Видалити фото</button>` : ''}` : ''}
     </div>
     <div class="pv-stage">${pages.length ? `<img class="pv-img" alt="${esc(title)}" draggable="false"><div class="pv-marks" aria-hidden="true"></div><div class="pv-hint" hidden>Проведіть по скану, щоб обвести запис. <button data-pv="mkcancel">Скасувати</button></div><div class="pv-cut" hidden></div>` : '<p class="pv-empty">Скан ще не додано.</p>'}
       ${pages.length > 1 ? `<button class="pv-nav prev" data-pv="prev" aria-label="Попередня">${ICO.l}</button><button class="pv-nav next" data-pv="next" aria-label="Наступна">${ICO.r}</button>` : ''}
@@ -2547,7 +2547,7 @@ async function voiceUrl(id) { // довгі записи сервер відда
   for (let k = 1; k < n; k++) parts.push(await (await get(k)).blob());
   return (vcache[id] = URL.createObjectURL(new Blob(parts, { type: parts[0].type })));
 }
-const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${(isOwner() || x.by === S.me.id) && !x.pending ? `<button class="btn line small" data-delphoto="${x.id}" title="Видалити запис">✕</button>` : ''}</div>`;
+const voiceRow = x => `<div class="vrow${x.pending ? ' phpend' : ''}" data-vid="${x.id}"><button class="vplay" data-act="v-play" data-id="${x.id}" aria-label="Слухати">▶</button><div class="vmeta"><b>${esc(x.caption || 'Голосовий спогад')}</b><i>${P[x.person] ? esc(short(P[x.person])) + ' · ' : String(x.person || '').startsWith('fam:') && FAM[x.person.slice(4)] ? esc(FAM[x.person.slice(4)].title) + ' · ' : ''}записав(ла) ${esc(who(x.by))}, ${esc(when(x.at))}${x.pending ? ' · <b class="pend-l">чекає підтвердження</b>' : ''}</i><audio controls preload="none" hidden></audio></div>${x.pending && isOwner() ? `<button class="btn small" data-act="ph-ok" data-id="${x.id}">✓</button><button class="btn line small" data-act="ph-no" data-id="${x.id}">✕</button>` : ''}${isOwner() && !x.pending ? `<details class="vmore"><summary title="Ще дії" aria-label="Ще дії">⋯</summary><div class="vmore-m"><button type="button" class="vdel" data-delphoto="${x.id}">Видалити запис</button></div></details>` : ''}</div>`;
 /* Усі голоси роду — #/voices: пошук, про кого, сортування */
 function vVoices() {
   const all = voicesOf().filter(x => !x.pending || isOwner() || x.by === S.me.id);
