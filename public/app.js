@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610222038';
+const BUILD = '202610222054';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -729,7 +729,7 @@ function vPerson() {
       ${aboutMore(p, docs)}
       ${!p.note && !docs.length && !ridMentions(p.id).length ? `<p class="muted">Поки нічого не написано.${canEdit() ? ' Натисніть «Редагувати», щоб додати.' : ''}</p>` : ''}
       ${qAboutHtml(p.id)}
-      ${p.last ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
+      ${p.last?.by ? `<div class="lastedit">Остання зміна: ${esc(who(p.last.by))}, ${esc(when(p.last.at))}${isOwner() ? ` · <a href="#" data-act="history">історія змін</a>` : ''}</div>` : ''}
     </div>
     ${(p.src || []).length ? `<div class="sec"><h3>Джерела в архівах</h3><ul class="srcs">${p.src.map(s => `<li><a href="${esc(s.u)}" target="_blank" rel="noopener noreferrer">${esc(s.t)}</a> <span class="muted small">${esc(srcSite(s.u))}</span></li>`).join('')}</ul></div>` : ''}
     <div class="sec"><h3>Документи ${canEdit() ? `<button class="btn line small" data-act="docform">+ Архівний документ</button>` : ''}</h3>

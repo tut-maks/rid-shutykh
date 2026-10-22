@@ -98,19 +98,22 @@ async function bootstrap(ctx) {
   const photosV = photos.filter(p => !pend[p.id] || isOwn || p.created_by === ctx.member.id); // чужі непідтверджені фото не показуємо
   let joinPending = 0;
   if (can(ctx.member, 'owner')) { try { joinPending = (await db.list('join_requests', { eq: { status: 'pending' }, select: 'id' })).length; } catch {} }
+  const authors = new Set([...photosV.map(p => p.created_by), ...stories.map(x => x.created_by), ...questions.map(q => q.by), ...questions.map(q => q.updBy)].filter(Boolean));
   const last = {};
   for (const r of revs) if (!last[r.entity_id]) last[r.entity_id] = { by: r.by, at: r.at, action: r.action };
   return {
     me: { id: ctx.member.id, name: ctx.member.name, role: ctx.member.role, person_id: ctx.member.person_id || null },
-    persons: persons.map(p => ({ id: p.id, ...p.data, v: p.version, last: last[p.id] || null })),
+    // Хто й коли правив картку — лише власнику (родичі не бачать активності інших)
+    persons: persons.map(p => ({ id: p.id, ...p.data, v: p.version, last: isOwn ? (last[p.id] || null) : (last[p.id]?.action === 'create' ? { action: 'create' } : null) })),
     unions: unions.map(u => ({ id: u.id, a: u.a, b: u.b, date: u.date || '' })),
     families: families.map(f => ({ id: f.id, ...f.data })),
     documents: documents.map(d => ({ id: d.id, ...d.data, pages: (d.data.pages || []).length })),
     photos: photosV.map(p => ({ id: p.id, person: p.person_id, caption: p.caption, mime: p.mime, by: p.created_by, at: p.created_at, ...(pend[p.id] ? { pending: true } : {}), ...(pver[p.id] ? { ver: verOut(pver[p.id]) } : {}) })),
     photoPending: isOwn ? photosV.filter(p => pend[p.id]).length : 0,
     stories: stories.map(s => ({ id: s.id, target: s.target, text: s.text, by: s.created_by, at: s.created_at })),
-    names: Object.fromEntries(members.map(m => [m.id, m.name || 'Родич'])),
-    accounts: [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))], // у кого вже є доступ — щоб не пропонувати «Запросити»
+    // Імена учасників: власнику — усі; іншим — лише автори видимих фото, спогадів і запитань та сам користувач (хто ще зареєстрований — не видно)
+    names: Object.fromEntries(members.filter(m => isOwn || m.id === ctx.member.id || authors.has(m.id)).map(m => [m.id, m.name || 'Родич'])),
+    accounts: isOwn ? [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))] : [], // у кого вже є доступ — лише власнику (запрошує тільки він)
     questions, qReady, joinPending,
     cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], routes: cfg.routes || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, photoFaces: cfg.photo_faces || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
   };
