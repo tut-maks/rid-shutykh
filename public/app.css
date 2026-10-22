@@ -1615,3 +1615,6 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .nd.t2.sel.sx-f{background:#fbe9ef}
 
 .ask-rot{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}.ask-rot .btn{min-height:44px}
+
+.pv-cap .pv-line,.pv-cap .pv-text,.pv-cap .pv-src,.pv-cap .pv-verl{-webkit-user-select:text;user-select:text;cursor:text}
+.pv-copy{align-self:flex-start;margin-top:6px;background:transparent;border:1px solid rgba(237,232,223,.35);color:inherit;border-radius:8px;padding:8px 12px;min-height:40px;font:inherit;font-size:13px;cursor:pointer}.pv-copy:hover{border-color:rgba(237,232,223,.7)}

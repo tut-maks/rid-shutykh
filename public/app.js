@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610222119';
+const BUILD = '202610222126';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -351,6 +351,7 @@ const MI = {
   families: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
   people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/></svg>',
   docs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4M9.5 12h5M9.5 15.5h5"/></svg>',
+  dl: '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   maps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 6.5 9 4l6 2.5L20.5 4v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>',
   q: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path d="M10.3 8.6a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M12 13.3v.1"/></svg>',
@@ -1694,7 +1695,7 @@ function vMaps() {
     <button class="mapim" data-doc="${m.id}" title="Відкрити карту">${m.pages ? `<img src="${img('doc=' + m.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph">зображення ще немає</span>'}</button>
     <div class="mapt"><b>${esc(m.title)}</b><span class="mono small">${esc(m.date || m.year || '')}</span>
       ${(m.villages || []).length ? `<span class="small muted">${m.villages.map(esc).join(' · ')}</span>` : ''}
-      ${m.text ? `<p class="small">${glossify(esc(m.text))}</p>` : ''}
+      ${m.text ? `<p class="small">${glossify(mdLinks(esc(m.text)))}</p>` : ''}
       ${m.src ? `<p class="small muted">${esc(m.src)}${m.url ? ` <a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">оригінал</a>` : ''}</p>` : ''}
       <div class="btns"><button class="btn line small" data-doc="${m.id}">Відкрити</button>${m.pages && (m.geo || []).length >= 3 ? `<button class="btn small" data-act="map-over" data-id="${m.id}">Накласти на сучасну карту</button><span class="small muted">прив'язана</span>` : `<span class="small muted">ще не прив'язана до сучасної карти</span>`}</div></div>
   </article>`).join('') || '<p class="muted">Карт поки немає.</p>'}</div>`;
@@ -1832,6 +1833,8 @@ function vDocs() {
 // інакше у переглядачі фото кнопки «⋯» і «✕» опиняються за краєм екрана
 function unzoomPage() { const vv = window.visualViewport; if (!vv || vv.scale <= 1.01) return; const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = m.content; m.content = c.replace(/,?\s*maximum-scale=[\d.]+/, '') + ',maximum-scale=1.0001'; setTimeout(() => { m.content = c; }, 60); }
 const pvPeople = ids => ids.filter(x => P[x]).map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('');
+// [[p:id|Ім'я]] / [[d:id|текст]] у підписі скану → посилання (у вікні перегляду: закрити вікно й перейти)
+const pvLinks = t => esc(t).replace(/\[\[([pd]):([a-z0-9_-]+)\|([^\]]+)\]\]/gi, (m, k, id, label) => k === 'p' ? (P[id] ? `<a href="${href('p', id)}" data-pv="go">${label}</a>` : label) : (S.data.documents.some(d => d.id === id) ? `<a href="#" class="doclink" data-doc="${id}">${label}</a>` : label));
 function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId, marks, items, startAt }) {
   const canPhoto = !!(items ? items.some(x => x.photoId) : photoId); let i = startAt || 0, sc = 1, tx = 0, ty = 0, mk = (marks || []).slice(), draw = null, cut = null, vOrig = false;
   const L = $('#layer');
@@ -1839,6 +1842,7 @@ function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId,
   const who_ = (people || []).filter(x => P[x]);
   L.innerHTML = `<div class="pv" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <div class="pv-top"><div class="pv-t"><b>${esc(title)}</b>${pages.length > 1 ? `<span class="mono pv-n"></span>` : ''}</div>
+      ${pages.length ? `<button class="pv-ic" data-pv="dl" title="Завантажити скан (з рамкою «наш запис»)" aria-label="Завантажити">${ICO.dl}</button>` : ''}
       <button class="pv-ic" data-pv="zoom" title="Збільшити (або двічі клацніть по фото)" aria-label="Збільшити">${ICO.zoom}</button>
       ${canPhoto || (docId && canEdit()) ? `<button class="pv-ic" data-pv="more" title="Ще" aria-label="Ще дії">${ICO.more}</button>` : ''}
       <button class="pv-ic" data-pv="close" title="Закрити (Esc)" aria-label="Закрити">${ICO.x}</button></div>
@@ -1856,7 +1860,7 @@ function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId,
     <div class="pv-cap">
       ${pages.length > 1 && !items ? `<div class="pv-pgs" role="tablist" aria-label="Сторінки">${pages.map((_, k) => `<button type="button" class="pv-pg" data-pv="pg" data-k="${k}" aria-label="Сторінка ${k + 1}">${thumbs?.[k] ? `<img src="${thumbs[k]}" alt="" loading="lazy">` : ''}<span>${k + 1}</span></button>`).join('')}</div>` : ''}
       <button class="pv-find" data-pv="tomark" hidden>⌕ Показати наш запис</button>
-      ${line || text ? glossify((line ? `<div class="pv-line">${esc(line)}</div>` : '') + (text ? `<div class="pv-text">${esc(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
+      ${line || text ? glossify((line ? `<div class="pv-line">${pvLinks(line)}</div>` : '') + (text ? `<div class="pv-text">${pvLinks(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${pvLinks(src)}</div>` : ''}${line || text || src ? `<button class="pv-copy" data-pv="copy" type="button">⧉ Скопіювати текст</button>` : ''}
       <div class="pv-verl" hidden></div>
       <div class="pv-people">${pvPeople(who_)}</div>${canPhoto ? `<button class="pv-who" data-pv="who"${photoId || items ? '' : ' hidden'}>👥 Хто на фото? — позначити людей</button>` : ''}
       ${canPhoto ? `<div class="pv-capedit" hidden><input class="in" id="cap-in" value="${esc(title === short(P[people?.[0]] || {}) ? '' : title)}" placeholder="Хто на фото, рік, звідки"><button class="btn small" data-pv="capsave">Зберегти</button></div>` : ''}
@@ -1937,6 +1941,16 @@ function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId,
     if (a === 'next') return go(1);
     if (a === 'zoom') return sc > 1.01 ? zoomTo(1, 0, 0) : (pageMarks().length ? toMark() : zoomTo(2.5, 0, 0));
     if (a === 'tomark') return toMark();
+    if (a === 'copy') { const t_ = [line, text, src].filter(Boolean).map(plainLinks).join('\n\n'); try { await navigator.clipboard.writeText(t_); toast('Текст скопійовано'); } catch { const r = document.createRange(); r.selectNodeContents(root.querySelector('.pv-cap')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Текст виділено — скопіюйте (⌘C)'); } return; }
+    if (a === 'dl') { if (!im) return; b.disabled = true; toast('Готую файл…');
+      try { const u = im.currentSrc || im.src; const r = await fetch(u, { credentials: 'same-origin' }); if (!r.ok) throw new Error('http_' + r.status); const bm = await createImageBitmap(await r.blob());
+        const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const g = c.getContext('2d'); g.drawImage(bm, 0, 0); const W = bm.width, H = bm.height; bm.close?.();
+        const lw = Math.max(3, Math.round(Math.max(W, H) / 450)), off = lw * 2; g.strokeStyle = '#E8361E'; g.lineWidth = lw; g.lineJoin = 'round';
+        for (const m of vOrig ? [] : pageMarks()) { const x = m.x * W - off, y = m.y * H - off, w = m.w * W + off * 2, h = m.h * H + off * 2, rr = Math.min(off * 2, w / 4, h / 4); g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, rr) : g.rect(x, y, w, h); g.stroke(); }
+        const bl = await canvasJpeg(c, 0.92); const name = (String(title || 'скан').replace(/[\\/:*?"<>|«»]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 90) || 'скан') + (pages.length > 1 ? ` — с. ${i + 1}` : '') + '.jpg';
+        const href_ = URL.createObjectURL(bl), aEl = document.createElement('a'); aEl.href = href_; aEl.download = name; document.body.appendChild(aEl); aEl.click(); aEl.remove(); setTimeout(() => URL.revokeObjectURL(href_), 4000);
+        ev('open', 'doc', 'download:' + (docId ? 'doc:' + docId : photoId ? 'photo:' + photoId : '')); }
+      catch (err) { toast(errText(err)); } b.disabled = false; return; }
     if (a === 'docdel') { if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Точно видалити? Натисніть ще раз'; return; } await api('/api/data', { body: { op: 'doc.delete', id: docId } }); close(); await load(); render(); toast('Документ прибрано з сайту'); return; }
     if (a === 'mkdraw') { menu.hidden = true; zoomTo(1, 0, 0, false); draw = { box: null }; root.classList.add('drawing'); root.querySelector('.pv-hint').hidden = false; return; }
     if (a === 'mkcancel') { draw = null; root.classList.remove('drawing'); root.querySelector('.pv-hint').hidden = true; placeMarks(); return; }
