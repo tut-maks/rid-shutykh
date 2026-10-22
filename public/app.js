@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610212233';
+const BUILD = '202610221335';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -156,7 +156,7 @@ function aboutMore(p, docs) {
   const plain = t => esc(String(t || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2'));
   const ds = docs.filter(d => d.text || d.line).slice().sort((a, b) => docYear(a) - docYear(b)).slice(0, 8);
   const rid = ridMentions(p.id);
-  return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date ? ` <span class="muted small mono">${esc(d.date)}</span>` : ''}<p>${glossify(mdLinks(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' '))))}</p></div>`).join('')}</div>` : ''}
+  return `${ds.length ? `<div class="abt-g"><h4>Що кажуть документи</h4>${ds.map(d => `<div class="abt-d"><a href="#" data-doc="${d.id}">${esc(d.title)}</a>${d.date || d.pages > 1 ? ` <span class="muted small mono">${esc([d.date, d.pages > 1 ? d.pages + ' стор.' : ''].filter(Boolean).join(' · '))}</span>` : ''}<p>${glossify(mdLinks(esc([d.text, d.line && d.line !== 'Весь бланк.' ? 'Запис: ' + d.line : ''].filter(Boolean).join(' '))))}</p></div>`).join('')}</div>` : ''}
     ${rid.length ? `<div class="abt-g"><h4>З «Історії роду»</h4>${rid.map(x => `<p>${glossify(plain(x))}</p>`).join('')}<a class="small" href="#/families">Читати всю історію →</a></div>` : ''}`;
 }
 
@@ -301,7 +301,7 @@ function ppHtml(id) {
   ev.sort((a, b) => yk(a).localeCompare(yk(b)));
   const row = x => `<button type="button" class="pp-p" data-pp="${x}">${avatar(P[x], 'sm')}<span><b>${esc(short(P[x]))}</b><i>${esc(years(P[x]))}${childAge(P[x]) ? ' · †' : ''}</i></span></button>`;
   const grp = (t, ids) => ids.length ? `<div class="pp-g"><h4>${t}</h4>${ids.map(row).join('')}</div>` : '';
-  const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
+  const docRow = d => `<button type="button" class="pp-doc" data-doc="${d.id}">${d.pages ? docThumbs(d) : '<span class="ph"></span>'}<span><b>${esc(d.title)}</b><i>${esc([d.date, d.place, pgWord(d.pages)].filter(Boolean).join(' · '))}</i></span>${IC.ext}</button>`;
   const life = `<ol class="tl">${ev.map(e => `<li><b>${esc(String(e[0] || ''))}${e[0] ? ' · ' : ''}${esc(e[1])}</b>${e[2] ? `<span class="tl-d">${esc(e[2])}</span>` : ''}${e[3] ? `<span class="tl-pl">${IC.pin}${esc(e[3])}</span>` : ''}</li>`).join('') || '<li class="muted">Дат поки немає.</li>'}</ol>
     ${(() => { const t = (p.note || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1') || (ridMentions(p.id)[0] || '').replace(/\[\[[pd]:[a-z0-9_-]+\|([^\]]+)\]\]/gi, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1') || docs.map(d => d.text).filter(Boolean)[0] || ''; return t ? `<div class="pp-note">${esc(t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t)}</div>` : ''; })()}
     ${docs.length ? `<div class="pp-g"><h4>${docs.length > 1 ? 'Джерела' : 'Джерело'}</h4>${docs.slice(0, 4).map(docRow).join('')}${docs.length > 4 ? `<button type="button" class="btn line small" data-act="pp-tab" data-v="src">Усі джерела (${docs.length})</button>` : ''}</div>` : ''}`;
@@ -1813,7 +1813,10 @@ function vPeople() {
 }
 
 /* ───── Документи ───── */
-const docCard = d => `<button class="doc" data-doc="${d.id}"><span class="im">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph" style="width:100%;height:100%">скан ще не додано</span>'}</span><b>${esc(d.title)}</b><span class="mono">${esc(d.date || '')}${d.place ? ' · ' + esc(d.place) : ''}</span></button>`;
+// Кілька сторінок документа (бланк і його зворот, розворот книги) — видно одразу: мініатюри поруч і «2 стор.»
+const pgWord = n => n > 1 ? n + ' стор.' : '';
+const docThumbs = d => d.pages > 1 ? `<span class="dthumbs">${Array.from({ length: Math.min(d.pages, 3) }, (_, k) => `<img src="${img('doc=' + d.id + '&page=' + k, true)}" alt="" loading="lazy">`).join('')}<em>${d.pages} стор.</em></span>` : `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">`;
+const docCard = d => `<button class="doc" data-doc="${d.id}"><span class="im">${d.pages ? docThumbs(d) : '<span class="ph" style="width:100%;height:100%">скан ще не додано</span>'}</span><b>${esc(d.title)}</b><span class="mono">${esc(d.date || '')}${d.place ? ' · ' + esc(d.place) : ''}${d.pages > 1 ? ' · ' + pgWord(d.pages) : ''}</span></button>`;
 function vDocs() {
   const s = S.data.documents.filter(d => d.type !== 'map').sort((a, b) => yearOf(a.date).localeCompare(yearOf(b.date)));
   return `<div class="lede"><div class="eyebrow">Архів</div><h1>Документи</h1><p>Метричні книги Покровської церкви села Вороньки, записи ЗАГС і сімейні документи. Під кожним указано, яка саме строчка стосується нашої родини.</p></div>
@@ -1829,7 +1832,7 @@ function vDocs() {
 // інакше у переглядачі фото кнопки «⋯» і «✕» опиняються за краєм екрана
 function unzoomPage() { const vv = window.visualViewport; if (!vv || vv.scale <= 1.01) return; const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = m.content; m.content = c.replace(/,?\s*maximum-scale=[\d.]+/, '') + ',maximum-scale=1.0001'; setTimeout(() => { m.content = c; }, 60); }
 const pvPeople = ids => ids.filter(x => P[x]).map(x => `<a href="${href('p', x)}" data-pv="go">${ph(P[x])}<span>${esc(short(P[x]))}</span></a>`).join('');
-function viewer({ title, pages, line, text, src, people, photoId, docId, marks, items, startAt }) {
+function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId, marks, items, startAt }) {
   const canPhoto = !!(items ? items.some(x => x.photoId) : photoId); let i = startAt || 0, sc = 1, tx = 0, ty = 0, mk = (marks || []).slice(), draw = null, cut = null, vOrig = false;
   const L = $('#layer');
   document.body.classList.add('noscroll'); unzoomPage();
@@ -1851,6 +1854,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       ${pages.length > 1 ? `<button class="pv-nav prev" data-pv="prev" aria-label="Попередня">${ICO.l}</button><button class="pv-nav next" data-pv="next" aria-label="Наступна">${ICO.r}</button>` : ''}
       <div class="pv-load"></div></div>
     <div class="pv-cap">
+      ${pages.length > 1 && !items ? `<div class="pv-pgs" role="tablist" aria-label="Сторінки">${pages.map((_, k) => `<button type="button" class="pv-pg" data-pv="pg" data-k="${k}" aria-label="Сторінка ${k + 1}">${thumbs?.[k] ? `<img src="${thumbs[k]}" alt="" loading="lazy">` : ''}<span>${k + 1}</span></button>`).join('')}</div>` : ''}
       <button class="pv-find" data-pv="tomark" hidden>⌕ Показати наш запис</button>
       ${line || text ? glossify((line ? `<div class="pv-line">${esc(line)}</div>` : '') + (text ? `<div class="pv-text">${esc(text)}</div>` : '')) : ''}${src ? `<div class="pv-src">${esc(src)}</div>` : ''}
       <div class="pv-verl" hidden></div>
@@ -1898,7 +1902,8 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
       root.querySelectorAll('[data-portrait],[data-delphoto]').forEach(b => { if ('portrait' in b.dataset) b.dataset.portrait = photoId || ''; else b.dataset.delphoto = photoId || ''; b.hidden = !photoId; }); root.querySelectorAll('[data-phask]').forEach(b => { b.dataset.phask = photoId || ''; b.hidden = !photoId; b.textContent = (CFG_().photoAsk || {})[photoId] ? 'Прибрати з «Хто на фото?»' : '«Хто на фото?» — попросити родичів упізнати'; }); root.querySelectorAll('[data-pv=cap],[data-pv=who]').forEach(b => { b.hidden = !photoId; }); const pp_ = root.querySelector('.pv-people'); if (pp_ && it.people) pp_.innerHTML = pvPeople(it.people);
       const ci = root.querySelector('#cap-in'); if (ci) ci.value = it.caption || ''; const ce = root.querySelector('.pv-capedit'); if (ce) ce.hidden = true; }
     vOrig = false; verLine();
-    im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `${i + 1} / ${pages.length}`;
+    im.src = pages[i]; const n = root.querySelector('.pv-n'); if (n) n.textContent = `сторінка ${i + 1} з ${pages.length}`;
+    root.querySelectorAll('.pv-pg').forEach(b => b.classList.toggle('on', +b.dataset.k === i));
     if (pages.length > 1) { new Image().src = pages[(i + 1) % pages.length]; new Image().src = pages[(i - 1 + pages.length) % pages.length]; } // сусідні вантажаться заздалегідь
   };
   let sliding = false; // плавне гортання: поточне фото від'їжджає вбік, нове заїжджає з іншого боку
@@ -1927,6 +1932,7 @@ function viewer({ title, pages, line, text, src, people, photoId, docId, marks, 
     const a = b.dataset.pv; e.stopPropagation();
     if (a === 'close') return close();
     if (a === 'go') { e.preventDefault(); const h = b.getAttribute('href'); close(); location.hash = h; return; }
+    if (a === 'pg') { const k = +b.dataset.k; if (k !== i) go(k - i); return; }
     if (a === 'prev') return go(-1);
     if (a === 'next') return go(1);
     if (a === 'zoom') return sc > 1.01 ? zoomTo(1, 0, 0) : (pageMarks().length ? toMark() : zoomTo(2.5, 0, 0));
@@ -2008,7 +2014,7 @@ const ICO = {
   l: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   r: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
 };
-function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, marks: d.marks, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
+function openDoc(id) { const d = S.data.documents.find(x => x.id === id); if (!d) return; ev('open', 'doc', 'doc:' + id); viewer({ title: d.title, marks: d.marks, pages: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`)), thumbs: Array.from({ length: d.pages || 0 }, (_, k) => img(`doc=${d.id}&page=${k}`, true)), line: d.line ? 'Наша строчка: ' + d.line : '', text: d.text, src: [d.src, d.place].filter(Boolean).join(' · '), people: d.people, docId: d.id }); }
 /* Головне фото: виділити обличчя квадратною рамкою (кадр зберігається в картці як pc, саме фото не змінюється) */
 function cropPortrait(photoId, pid) {
   const p = P[pid]; if (!p) return; const old = p.pc && p.pc.id === photoId ? p.pc : null;
