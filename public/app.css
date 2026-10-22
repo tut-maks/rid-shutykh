@@ -1610,3 +1610,6 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .pv-pg img{width:100%;height:100%;object-fit:cover;display:block;opacity:.75}
 .pv-pg span{position:absolute;left:3px;bottom:2px;font-size:11px;color:#fff;text-shadow:0 0 3px #000}
 .pv-pg.on{border-color:#E8B9A6}.pv-pg.on img{opacity:1}
+/* Виділена картка в дереві зберігає колір статі (раніше виділений чоловік виглядав «рожевим», як жінка) */
+.nd.t2.sel.sx-m{background:#e3eef9}
+.nd.t2.sel.sx-f{background:#fbe9ef}
