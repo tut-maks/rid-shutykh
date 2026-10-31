@@ -145,6 +145,7 @@ class Component extends DCLogic {
         isLoader: t.id === 'loader'
       })),
       items: items,
+      enHref: base + 'en',
       footCats: tiles.map((t) => ({ label: t.label, href: base + t.slug })),
       empty: items.length === 0,
       hasFilter: hasFilter,
