@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 1040" width="1040" height="1040">
+<defs><radialGradient id="sw" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#3a3e44"/><stop offset="100%" stop-color="#1c1e21"/></radialGradient><radialGradient id="rim" cx="45%" cy="40%" r="60%"><stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#f2a516"/></radialGradient></defs>
+<polygon points="934.5,500.5 1019.5,541.4 1015.3,588.3 934.5,539.5" fill="#1b1d20"/>
+<polygon points="928.5,593.2 1002.2,652.1 987.7,696.8 919.8,631.3" fill="#1b1d20"/>
+<polygon points="902.0,682.2 960.8,756.1 936.6,796.5 885.0,717.5" fill="#1b1d20"/>
+<polygon points="856.3,763.2 897.2,848.2 864.6,882.3 831.9,793.7" fill="#1b1d20"/>
+<polygon points="793.7,831.9 814.7,923.9 775.4,949.9 763.2,856.3" fill="#1b1d20"/>
+<polygon points="717.5,885.0 717.4,979.4 673.3,995.9 682.2,902.0" fill="#1b1d20"/>
+<polygon points="631.3,919.8 610.3,1011.8 563.6,1018.1 593.2,928.5" fill="#1b1d20"/>
+<polygon points="539.5,934.5 498.6,1019.5 451.7,1015.3 500.5,934.5" fill="#1b1d20"/>
+<polygon points="446.8,928.5 387.9,1002.2 343.2,987.7 408.7,919.8" fill="#1b1d20"/>
+<polygon points="357.8,902.0 283.9,960.8 243.5,936.6 322.5,885.0" fill="#1b1d20"/>
+<polygon points="276.8,856.3 191.8,897.2 157.7,864.6 246.3,831.9" fill="#1b1d20"/>
+<polygon points="208.1,793.7 116.1,814.7 90.1,775.4 183.7,763.2" fill="#1b1d20"/>
+<polygon points="155.0,717.5 60.6,717.4 44.1,673.3 138.0,682.2" fill="#1b1d20"/>
+<polygon points="120.2,631.3 28.2,610.3 21.9,563.6 111.5,593.2" fill="#1b1d20"/>
+<polygon points="105.5,539.5 20.5,498.6 24.7,451.7 105.5,500.5" fill="#1b1d20"/>
+<polygon points="111.5,446.8 37.8,387.9 52.3,343.2 120.2,408.7" fill="#1b1d20"/>
+<polygon points="138.0,357.8 79.2,283.9 103.4,243.5 155.0,322.5" fill="#1b1d20"/>
+<polygon points="183.7,276.8 142.8,191.8 175.4,157.7 208.1,246.3" fill="#1b1d20"/>
+<polygon points="246.3,208.1 225.3,116.1 264.6,90.1 276.8,183.7" fill="#1b1d20"/>
+<polygon points="322.5,155.0 322.6,60.6 366.7,44.1 357.8,138.0" fill="#1b1d20"/>
+<polygon points="408.7,120.2 429.7,28.2 476.4,21.9 446.8,111.5" fill="#1b1d20"/>
+<polygon points="500.5,105.5 541.4,20.5 588.3,24.7 539.5,105.5" fill="#1b1d20"/>
+<polygon points="593.2,111.5 652.1,37.8 696.8,52.3 631.3,120.2" fill="#1b1d20"/>
+<polygon points="682.2,138.0 756.1,79.2 796.5,103.4 717.5,155.0" fill="#1b1d20"/>
+<polygon points="763.2,183.7 848.2,142.8 882.3,175.4 793.7,208.1" fill="#1b1d20"/>
+<polygon points="831.9,246.3 923.9,225.3 949.9,264.6 856.3,276.8" fill="#1b1d20"/>
+<polygon points="885.0,322.5 979.4,322.6 995.9,366.7 902.0,357.8" fill="#1b1d20"/>
+<polygon points="919.8,408.7 1011.8,429.7 1018.1,476.4 928.5,446.8" fill="#1b1d20"/>
+<circle cx="520" cy="520" r="430.0" fill="#1b1d20"/>
+<circle cx="520" cy="520" r="410.0" fill="url(#sw)"/>
+<circle cx="520" cy="520" r="400.0" fill="none" stroke="#45494f" stroke-width="3"/>
+<circle cx="520" cy="520" r="310.0" fill="none" stroke="#45494f" stroke-width="3"/>
+<path id="arc" d="M 165.0,520 A 355.0,355.0 0 0 1 875.0,520" fill="none"/>
+<text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="42" letter-spacing="10" fill="#5a5f66"><textPath href="#arc" startOffset="50%" text-anchor="middle">AGRI RADIAL · 18.4 R38</textPath></text>
+<path id="arc2" d="M 145.0,520 A 375.0,375.0 0 0 0 895.0,520" fill="none"/>
+<text font-family="Arial,sans-serif" font-weight="700" font-size="25" letter-spacing="8" fill="#555a60"><textPath href="#arc2" startOffset="50%" text-anchor="middle">TUBELESS · MADE IN TÜRKIYE</textPath></text>
+<circle cx="520" cy="520" r="290.0" fill="#2b2e33"/>
+<circle cx="520" cy="520" r="275.0" fill="url(#rim)"/>
+<circle cx="520" cy="520" r="225.0" fill="none" stroke="#c98500" stroke-width="10.0"/>
+<ellipse cx="700.0" cy="520.0" rx="30.0" ry="22.5" transform="rotate(0.0 700.0 520.0)" fill="#8a5d00"/>
+<ellipse cx="647.3" cy="647.3" rx="30.0" ry="22.5" transform="rotate(45.0 647.3 647.3)" fill="#8a5d00"/>
+<ellipse cx="520.0" cy="700.0" rx="30.0" ry="22.5" transform="rotate(90.0 520.0 700.0)" fill="#8a5d00"/>
+<ellipse cx="392.7" cy="647.3" rx="30.0" ry="22.5" transform="rotate(135.0 392.7 647.3)" fill="#8a5d00"/>
+<ellipse cx="340.0" cy="520.0" rx="30.0" ry="22.5" transform="rotate(180.0 340.0 520.0)" fill="#8a5d00"/>
+<ellipse cx="392.7" cy="392.7" rx="30.0" ry="22.5" transform="rotate(225.0 392.7 392.7)" fill="#8a5d00"/>
+<ellipse cx="520.0" cy="340.0" rx="30.0" ry="22.5" transform="rotate(270.0 520.0 340.0)" fill="#8a5d00"/>
+<ellipse cx="647.3" cy="392.7" rx="30.0" ry="22.5" transform="rotate(315.0 647.3 392.7)" fill="#8a5d00"/>
+<circle cx="520" cy="520" r="100.0" fill="#d48f00"/>
+<circle cx="590.0" cy="520.0" r="11.0" fill="#5c3f00"/>
+<circle cx="576.6" cy="561.1" r="11.0" fill="#5c3f00"/>
+<circle cx="541.6" cy="586.6" r="11.0" fill="#5c3f00"/>
+<circle cx="498.4" cy="586.6" r="11.0" fill="#5c3f00"/>
+<circle cx="463.4" cy="561.1" r="11.0" fill="#5c3f00"/>
+<circle cx="450.0" cy="520.0" r="11.0" fill="#5c3f00"/>
+<circle cx="463.4" cy="478.9" r="11.0" fill="#5c3f00"/>
+<circle cx="498.4" cy="453.4" r="11.0" fill="#5c3f00"/>
+<circle cx="541.6" cy="453.4" r="11.0" fill="#5c3f00"/>
+<circle cx="576.6" cy="478.9" r="11.0" fill="#5c3f00"/>
+<circle cx="520" cy="520" r="35.0" fill="#6b4a00"/>
+</svg>
