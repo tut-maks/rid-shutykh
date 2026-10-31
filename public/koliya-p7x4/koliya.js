@@ -1,4 +1,33 @@
+// ---- КОЛІЯ: рендер головної + плавна прокрутка (без inline-скриптів, CSP 'self')
 (function(){
+var ease=function(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+var anim=null;
+function smoothTo(el,push){
+  var head=document.querySelector('header');var off=(head?head.offsetHeight:0)+16;
+  var start=window.scrollY,target=Math.max(0,el.getBoundingClientRect().top+start-off),dist=target-start;
+  if(Math.abs(dist)<2)return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){window.scrollTo(0,target);return}
+  var dur=Math.min(1400,Math.max(650,Math.abs(dist)*0.45)),t0=null;
+  if(anim)cancelAnimationFrame(anim);
+  document.documentElement.style.scrollBehavior='auto';
+  function step(ts){if(t0===null)t0=ts;var p=Math.min(1,(ts-t0)/dur);window.scrollTo(0,start+dist*ease(p));if(p<1)anim=requestAnimationFrame(step);else{anim=null;document.documentElement.style.scrollBehavior=''}}
+  anim=requestAnimationFrame(step);
+  if(push&&history.pushState)history.pushState(null,'','#'+el.id);
+}
+['wheel','touchstart','keydown'].forEach(function(ev){window.addEventListener(ev,function(){if(anim){cancelAnimationFrame(anim);anim=null;document.documentElement.style.scrollBehavior=''}},{passive:true})});
+document.addEventListener('click',function(e){
+  var a=e.target.closest&&e.target.closest('a[href*="#"]');if(!a||e.defaultPrevented&&!a.dataset.k)return;
+  var u=new URL(a.getAttribute('href'),location.href);
+  if(u.pathname.replace(/\/$/,'')!==location.pathname.replace(/\/$/,'')||!u.hash)return;
+  var el=document.getElementById(decodeURIComponent(u.hash.slice(1)));if(!el)return;
+  e.preventDefault();setTimeout(function(){smoothTo(el,true)},0);
+});
+window.__kolSmooth=smoothTo;
+function arrive(){if(!location.hash)return;var el=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(!el)return;window.scrollTo(0,0);setTimeout(function(){smoothTo(el,false)},350)}
+if('scrollRestoration' in history)history.scrollRestoration='manual';
+
+var tpl=document.getElementById('t');
+if(!tpl){document.addEventListener('DOMContentLoaded',arrive);return}
 class DCLogic{constructor(p){this.props=p||{};this.state={}} setState(o){Object.assign(this.state,o);render()}}
 class Component extends DCLogic {
   constructor(props) {
@@ -52,6 +81,7 @@ class Component extends DCLogic {
       { id: 'truck', label: 'Вантажні' }
     ];
     const s = this.state;
+    const base = this.props.base ?? '';
     const segOf = (c) => (AGRO.indexOf(c) >= 0 ? 'agro' : 'build');
     const inSeg = (x) => s.seg === 'all' || segOf(x.cat) === s.seg;
     const diamList = Array.from(new Set(all.map((x) => x.d))).sort((a, b) => parseFloat(a) - parseFloat(b));
@@ -71,16 +101,16 @@ class Component extends DCLogic {
     const hasFilter = parts.length > 0;
     const pickCat = (id) => () => this.setState({ cat: id, seg: id === 'all' ? s.seg : segOf(id) });
     const tiles = [
-      { id: 'tractor', label: 'Тракторні шини', note: 'R20 — R38', photo: '/koliya-p7x4/img/tractorbig.jpg' },
-      { id: 'combine', label: 'Для комбайнів', note: 'R26 — R26.5', photo: '/koliya-p7x4/img/combine.jpg' },
-      { id: 'trailer', label: 'Причіпна техніка', note: 'R13 — R16', photo: '/koliya-p7x4/img/implements.jpg' },
-      { id: 'sprayer', label: 'Обприскувачі', note: 'вузькі R32', photo: '/koliya-p7x4/img/horizon.jpg' },
-      { id: 'backhoe', label: 'Екскаватори-навантажувачі', note: 'R18 — R28', photo: '/koliya-p7x4/img/backhoe.jpg' },
-      { id: 'wheelloader', label: 'Фронтальні навантажувачі', note: 'R24 — R25', photo: '/koliya-p7x4/img/frontloader.jpg' },
-      { id: 'telehandler', label: 'Телескопічні', note: 'R20 — R24', photo: '/koliya-p7x4/img/telehandler.jpg' },
-      { id: 'skid', label: 'Міні-навантажувачі', note: 'R16.5', photo: '/koliya-p7x4/img/loader.jpg' },
-      { id: 'forklift', label: 'Вилкові навантажувачі', note: 'R8 — R12', photo: '/koliya-p7x4/img/forklift.jpg' },
-      { id: 'truck', label: 'Вантажна та кар’єрна', note: 'R20 — R22.5', photo: '/koliya-p7x4/img/truck.jpg' }
+      { id: 'tractor', slug: 'shyny-dlia-traktoriv', label: 'Тракторні шини', note: 'R20 — R38', photo: '/koliya-p7x4/img/tractorbig.jpg' },
+      { id: 'combine', slug: 'shyny-dlia-kombainiv', label: 'Для комбайнів', note: 'R26 — R26.5', photo: '/koliya-p7x4/img/combine.jpg' },
+      { id: 'trailer', slug: 'shyny-dlia-prychipnoi-tekhniky', label: 'Причіпна техніка', note: 'R13 — R16', photo: '/koliya-p7x4/img/implements.jpg' },
+      { id: 'sprayer', slug: 'shyny-dlia-obpryskuvachiv', label: 'Обприскувачі', note: 'вузькі R32', photo: '/koliya-p7x4/img/horizon.jpg' },
+      { id: 'backhoe', slug: 'shyny-dlia-ekskavatoriv-navantazhuvachiv', label: 'Екскаватори-навантажувачі', note: 'R18 — R28', photo: '/koliya-p7x4/img/backhoe.jpg' },
+      { id: 'wheelloader', slug: 'shyny-dlia-frontalnykh-navantazhuvachiv', label: 'Фронтальні навантажувачі', note: 'R24 — R25', photo: '/koliya-p7x4/img/frontloader.jpg' },
+      { id: 'telehandler', slug: 'shyny-dlia-teleskopichnykh-navantazhuvachiv', label: 'Телескопічні', note: 'R20 — R24', photo: '/koliya-p7x4/img/telehandler.jpg' },
+      { id: 'skid', slug: 'shyny-dlia-mini-navantazhuvachiv', label: 'Міні-навантажувачі', note: 'R16.5', photo: '/koliya-p7x4/img/loader.jpg' },
+      { id: 'forklift', slug: 'shyny-dlia-vylkovykh-navantazhuvachiv', label: 'Вилкові навантажувачі', note: 'R8 — R12', photo: '/koliya-p7x4/img/forklift.jpg' },
+      { id: 'truck', slug: 'shyny-dlia-vantazhnoi-tekhniky', label: 'Вантажна та кар’єрна', note: 'R20 — R22.5', photo: '/koliya-p7x4/img/truck.jpg' }
     ];
     const segDefs = [{ id: 'all', label: 'Усе' }, { id: 'agro', label: 'Агро' }, { id: 'build', label: 'Спецтехніка' }];
     const setSeg = (id) => () => this.setState({ seg: id, cat: 'all', diam: '', size: '' });
@@ -107,7 +137,7 @@ class Component extends DCLogic {
       goBuild: setSeg('build'),
       catTiles: tiles.map((t) => ({
         ...t,
-        pick: pickCat(t.id),
+        href: base + t.slug,
         isTractor: t.id === 'tractor',
         isCombine: t.id === 'combine',
         isTrailer: t.id === 'trailer',
@@ -115,6 +145,7 @@ class Component extends DCLogic {
         isLoader: t.id === 'loader'
       })),
       items: items,
+      footCats: tiles.map((t) => ({ label: t.label, href: base + t.slug })),
       empty: items.length === 0,
       hasFilter: hasFilter,
       filterText: hasFilter ? 'Фільтр: ' + parts.join(', ') + ' — знайдено ' + items.length : 'Показано ' + items.length + ' популярних розмірів. Інші — під замовлення з заводу.',
@@ -128,28 +159,28 @@ class Component extends DCLogic {
     };
   }
 }
-const c=new Component({brand:'КОЛІЯ'});
-const get=(sc,p)=>p.trim().split('.').reduce((o,k)=>o==null?o:o[k],sc);
-const interp=(s,sc)=>s.replace(/\{\{\s*([^}]+?)\s*\}\}/g,(m,p)=>{const v=(p==='true'||p==='false')?p:get(sc,p);return typeof v==='function'||v==null?'':String(v)});
-const expr=a=>a.replace(/[{}]/g,'').trim();
-function proc(node,sc){for(const ch of [...node.childNodes]){
- if(ch.nodeType===3){if(ch.textContent.includes('{{'))ch.textContent=interp(ch.textContent,sc);continue}
- if(ch.nodeType!==1)continue; const tag=ch.tagName.toLowerCase();
- if(tag==='sc-for'){const list=get(sc,expr(ch.getAttribute('list')))||[];const as=ch.getAttribute('as');const fr=document.createDocumentFragment();
-  list.forEach((it,i)=>{const cl=ch.cloneNode(true);proc(cl,{...sc,[as]:it,$index:i});while(cl.firstChild)fr.appendChild(cl.firstChild)});ch.replaceWith(fr);continue}
- if(tag==='sc-if'){const v=expr(ch.getAttribute('value'));const ok=v==='true'?true:v==='false'?false:!!get(sc,v);
-  if(ok){proc(ch,sc);const fr=document.createDocumentFragment();while(ch.firstChild)fr.appendChild(ch.firstChild);ch.replaceWith(fr)}else ch.remove();continue}
- if(tag==='template')continue;
- for(const a of [...ch.attributes]){
-  if(/^on[a-z]/i.test(a.name)){const fn=get(sc,expr(a.value));ch.removeAttribute(a.name);if(typeof fn==='function')ch.addEventListener(a.name.slice(2).toLowerCase(),e=>{if(ch.tagName==='A'&&a.name.toLowerCase()==='onclick'){/* let anchor scroll */}fn(e)});continue}
-  if(a.value.includes('{{'))ch.setAttribute(a.name,interp(a.value,sc));}
+window.__C=Component;
+var c=new Component({"brand":"КОЛІЯ","base":"/koliya-p7x4/"});
+var get=function(sc,p){return p.trim().split('.').reduce(function(o,k){return o==null?o:o[k]},sc)};
+var interp=function(s,sc){return s.replace(/\{\{\s*([^}]+?)\s*\}\}/g,function(m,p){var v=(p==='true'||p==='false')?p:get(sc,p);return typeof v==='function'||v==null?'':String(v)})};
+var expr=function(a){return a.replace(/[{}]/g,'').trim()};
+function proc(node,sc){Array.prototype.slice.call(node.childNodes).forEach(function(ch){
+ if(ch.nodeType===3){if(ch.textContent.indexOf('{{')>=0)ch.textContent=interp(ch.textContent,sc);return}
+ if(ch.nodeType!==1)return;var tag=ch.tagName.toLowerCase();
+ if(tag==='sc-for'){var list=get(sc,expr(ch.getAttribute('list')))||[],as=ch.getAttribute('as'),fr=document.createDocumentFragment();
+  list.forEach(function(it,i){var cl=ch.cloneNode(true),s2=Object.assign({},sc);s2[as]=it;s2.$index=i;proc(cl,s2);while(cl.firstChild)fr.appendChild(cl.firstChild)});ch.replaceWith(fr);return}
+ if(tag==='sc-if'){var v=expr(ch.getAttribute('value')),ok=v==='true'?true:v==='false'?false:!!get(sc,v);
+  if(ok){proc(ch,sc);var f2=document.createDocumentFragment();while(ch.firstChild)f2.appendChild(ch.firstChild);ch.replaceWith(f2)}else ch.remove();return}
+ Array.prototype.slice.call(ch.attributes).forEach(function(a){
+  if(/^on[a-z]/i.test(a.name)){var fn=get(sc,expr(a.value));ch.removeAttribute(a.name);if(typeof fn==='function'){ch.dataset.k='1';ch.addEventListener(a.name.slice(2).toLowerCase(),function(e){fn(e)})}return}
+  if(a.value.indexOf('{{')>=0)ch.setAttribute(a.name,interp(a.value,sc))});
  proc(ch,sc);
  if(tag==='select'&&ch.hasAttribute('value'))ch.dataset.v=ch.getAttribute('value');
-}}
-let first=true;
-function render(){const root=document.getElementById('root');const y=window.scrollY;
- const t=document.getElementById('t').content.cloneNode(true);proc(t,c.renderVals());
- root.replaceChildren(t);root.querySelectorAll('select[data-v]').forEach(s=>s.value=s.dataset.v);
- if(!first)window.scrollTo(0,y);first=false;}
-document.addEventListener('DOMContentLoaded',render);
+})}
+var first=true;
+function render(){var root=document.getElementById('root'),y=window.scrollY;
+ var t=tpl.content.cloneNode(true);proc(t,c.renderVals());root.replaceChildren(t);
+ root.querySelectorAll('select[data-v]').forEach(function(s){s.value=s.dataset.v});
+ if(!first)window.scrollTo(0,y);else arrive();first=false}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render();
 })();
