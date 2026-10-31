@@ -21,7 +21,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 .in3{animation:rise .8s .35s both cubic-bezier(.2,.7,.2,1)}
 .in4{animation:rise .8s .5s both cubic-bezier(.2,.7,.2,1)}
 .track{display:flex;width:max-content;animation:marquee 40s linear infinite}
-.soilband{height:72px;background-image:url(img/soil.svg);background-size:800px 72px;background-repeat:repeat-x;animation:soil 24s linear infinite}
+.soilband{height:72px;background-image:url(/koliya-p7x4/img/soil.svg);background-size:800px 72px;background-repeat:repeat-x;animation:soil 24s linear infinite}
 .pulse{animation:pulse 2.4s infinite}
 .btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 26px;border-radius:14px;font:800 16px/1 Manrope,sans-serif;text-decoration:none;transition:transform .2s,background .2s,color .2s,box-shadow .2s}
 .btn:hover{transform:translateY(-2px)}
@@ -72,7 +72,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 .spin,.kb,.track,.soilband,.pulse,.in1,.in2,.in3,.in4,.reveal,.herotire img{animation:none !important}
 }
 </style>
-<script src="koliya.js" defer></script></head><body><template id="t">
+<script src="/koliya-p7x4/koliya.js" defer></script></head><body><template id="t">
 
 <div style="font-family: Manrope, system-ui, sans-serif; color: #172119; background: #ffffff; overflow-x: hidden">
 
@@ -86,7 +86,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <header style="position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #e3ebe1">
 <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 76px">
 <a href="#top" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #14361f">
-<img src="img/tire-card.svg" alt="" class="spin" style="width: 42px; height: 42px">
+<img src="/koliya-p7x4/img/tire-card.svg" alt="" class="spin" style="width: 42px; height: 42px">
 <span style="display: flex; flex-direction: column; gap: 4px">
 <span style="font: 800 22px/1 Unbounded, sans-serif; letter-spacing: 0.04em">{{brand}}</span>
 <span style="font: 700 11px/1 Manrope, sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: #2f9e44">агро · спецтехніка · вантажні</span>
@@ -107,8 +107,8 @@ a{color:#1f6b34}a:hover{color:#14361f}
 </header>
 
 <section id="top" style="position: relative; overflow: hidden; min-height: 720px; display: flex; align-items: center; padding: 56px 0 140px">
-<img src="img/hero-harvest.jpg" alt="" aria-hidden="true" class="kb" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%">
-<img src="img/excavator.jpg" alt="" aria-hidden="true" class="xfade" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%">
+<img src="/koliya-p7x4/img/hero-harvest.jpg" alt="" aria-hidden="true" class="kb" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%">
+<img src="/koliya-p7x4/img/excavator.jpg" alt="" aria-hidden="true" class="xfade" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%">
 <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(12,34,18,0.88) 0%, rgba(12,34,18,0.62) 45%, rgba(12,34,18,0.05) 80%)"></div>
 <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 160px; background: linear-gradient(0deg, rgba(12,34,18,0.55), transparent)"></div>
 <div class="wrap hero" style="position: relative; width: 100%; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center">
@@ -127,7 +127,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 </div>
 <div class="herotire in3" style="display: flex; justify-content: flex-end; align-items: flex-end; align-self: end">
 <div style="display: flex; gap: 14px; align-items: center; padding: 12px 18px 12px 12px; border-radius: 18px; background: #ffffff; color: #14361f; box-shadow: 0 24px 48px -20px rgba(0,0,0,0.6)">
-<img src="img/tireclose.jpg" alt="Тракторна шина на жовтому диску" style="width: 76px; height: 76px; border-radius: 12px; object-fit: cover">
+<img src="/koliya-p7x4/img/tireclose.jpg" alt="Тракторна шина на жовтому диску" style="width: 76px; height: 76px; border-radius: 12px; object-fit: cover">
 <div>
 <div style="font: 700 12px Manrope, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #1d5fa8">Хіт сезону</div>
 <div style="font: 800 20px Unbounded, sans-serif; margin-top: 4px">18.4-38 TA60</div>
@@ -164,7 +164,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <section style="padding: 80px 0 8px">
 <div class="wrap two" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
 <a href="#catalog" class="seg reveal" onClick="{{goAgro}}" style="position: relative; display: block; overflow: hidden; border-radius: 28px; min-height: 380px; color: #ffffff; text-decoration: none">
-<img src="img/combine.jpg" alt="Комбайни в пшеничному полі" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover">
+<img src="/koliya-p7x4/img/combine.jpg" alt="Комбайни в пшеничному полі" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover">
 <span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(0deg, rgba(20,54,31,0.92) 0%, rgba(20,54,31,0.35) 55%, rgba(20,54,31,0.05) 100%)"></span>
 <span style="position: absolute; left: 32px; right: 32px; bottom: 30px; display: flex; flex-direction: column; gap: 12px">
 <span style="align-self: flex-start; padding: 6px 12px; border-radius: 8px; background: #f2c230; color: #14361f; font: 800 12px Manrope, sans-serif; letter-spacing: 0.08em; text-transform: uppercase">Агро</span>
@@ -174,7 +174,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 </span>
 </a>
 <a href="#catalog" class="seg reveal" onClick="{{goBuild}}" style="position: relative; display: block; overflow: hidden; border-radius: 28px; min-height: 380px; color: #ffffff; text-decoration: none">
-<img src="img/backhoe.jpg" alt="Екскаватор-навантажувач на будмайданчику" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover">
+<img src="/koliya-p7x4/img/backhoe.jpg" alt="Екскаватор-навантажувач на будмайданчику" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover">
 <span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(0deg, rgba(14,45,90,0.94) 0%, rgba(14,45,90,0.35) 55%, rgba(14,45,90,0.05) 100%)"></span>
 <span style="position: absolute; left: 32px; right: 32px; bottom: 30px; display: flex; flex-direction: column; gap: 12px">
 <span style="align-self: flex-start; padding: 6px 12px; border-radius: 8px; background: #ffffff; color: #1d5fa8; font: 800 12px Manrope, sans-serif; letter-spacing: 0.08em; text-transform: uppercase">Спецтехніка</span>
@@ -265,9 +265,9 @@ a{color:#1f6b34}a:hover{color:#14361f}
 </div>
 </div>
 <figure class="reveal" style="margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
-<div style="grid-row: span 2; border-radius: 24px; overflow: hidden; min-height: 420px"><img class="photo-zoom" src="img/aerial.jpg" alt="Трактор обробляє поле, вид згори зі слідами шин" style="width: 100%; height: 100%; object-fit: cover"></div>
-<div style="border-radius: 24px; overflow: hidden; height: 200px"><img class="photo-zoom" src="img/tire-mud.jpg" alt="Тракторна шина в ґрунті" style="width: 100%; height: 100%; object-fit: cover"></div>
-<div style="border-radius: 24px; overflow: hidden; height: 206px; background: #5a3d22"><img src="img/footprint.svg" alt="Порівняння плями контакту діагональної та радіальної шини" style="width: 100%; height: 100%; object-fit: contain"></div>
+<div style="grid-row: span 2; border-radius: 24px; overflow: hidden; min-height: 420px"><img class="photo-zoom" src="/koliya-p7x4/img/aerial.jpg" alt="Трактор обробляє поле, вид згори зі слідами шин" style="width: 100%; height: 100%; object-fit: cover"></div>
+<div style="border-radius: 24px; overflow: hidden; height: 200px"><img class="photo-zoom" src="/koliya-p7x4/img/tire-mud.jpg" alt="Тракторна шина в ґрунті" style="width: 100%; height: 100%; object-fit: cover"></div>
+<div style="border-radius: 24px; overflow: hidden; height: 206px; background: #5a3d22"><img src="/koliya-p7x4/img/footprint.svg" alt="Порівняння плями контакту діагональної та радіальної шини" style="width: 100%; height: 100%; object-fit: contain"></div>
 <figcaption style="grid-column: span 2; font-size: 14px; color: #bfae94; line-height: 1.6">Радіальна шина лягає на ґрунт ширшою плямою — тиск на поле нижчий при тій самій вазі техніки.</figcaption>
 </figure>
 </div>
@@ -344,7 +344,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <div style="font: 800 13px Manrope, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #1d5fa8">Професійний підхід</div>
 <h2 style="margin: 0; font: 800 clamp(28px, 3.4vw, 46px)/1.08 Unbounded, sans-serif; color: #14361f">Підбираємо шину як інженер, а не як продавець</h2>
 <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #4f5d52">Неправильна шина — це зайве пальне, ущільнений ґрунт і простій техніки посеред сезону. Тому кожне замовлення починаємо з техніки й умов роботи.</p>
-<div style="border-radius: 24px; overflow: hidden; height: 300px; margin-top: 8px"><img class="photo-zoom" src="img/tireclose.jpg" alt="Тракторна шина з жовтим диском" style="width: 100%; height: 100%; object-fit: cover"></div>
+<div style="border-radius: 24px; overflow: hidden; height: 300px; margin-top: 8px"><img class="photo-zoom" src="/koliya-p7x4/img/tireclose.jpg" alt="Тракторна шина з жовтим диском" style="width: 100%; height: 100%; object-fit: cover"></div>
 </div>
 <div style="display: flex; flex-direction: column; gap: 14px">
 <div class="reveal" style="display: flex; gap: 18px; padding: 24px; border-radius: 20px; border: 1.5px solid #e3ebe1">
@@ -380,7 +380,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <span style="padding: 8px 14px; border-radius: 10px; background: rgba(255,255,255,0.12); font-size: 14px; font-weight: 700">TA110</span>
 <span style="padding: 8px 14px; border-radius: 10px; background: rgba(255,255,255,0.12); font-size: 14px; font-weight: 700">IND25</span>
 </div>
-<img src="img/tire-card.svg" alt="" aria-hidden="true" class="spin" style="position: absolute; right: -90px; bottom: -90px; width: 280px; height: 280px; opacity: 0.45">
+<img src="/koliya-p7x4/img/tire-card.svg" alt="" aria-hidden="true" class="spin" style="position: absolute; right: -90px; bottom: -90px; width: 280px; height: 280px; opacity: 0.45">
 </div>
 <div class="reveal" style="position: relative; overflow: hidden; padding: 40px; border-radius: 28px; background: #1d5fa8; color: #ffffff; min-height: 300px; display: flex; flex-direction: column; gap: 16px">
 <div style="font: 800 52px/1 Unbounded, sans-serif; letter-spacing: 0.02em">OZKA</div>
@@ -391,7 +391,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <span style="padding: 8px 14px; border-radius: 10px; background: rgba(255,255,255,0.14); font-size: 14px; font-weight: 700">AGRO10</span>
 <span style="padding: 8px 14px; border-radius: 10px; background: rgba(255,255,255,0.14); font-size: 14px; font-weight: 700">LD90</span>
 </div>
-<img src="img/tire-card-grey.svg" alt="" aria-hidden="true" class="spin" style="position: absolute; right: -90px; bottom: -90px; width: 280px; height: 280px; opacity: 0.45">
+<img src="/koliya-p7x4/img/tire-card-grey.svg" alt="" aria-hidden="true" class="spin" style="position: absolute; right: -90px; bottom: -90px; width: 280px; height: 280px; opacity: 0.45">
 </div>
 </div>
 </div>
@@ -415,7 +415,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <section id="dealers" style="padding: 0 0 88px">
 <div class="wrap">
 <div class="two reveal" style="position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 48px; border-radius: 32px; background: #14361f; color: #ffffff">
-<img src="img/plow.jpg" alt="" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.28">
+<img src="/koliya-p7x4/img/plow.jpg" alt="" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.28">
 <div style="position: relative; display: flex; flex-direction: column; gap: 20px">
 <div style="font: 800 13px Manrope, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #f2c230">Опт і тендери</div>
 <h2 style="margin: 0; font: 800 clamp(28px, 3.2vw, 44px)/1.08 Unbounded, sans-serif">Оптовий прайс для дилерів і господарств</h2>
@@ -450,7 +450,7 @@ a{color:#1f6b34}a:hover{color:#14361f}
 <div class="wrap" style="display: flex; flex-direction: column; gap: 40px">
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px">
 <div style="display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; align-items: center; gap: 12px"><img src="img/tire-card.svg" alt="" class="spin" style="width: 36px; height: 36px"><span style="font: 800 22px Unbounded, sans-serif; color: #ffffff">{{brand}}</span></div>
+<div style="display: flex; align-items: center; gap: 12px"><img src="/koliya-p7x4/img/tire-card.svg" alt="" class="spin" style="width: 36px; height: 36px"><span style="font: 800 22px Unbounded, sans-serif; color: #ffffff">{{brand}}</span></div>
 <div style="line-height: 1.6">Імпорт сільськогосподарських та індустріальних шин з Туреччини.</div>
 </div>
 <div style="display: flex; flex-direction: column; gap: 10px">
