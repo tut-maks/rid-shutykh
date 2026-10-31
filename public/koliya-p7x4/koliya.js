@@ -6,8 +6,8 @@ class Component extends DCLogic {
     this.state = { diam: '', size: '', cat: 'all', seg: 'all' };
   }
   renderVals() {
-    const T = 'img/tire-card.svg';
-    const G = 'img/tire-card-grey.svg';
+    const T = '/koliya-p7x4/img/tire-card.svg';
+    const G = '/koliya-p7x4/img/tire-card-grey.svg';
     const all = [
       { size: '18.4-38', brand: 'Petlas', model: 'TA60', d: '38', cat: 'tractor', use: 'Ведучі колеса тракторів МТЗ, John Deere, New Holland' },
       { size: '18.4-34', brand: 'Petlas', model: 'TA60', d: '34', cat: 'tractor', use: 'Задня вісь тракторів середньої потужності' },
@@ -71,16 +71,16 @@ class Component extends DCLogic {
     const hasFilter = parts.length > 0;
     const pickCat = (id) => () => this.setState({ cat: id, seg: id === 'all' ? s.seg : segOf(id) });
     const tiles = [
-      { id: 'tractor', label: 'Тракторні шини', note: 'R20 — R38', photo: 'img/tractorbig.jpg' },
-      { id: 'combine', label: 'Для комбайнів', note: 'R26 — R26.5', photo: 'img/combine.jpg' },
-      { id: 'trailer', label: 'Причіпна техніка', note: 'R13 — R16', photo: 'img/implements.jpg' },
-      { id: 'sprayer', label: 'Обприскувачі', note: 'вузькі R32', photo: 'img/horizon.jpg' },
-      { id: 'backhoe', label: 'Екскаватори-навантажувачі', note: 'R18 — R28', photo: 'img/backhoe.jpg' },
-      { id: 'wheelloader', label: 'Фронтальні навантажувачі', note: 'R24 — R25', photo: 'img/frontloader.jpg' },
-      { id: 'telehandler', label: 'Телескопічні', note: 'R20 — R24', photo: 'img/telehandler.jpg' },
-      { id: 'skid', label: 'Міні-навантажувачі', note: 'R16.5', photo: 'img/loader.jpg' },
-      { id: 'forklift', label: 'Вилкові навантажувачі', note: 'R8 — R12', photo: 'img/forklift.jpg' },
-      { id: 'truck', label: 'Вантажна та кар’єрна', note: 'R20 — R22.5', photo: 'img/truck.jpg' }
+      { id: 'tractor', label: 'Тракторні шини', note: 'R20 — R38', photo: '/koliya-p7x4/img/tractorbig.jpg' },
+      { id: 'combine', label: 'Для комбайнів', note: 'R26 — R26.5', photo: '/koliya-p7x4/img/combine.jpg' },
+      { id: 'trailer', label: 'Причіпна техніка', note: 'R13 — R16', photo: '/koliya-p7x4/img/implements.jpg' },
+      { id: 'sprayer', label: 'Обприскувачі', note: 'вузькі R32', photo: '/koliya-p7x4/img/horizon.jpg' },
+      { id: 'backhoe', label: 'Екскаватори-навантажувачі', note: 'R18 — R28', photo: '/koliya-p7x4/img/backhoe.jpg' },
+      { id: 'wheelloader', label: 'Фронтальні навантажувачі', note: 'R24 — R25', photo: '/koliya-p7x4/img/frontloader.jpg' },
+      { id: 'telehandler', label: 'Телескопічні', note: 'R20 — R24', photo: '/koliya-p7x4/img/telehandler.jpg' },
+      { id: 'skid', label: 'Міні-навантажувачі', note: 'R16.5', photo: '/koliya-p7x4/img/loader.jpg' },
+      { id: 'forklift', label: 'Вилкові навантажувачі', note: 'R8 — R12', photo: '/koliya-p7x4/img/forklift.jpg' },
+      { id: 'truck', label: 'Вантажна та кар’єрна', note: 'R20 — R22.5', photo: '/koliya-p7x4/img/truck.jpg' }
     ];
     const segDefs = [{ id: 'all', label: 'Усе' }, { id: 'agro', label: 'Агро' }, { id: 'build', label: 'Спецтехніка' }];
     const setSeg = (id) => () => this.setState({ seg: id, cat: 'all', diam: '', size: '' });
