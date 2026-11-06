@@ -10,7 +10,7 @@
       "includeFiles": "seed/**"
     },
     "api/data.js": {
-      "includeFiles": "seed/import/manifest.json"
+      "includeFiles": "{seed/import/manifest.json,facts/baza/*.csv}"
     },
     "api/upload.js": {
       "maxDuration": 30

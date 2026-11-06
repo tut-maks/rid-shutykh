@@ -119,6 +119,11 @@ async function bootstrap(ctx) {
   };
 }
 
+// Джерела для «Бази» (файл → назва джерела й посилання). Новий файл facts/baza/src_*.csv — додати сюди.
+const BAZA_SRC = {
+  'src_holodomor_bobrovytskyi.csv': { src: 'Національна книга пам\'яті жертв Голодомору 1932–1933 рр., Чернігівська обл. (2008), Бобровицький р-н: Веприк і Вороньки — с. 65–70, х. Лідин — с. 81, Олександрівка — с. 84, Свидовець — с. 87; ДАЧО ф. 9030', url: 'https://history.org.ua/LiberUA/978-966-502-451-4/978-966-502-451-4.pdf', doc: 'holod' },
+};
+
 export default handler(async (req, res, ctx, url) => {
   const me = ctx.member;
   if (req.method === 'GET') {
@@ -129,6 +134,16 @@ export default handler(async (req, res, ctx, url) => {
         const it = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'seed/import/manifest.json'), 'utf8')).find(x => x.kind === 'text' && x.id === tk); text = it?.value || null;
       } catch {}
       return send(res, 200, { text }); }
+    if (url?.searchParams?.get('baza')) { // «База»: усі люди, прочитані в джерелах (і не наші) — facts/baza/src_*.csv з репозиторію; лише для учасників сайту
+      const dir = path.join(process.cwd(), 'facts/baza'), out = [];
+      try { for (const f of fs.readdirSync(dir).filter(f => /^src_.*\.csv$/.test(f)).sort()) {
+        const [head, ...rows] = fs.readFileSync(path.join(dir, f), 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean).map(l => l.split(';'));
+        const meta = BAZA_SRC[f] || { src: f };
+        rows.forEach(r => out.push({ ...meta, ...Object.fromEntries(head.map((h, i) => [h, r[i] || ''])) }));
+      } } catch {}
+      track(me.id, ctx.sid, 'open', 'baza', 'baza');
+      return send(res, 200, { rows: out });
+    }
     return send(res, 200, await bootstrap(ctx));
   }
   if (req.method !== 'POST') return fail(res, 405, 'method');

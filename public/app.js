@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202610222206';
+const BUILD = '202611062139';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2680,6 +2680,80 @@ function statTiles() {
   const T = [[s.n, 'людей у дереві'], [s.gens, 'поколінь'], [s.first ? s.first.y : '—', 'найдавніша дата народження'], [s.docs, 'архівних документів'], [s.photos, 'фото'], [s.voices, 'голосових спогадів'], [s.villages, 'сіл і міст'], [s.members, 'родичів на сайті']];
   return `<div class="tiles">${T.map(([v, t]) => `<a class="tile" href="#/stats"><b>${v}</b><span>${t}</span></a>`).join('')}</div>`;
 }
+/* Голодомор 1932–1933: поіменні списки з «Національної книги пам'яті жертв Голодомору», том «Чернігівська область» (2008), Бобровицький р-н,
+   с. 65–70 (Веприк, Вороньки), 81 (х. Лідин), 84 (Олександрівка), 87 (Свидовець); джерело книги — ДАЧО ф. 9030, оп. 2, спр. 2. Переписано 14.10 і звірено 06.11.2026 зі сторінками PDF; повні списки цих сіл (і не наші прізвища) — facts/baza/src_holodomor_bobrovytskyi.csv. Тут лише ті, чиє прізвище є в нашому дереві;
+   ні віку, ні батьків книга здебільшого не дає — тож чи це наша рідня, не доведено. k — прізвища, як їх пишуть у дереві. */
+const HOLOD_SRC = { t: 'Національна книга пам’яті жертв Голодомору 1932–1933 рр. Чернігівська область (2008), с. 65–70, 81, 84, 87', u: 'http://history.org.ua/LiberUA/978-966-502-451-4/978-966-502-451-4.pdf' };
+const HOLOD = [
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Шутий', 'Шута', 'Шутая'], n: ['Шута Агафія Василівна, 1932', 'Шута Катерина Павлівна, 1933', 'Шута Параска Павлівна, 1933', 'Шутий Василь Іванович, 1932', 'Шутий Василь Опанасович, 1932', 'Шутий Іван Федорович, 1933', 'Шутий Ілля Іванович, 1932', 'Шутий Левко Корнійович, 1933', 'Шутий Микола Опанасович, 1932', 'Шутий Микола Степанович, 1932', 'Шутий Михайло Степанович, 1932', 'Шутий Опанас Васильович, 1932'] },
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Семена'], n: ['Семена Ганна Василівна, 1932', 'Семена Євдокія Степанівна, 1932', 'Семена Іван Васильович, 1932', 'Семена Іван Федорович, 1933', 'Семена Микола Васильович, 1933', 'Семена Михайло Васильович, 1933', 'Семена Олена Степанівна, 1932', 'Семена Степан Семенович, 1932', 'Семена Феодосія, 1933'] },
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Кликавка'], n: ['Кликавка Єфросинія, 1933', 'Кликавка Василь Прокопович, 1933', 'Кликавка Галина, 1933', 'Кликавка Микола, 1933', 'Кликавка Уляна, 1933'] },
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Турчин', 'Турчина'], n: ['Турчин Іван Харитонович, 1932', 'Турчин Михайло Кирилович, 1932', 'Турчин Харитон Андрійович, 1932'] },
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Дуб', 'Дубова'], n: ['Дуб Григорій Миколайович, 1933', 'Дуб Марфа Костянтинівна, 1933', 'Дуб Микола Кузьмич, 1933'] },
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Гусак', 'Гусачка'], n: ['Гусак Антон Кирилович, 1932', 'Гусак Варвара Панасівна, 1932', 'Гусак Василь Олексійович, 1933', 'Гусак Володимир Антонович, 1932', 'Гусак Ганна Антонівна, 1932', 'Гусак Катерина Миронівна, 1933', 'Гусак Костянтин Якович, 1932', 'Гусак Любов Миронівна, 1933', 'Гусак Марія Антонівна, 1933', 'Гусак Микола Олексійович, 1933', 'Гусак Микола Якович, 1933', 'Гусак Михайло Олексійович, 1933', 'Гусак Надія Олексіївна, 1933', 'Гусак Надія Яківна, 1932', 'Гусак Олексій Григорович, 1933', 'Гусак Петро Антонович, 1932', 'Гусак Софія Олексіївна, 1933', 'Гусак Степан Андрійович, 1932', 'Гусак Тетяна, 1933', 'Гусак Трифон Парфенович, 1932', 'Гусак Феодосій Андрійович, 1932', 'Гусак Яків Остапович, 1932'] },
+  { v: 'Вороньки', doc: 'hdvoronky', k: ['Руденко'], n: ['Руденко Марина, 1932'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Левченко'], n: ['Левченко Василь Ілліч, 5 р., 1932', 'Левченко Григорій Григорович, 7 р., 1932', 'Левченко Дарія Михайлівна, 1933', 'Левченко Катерина Михайлівна, 45 р., 1933', 'Левченко Михайло Трохимович, 60 р., 1933', 'Левченко Олена, 1933', 'Левченко Параска Олексіївна, 7 р., 1933', 'Левченко Сергій Михайлович, 9 р., 1933', 'Левченко Сергій Петрович, 6 р., 1932'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Батечко'], n: ['Батечко Михайло, 30 р., одноосібник, 1933', 'Батечко Параска Михайлівна, 7 р., 1933', 'Батечко Петро, 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Галай'], n: ['Галай Андрій, 45 р., одноосібник, 1933', 'Галай Григорій Андрійович, 9 р., 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Янок'], n: ['Янок Яків Якович, 35 р., 1933', 'Янок Параска Яківна, 9 р., 1933', 'Янок Петро Якович, 4 р., 1933', 'Янок Ганна Яківна, 3 р., 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Горовий', 'Горова'], n: ['Горова Анастасія Федорівна, 13 р., 1933', 'Горова Марфа Степанівна, 15 р., 1933', 'Горова Ольга Оврамівна, 9 р., 1933', 'Горова Ольга Федорівна, 6 р., 1933', 'Горовий Максим Митрофанович, 10 р., 1933', 'Горовий Михайло Оврамович, 6 р., 1933', 'Горовий Федір Петрович, 11 р., 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Вовк', 'Волк', 'Вовчиха'], n: ['Вовк Марина Іванівна, 1933', 'Вовк Мотрона Іванівна, 18 р., 1933', 'Вовк Ольга Артемівна, 4 р., 1933', 'Вовк Тихон Іванович, 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Турчин', 'Турчина'], n: ['Турчин Олександр Мойсейович, 63 р., одноосібник, 1933', 'Турчин Параска Тимофіївна, 63 р., 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Дуб', 'Дубова'], n: ['Дуб Варвара, 1933', 'Дуб Іван, 1933', 'Дуб Іван, 1933', 'Дуб Сергій Іванович, 3 р., 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Березенко'], n: ['Березенко Григорій Семенович, 1933', 'Березенко Семен, 1933', 'Березенко Христина, 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Оношко'], n: ['Оношко Ілля Андрійович, 1933'] },
+  { v: 'Веприк', doc: 'hdveprik', k: ['Стельмах'], n: ['Стельмах Степан Степанович, 1933'] },
+  { v: 'х. Лідин', k: ['Янок'], n: ['Янок Василь Михайлович (рік не вказано)'] },
+  { v: 'Свидовець', k: ['Дуб', 'Дубова'], n: ['Дуб Євмен (рік не вказано)', 'Дуб Ольга (рік не вказано)'] },
+  { v: 'Свидовець', k: ['Яценко'], n: ['Яценко Михайло Матвійович, 1932'] },
+];
+const treeSurn = () => { const s = new Set(); Object.values(P).forEach(p => [p.s, p.m].filter(Boolean).forEach(x => String(x).split(/[\s/(),]+/).forEach(w => w && s.add(w)))); return s; };
+function holodData() {
+  const TS = treeSurn(), G = HOLOD.filter(g => g.k.some(k => TS.has(k)));
+  const died = Object.values(P).filter(p => [1932, 1933].includes(yN(p.d))).sort((a, b) => (yN(a.d) - yN(b.d)) || short(a).localeCompare(short(b), 'uk'));
+  const hy = (typeof hypItems === 'function' ? hypItems() : []).filter(x => /^holod/.test(x.id || ''));
+  return { G, n: G.reduce((s, g) => s + g.n.length, 0), sur: new Set(G.map(g => g.k[0])).size, died, hy };
+}
+function holodBlock() {
+  const h = holodData(); if (!h.G.length && !h.died.length) return '';
+  const byV = {}; h.G.forEach(g => (byV[g.v] ||= []).push(g));
+  return `<div class="sec war-st holod"><h3>Голодомор 1932–1933</h3>
+    <div class="war-n"><span><b>${h.n}</b> людей з прізвищами нашого роду в поіменних списках загиблих</span><span><b>${h.sur}</b> прізвищ роду</span><span><b>${h.died.length}</b> людей у дереві, що померли 1932–1933 рр.</span></div>
+    <p class="small muted">Списки — з «Національної книги пам’яті жертв Голодомору», том «Чернігівська область» (2008), с. 65–70, 81, 84, 87 (<a href="${HOLOD_SRC.u}" target="_blank" rel="noopener">PDF</a>; у книзі — за ДАЧО ф. 9030). Віку й батьків книга здебільшого не пише, тому чи це саме наші родичі — не доведено: тут лише збіг прізвища з прізвищами в дереві. Актові записи про смерть 1932–1933 рр. по сільрадах — у черзі запитів до архіву.</p>
+    ${h.died.length ? `<p class="small"><b>У дереві:</b> ${h.died.map(p => `${pLink(p.id)} <span class="muted">(${esc(life_(p))})</span>`).join(', ')}.</p>` : ''}
+    ${h.hy.length ? `<p class="small"><b>Припущення:</b> ${h.hy.map(x => `<button class="lnk" data-act="hyp-open" data-id="${esc(x.id)}">${esc(x.title)}</button>`).join('; ')}.</p>` : ''}
+    <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Село')}${sortTh(1, 'Прізвище')}${sortTh(2, 'Людей у списку', 1)}<th>Хто записаний</th></tr></thead><tbody>${Object.entries(byV).flatMap(([v, gs]) => gs.map(g => `<tr><td>${esc(v)}</td><td>${esc(g.k[0])}</td><td class="mono">${g.n.length}</td><td class="small">${esc(g.n.join('; '))}</td></tr>`)).join('')}</tbody></table></div>
+    <p class="small muted">За родинними спогадами (бабуся Паша), на хуторі Лідин вмирали цілими сім’ями, а в книзі по хутору Лідин лише 3 імені (і 1 по Олександрівці).</p></div>`;
+}
+/* Уся база однією таблицею: кожна людина — рядок, усі відомі поля — колонки. Відкривається в Excel / Google Таблицях. Лише власнику (є живі люди). */
+function baseRows() {
+  const root = rootId(), docsOf = pid => S.data.documents.filter(d => (d.people || []).includes(pid) && d.type !== 'map').sort((a, b) => (yN(a.date) || 0) - (yN(b.date) || 0));
+  const ph = pid => S.data.photos.filter(x => x.person_id === pid && !x.pending), WN = { ww1: 'Перша світова', ww2: 'Друга світова', other: 'інша' }, FN = { ret: 'повернувся', kil: 'загинув', mis: 'пропав безвісти', unk: 'невідомо' };
+  const famT = id => (S.data.families.find(f => f.id === id) || {}).title || id, nm = id => P[id] ? short(P[id]) + (life(P[id]) ? ' (' + life(P[id]) + ')' : '') : '';
+  const holod = p => HOLOD.filter(g => g.k.includes(p.s) || g.k.includes(p.m)).map(g => g.v).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+  const H = ['Код', 'Прізвище', 'Дівоче прізвище', "Ім'я", 'По батькові', 'Стать', 'Дата народження', 'Рік нар.', 'Місце народження', 'Дата смерті', 'Рік смерті', 'Місце смерті', 'Вік', 'Де жив(ла)', 'Живий(а)', 'Батько', 'Мати', 'Подружжя (дата шлюбу)', 'Дітей', 'Діти', 'Ким доводиться Максиму', 'Гілки роду', 'Війна', 'Доля на війні', 'Прізвище в списках Голодомору (село)', 'Припущення (не підтверджено)', 'Документів', 'Документи (рік — назва)', 'Фото', 'Голосів', 'Джерела (посилання)', 'Опис'];
+  const R = Object.values(P).sort((a, b) => (a.s || '').localeCompare(b.s || '', 'uk') || (yN(a.b) || 9999) - (yN(b.b) || 9999) || (a.n || '').localeCompare(b.n || '', 'uk')).map(p => {
+    const b = yN(p.b), d = yN(p.d), ds = docsOf(p.id), kids = (KIDS[p.id] || []).filter(x => P[x]), pp = ph(p.id);
+    let kin = ''; try { kin = root && root !== p.id ? (kinship(root, p.id)?.word || '') : (root === p.id ? 'сам Максим' : ''); } catch (e) { kin = ''; }
+    return [p.id, p.s || '', p.m || '', p.n || '', p.pt || '', p.sex === 'm' ? 'ч' : p.sex === 'f' ? 'ж' : '', p.b || '', b || '', p.bp || '', p.d || (p.dead ? 'помер(ла), дата невідома' : ''), d || '', p.dp || '', b && d ? d - b : '', p.lp || '', isLiving(p) ? 'так' : '', nm(p.f), nm(p.mo),
+      (SPOUSES[p.id] || []).map(s => nm(s.id) + (s.date ? ' [' + s.date + ']' : '')).join('; '), kids.length || '', kids.map(nm).join('; '), kin, (p.fam || []).map(famT).join('; '),
+      p.war ? WN[p.war.w] + (p.war.h ? ' (припущення)' : '') : '', p.war ? FN[p.war.f] : '', holod(p), p.hyp ? 'так' : '', ds.length || '', ds.map(x => (yN(x.date) || '') + ' — ' + plainLinks(x.title || '')).join('; '),
+      pp.filter(x => !isVoice(x)).length || '', pp.filter(isVoice).length || '', (p.src || []).map(x => x.u).join(' '), plainLinks(p.note || '').replace(/\s+/g, ' ').trim()];
+  });
+  return { H, R };
+}
+// Люди з джерел, прочитані повністю (і не наші) — facts/baza/src_*.csv через /api/data?baza=1; додаються в ту саму таблицю рядками «згадка в джерелі»
+const BAZA_X = ['Джерело', 'Посилання на джерело', 'Село (у джерелі)', 'Рік (у джерелі)', 'Вік (у джерелі)', 'Двір / роль / заняття', 'Господарство', 'Примітка до запису', 'Можливо, у дереві (код)'];
+async function bazaLoad() { if (!S.baza) { try { S.baza = (await api('/api/data?baza=1')).rows || []; } catch (e) { S.baza = []; } } return S.baza; }
+function baseCsv(M = []) { const { H, R } = baseRows(), q = v => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const iS = H.indexOf('Прізвище'), iN = H.indexOf("Ім'я"), iP = H.indexOf('По батькові'), iSx = H.indexOf('Стать'), key = (a, b, c) => [a, b, c].map(x => String(x || '').toLowerCase().replace(/[’']/g, '').trim()).join('|');
+  const byKey = {}; Object.values(P).forEach(p => [p.s, p.m].filter(Boolean).forEach(sn => (byKey[key(sn, p.n, p.pt)] ||= []).push(p.id)));
+  const RT = R.map(r => ['картка дерева', ...r, ...BAZA_X.map(() => '')]);
+  const RM = M.map(m => { const r = H.map(() => ''); r[iS] = m['прізвище'] || ''; r[iN] = m["ім'я"] || ''; r[iP] = m['по батькові'] || ''; r[iSx] = m['стать'] || '';
+    return ['згадка в джерелі', ...r, m.src || '', m.url || '', m['село'] || '', m['рік'] || '', m['вік'] || '', [m['двір'], m['роль'], m['заняття']].filter(Boolean).join(', '), m['господарство'] || '', m['примітка'] || '', (byKey[key(m['прізвище'], m["ім'я"], m['по батькові'])] || []).join(' ')]; });
+  return '\uFEFF' + [['Тип запису', ...H, ...BAZA_X], ...RT, ...RM].map(r => r.map(q).join(';')).join('\r\n'); }
+async function baseDownload() { const M = await bazaLoad(); const blob = new Blob([baseCsv(M)], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a'), d = new Date(); a.href = URL.createObjectURL(blob); a.download = `rodovid-baza-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); ev('open', 'stats', 'baza.csv'); }
+document.addEventListener('click', e => { if (e.target.closest('[data-act="baza"]')) { if (!isOwner()) return; baseDownload(); } });
 const sortTh = (k, t, num) => `<th data-sort="${k}"${num ? ' data-num="1"' : ''}>${t}</th>`;
 function vStats() {
   const s = famStats(), ps = Object.values(P);
@@ -2703,6 +2777,7 @@ function vStats() {
   const places = cnt(F.map(p => p.bp && p.bp.split(',')[0].trim()));
   return `<div class="lede"><h1>Цифри роду</h1><p class="small muted">Усе пораховано з карток дерева — що більше внесемо, то точніше.</p></div>
   ${statTiles()}
+  ${isOwner() ? `<p class="btns"><button class="btn wine" data-act="baza">⬇ Уся база однією таблицею (Excel)</button> <span class="small muted">кожна людина — рядок, усе, що знаємо, — у колонках: ${Object.keys(P).length} людей з дерева + усі, кого ми прочитали в джерелах (і не наші)</span></p>` : ''}
   <div class="stbar"><select class="in" data-st="stFam" aria-label="Гілка"><option value="">Усі гілки</option>${S.data.families.map(f => `<option value="${f.id}"${fam === f.id ? ' selected' : ''}>${esc(f.title)}</option>`).join('')}</select>
     <select class="in" data-st="stSex" aria-label="Стать"><option value="">Чоловіки й жінки</option><option value="m"${sex === 'm' ? ' selected' : ''}>Чоловіки</option><option value="f"${sex === 'f' ? ' selected' : ''}>Жінки</option></select>
     <select class="in" data-st="stPer" aria-label="Період"><option value="">Усі роки</option>${[['1700-1799', 'XVIII ст.'], ['1800-1899', 'XIX ст.'], ['1900-1945', '1900–1945'], ['1946-1991', '1946–1991'], ['1992-2100', 'з 1992']].map(([v, t]) => `<option value="${v}"${S.ui.stPer === v ? ' selected' : ''}>${t}</option>`).join('')}<option value="own"${S.ui.stPer === 'own' ? ' selected' : ''}>Свій період…</option></select>
@@ -2724,6 +2799,7 @@ function vStats() {
         <div class="war-n"><span><b>${W.length}</b> воювали</span><span><b>${c('kil')}</b> загинули</span><span><b>${c('mis')}</b> пропали безвісти</span><span><b>${c('ret')}</b> повернулися</span>${c('unk') ? `<span><b>${c('unk')}</b> доля невідома</span>` : ''}</div>
         <p class="small muted">Не повернулися ${c('kil') + c('mis')} з ${W.length} (${Math.round((c('kil') + c('mis')) / W.length * 100)}%).${W.some(p => p.war.h) ? ' * — що це саме наш родич, поки «Є припущення».' : ''}</p>
         <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Війна')}${sortTh(3, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life_(p))}</td><td class="small">${WN[p.war.w]}</td><td class="small war-${p.war.f}">${fw(p, p.war.f)}</td></tr>`).join('')}</tbody></table></div></div>`; })()}
+    ${holodBlock()}
     <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
   </div>`;
@@ -3325,12 +3401,18 @@ async function posterMake() {
 }
 
 /* ── Головна ── */
+function homeKeyNums() { // головні цифри під плитками: війни й Голодомор (докладно — #/stats)
+  const W = Object.values(P).filter(p => p.war), k = W.filter(p => ['kil', 'mis'].includes(p.war.f)).length, h = holodData(), L = [];
+  if (W.length) L.push(`<a href="#/stats"><b>${W.length}</b> воювали, <b>${k}</b> не повернулися</a>`);
+  if (h.n) L.push(`<a href="#/stats"><b>${h.n}</b> людей з прізвищами роду — у списках жертв Голодомору 1932–1933 (${h.sur} прізвищ)</a>`);
+  return L.length ? `<p class="hk-nums small">${L.join('<span class="muted"> · </span>')}</p>` : '';
+}
 function vHome() {
   const me = P[S.me?.person_id], nm = String(S.me?.name || '').split(/\s+/)[0];
   const living = Object.values(P).filter(p => isLiving(p) && !accSet().has(p.id) && p.id !== S.me?.person_id).length;
   const VA = voicesOf().filter(x => !x.pending || isOwner() || x.by === S.me.id), VN = VA.length, V = VA.slice(-3).reverse();
   return `<div class="lede"><h1>Вітаємо${nm ? ', ' + esc(nm) : ''}!</h1><p class="small muted">Родинний архів: дерево, документи з архівів, фото, спогади й голоси наших.</p></div>
-  ${statTiles()}
+  <div class="hcard h-stats"><h3>📊 Цифри роду <a class="small" href="#/stats">усі цифри →</a></h3>${statTiles()}${homeKeyNums()}</div>
   <div class="hgrid">
     <div class="hcol">
             <div class="hcard h-iv${ivOpen().length ? ' pulse' : ''}"><h3>🎙 Питання для розмови ${ivOpen().length ? `<i class="ivcnt">${ivOpen().length}</i>` : ''} <a class="small" href="#/iv">усі →</a></h3><p class="small muted" style="margin:0 0 8px">Сайт сам склав питання з того, чого бракує в дереві. Знаєте відповідь — напишіть; не знаєте — спитайте старших.</p>${ivOpen().slice(0, 3).map(q => `<p class="small" style="margin:0 0 6px">• ${esc(q.t)}</p>`).join('')}<a class="btn small" href="#/iv">Відповісти на питання</a></div>
@@ -3347,7 +3429,6 @@ function vHome() {
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
       <div class="hcard links3">
         <a href="#/geo"><b>🗺 Карта роду</b><span>Де жили наші — з 1780-х до сьогодні</span></a>
-        <a href="#/stats"><b>📊 Цифри роду</b><span>Імена, довгожителі, найбільші родини</span></a>
         <button data-act="poster"><b>🖼 Дерево-плакат</b><span>Велика картинка для друку на стіну</span></button>
         <a href="#/dna"><b>🧬 ДНК-тести</b><span>Як знайти родичів у світі</span></a>
         <a href="#/terms"><b>📖 Словник і джерела</b><span>Що за документи й що означають старі слова</span></a>
