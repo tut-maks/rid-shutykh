@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611062139';
+const BUILD = '202611062153';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2750,7 +2750,7 @@ function baseCsv(M = []) { const { H, R } = baseRows(), q = v => { const s = Str
   const byKey = {}; Object.values(P).forEach(p => [p.s, p.m].filter(Boolean).forEach(sn => (byKey[key(sn, p.n, p.pt)] ||= []).push(p.id)));
   const RT = R.map(r => ['картка дерева', ...r, ...BAZA_X.map(() => '')]);
   const RM = M.map(m => { const r = H.map(() => ''); r[iS] = m['прізвище'] || ''; r[iN] = m["ім'я"] || ''; r[iP] = m['по батькові'] || ''; r[iSx] = m['стать'] || '';
-    return ['згадка в джерелі', ...r, m.src || '', m.url || '', m['село'] || '', m['рік'] || '', m['вік'] || '', [m['двір'], m['роль'], m['заняття']].filter(Boolean).join(', '), m['господарство'] || '', m['примітка'] || '', (byKey[key(m['прізвище'], m["ім'я"], m['по батькові'])] || []).join(' ')]; });
+    return ['згадка в джерелі', ...r, m.src || '', m['посилання'] || m.url || '', m['село'] || '', m['рік'] || '', m['вік'] || '', [m['двір'] ? 'двір ' + m['двір'] : '', m['роль'], m['заняття']].filter(Boolean).join(', '), m['господарство'] || '', [m['примітка'], m['аркуш'] ? 'арк. ' + m['аркуш'] : '', m['кадр'] ? 'кадр ' + m['кадр'] : '', m['документ'] ? 'документ сайту: ' + m['документ'] : ''].filter(Boolean).join('; '), m['код у дереві'] || (byKey[key(m['прізвище'], m["ім'я"], m['по батькові'])] || []).join(' ')]; });
   return '\uFEFF' + [['Тип запису', ...H, ...BAZA_X], ...RT, ...RM].map(r => r.map(q).join(';')).join('\r\n'); }
 async function baseDownload() { const M = await bazaLoad(); const blob = new Blob([baseCsv(M)], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a'), d = new Date(); a.href = URL.createObjectURL(blob); a.download = `rodovid-baza-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); ev('open', 'stats', 'baza.csv'); }
 document.addEventListener('click', e => { if (e.target.closest('[data-act="baza"]')) { if (!isOwner()) return; baseDownload(); } });
