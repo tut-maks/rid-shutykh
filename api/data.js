@@ -134,7 +134,8 @@ export default handler(async (req, res, ctx, url) => {
         const it = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'seed/import/manifest.json'), 'utf8')).find(x => x.kind === 'text' && x.id === tk); text = it?.value || null;
       } catch {}
       return send(res, 200, { text }); }
-    if (url?.searchParams?.get('baza')) { // «База»: усі люди, прочитані в джерелах (і не наші) — facts/baza/src_*.csv з репозиторію; лише для учасників сайту
+    if (url?.searchParams?.get('baza')) { // «База»: усі люди, прочитані в джерелах (і не наші) — facts/baza/src_*.csv з репозиторію; ЛИШЕ власнику (вимога Максима, 06.11)
+      if (!can(me, 'owner')) return fail(res, 403, 'forbidden');
       const dir = path.join(process.cwd(), 'facts/baza'), out = [];
       try { for (const f of fs.readdirSync(dir).filter(f => /^src_.*\.csv$/.test(f)).sort()) {
         const [head, ...rows] = fs.readFileSync(path.join(dir, f), 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean).map(l => l.split(';'));
