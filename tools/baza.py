@@ -37,6 +37,8 @@ def check():
         miss = [c for c in NEED if c not in head]
         if miss: print(f'ПОМИЛКА {os.path.basename(fn)}: немає колонок {miss}'); err += 1
     for r in rows:
+        if None in r or any(v is None for v in r.values()):
+            print(f"ПОМИЛКА {r['_file']}:{r['_line']}: кількість полів не збігається з заголовком (крапка з комою в тексті без лапок?)"); err += 1
         if not (r.get('прізвище') or '').strip() and not (r.get("ім'я") or '').strip():
             print(f"ПОМИЛКА {r['_file']}:{r['_line']}: ні прізвища, ні імені"); err += 1
     dup = Counter((r['_file'], norm(*[r.get(c) for c in NEED + ['вік', 'рік', 'двір', 'роль']])) for r in rows)
