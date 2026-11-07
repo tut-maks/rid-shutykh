@@ -1,4 +1,6 @@
-import os
+import os, sys
+sys.path.insert(0,'/home/claude')
+from translations import T
 from PIL import Image, ImageOps
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -26,6 +28,7 @@ H2 = ParagraphStyle('h2', fontName='DVSB', fontSize=14.5, leading=19, textColor=
 P = ParagraphStyle('p', fontName='DV', fontSize=10, leading=14.2, textColor=INK, spaceAfter=4)
 SM = ParagraphStyle('sm', parent=P, fontSize=8.5, leading=11.5, textColor=GREY)
 HY = ParagraphStyle('hy', parent=P, backColor=colors.HexColor('#f6efe6'), borderPadding=(5, 6, 5, 6), spaceBefore=4, spaceAfter=8)
+TR = ParagraphStyle('tr', parent=P, fontSize=9, leading=12.5, leftIndent=6, borderColor=colors.HexColor('#d9cbb8'), borderWidth=0.6, borderPadding=(5,6,5,6), spaceBefore=2, spaceAfter=12)
 CAP = ParagraphStyle('cap', parent=SM, alignment=1, spaceAfter=10)
 
 W = A4[0] - 36 * mm
@@ -47,8 +50,11 @@ def img(name, maxh=110 * mm, cap=None):
     if cap:
         items.append(Paragraph(cap, CAP))
     else:
-        items.append(Spacer(1, 8))
-    return KeepTogether(items)
+        items.append(Spacer(1, 6))
+    out_items = [KeepTogether(items)]
+    if name in T:
+        out_items.append(Paragraph(T[name], TR))
+    return out_items
 
 
 def person(title, facts, hyp, images, src):
@@ -58,7 +64,7 @@ def person(title, facts, hyp, images, src):
     if hyp:
         s.append(Paragraph(hyp, HY))
     for im in images:
-        s.append(img(*im))
+        s.extend(img(*im))
     s.append(Paragraph('Джерело: ' + src, SM))
     s.append(PageBreak())
     return s
@@ -66,10 +72,12 @@ def person(title, facts, hyp, images, src):
 
 story = []
 story += [
-    Paragraph('Вороньки й Веприк у документах Arolsen Archives, 1942–1945', H1),
+    Paragraph('Наші села й прізвища в документах Arolsen Archives, 1942–1945', H1),
     Paragraph('Остарбайтери, в’язні концтаборів і військовополонені з наших сіл', ParagraphStyle('sub', parent=P, fontName='DVS', fontSize=12, leading=16, textColor=GREY, spaceAfter=10)),
     Paragraph('<b>Що це.</b> Arolsen Archives (Німеччина) — міжнародний архів документів про людей, яких переслідував нацистський режим: вивезених на примусову працю, в’язнів концтаборів, військовополонених. Документи нижче знайдено 07.11.2026 у його онлайн-архіві за назвами сіл Веприк і Вороньки та за прізвищем Шутий.', P),
     Paragraph('<b>Важливо.</b> Ці люди — з наших сіл, але ми <b>не знаємо, чи вони наші родичі</b>. Найімовірніше, більшість — односельці. У нашому родовому дереві їх поки немає. Усе, що написано про можливу спорідненість, — лише припущення (позначено «Є припущення»). Імена, дати й місця подано так, як записано в документах; німецькі писарі часто перекручували слов’янські імена й назви.', HY),
+    Paragraph('<b>Які прізвища знайдено:</b> <b>Шутий</b> (Вороньки, Веприк), <b>Левченко</b> (Веприк), <b>Галай</b> (Веприк, імовірно), <b>Янок</b> (Веприк), <b>Дривинський</b> (Веприк), <b>Турчин</b>, <b>Самойлик</b>, <b>Вовк</b> (Вороньки), <b>Семена</b> (місце не вказано), <b>Перчета</b> (Київ), а також односельці: Сутуга, Василяк (Веприк), Лесек, Цюцюра, Величко (Вороньки).', P),
+    Paragraph('<b>Шукали й не знайшли з наших сіл:</b> Вдовинець, Красновид, Батечко, Половець (крім одного запису без документа), Горовий (є двоє з Веприка, але документи без подробиць), Телятник, Талавира, Крук (Розкошівка).', SM),
     Paragraph('<b>Прохання до родини.</b> Подивіться, будь ласка: може, хтось упізнає ці імена, пам’ятає розповіді старших про Німеччину, знає, чиї це діти, хто повернувся, а хто ні. Будь-яка згадка допоможе — напишіть у групу або Максимові.', P),
     Spacer(1, 6),
     Paragraph('<b>Як читати.</b> «Erziehung» — «виховний» в’язень: людей, які втекли з місця примусової роботи, гестапо відправляло на кілька тижнів у табір. «Stapo» — державна поліція (гестапо). Kr. Czernikow / Tschernigow — Чернігівська область. Дати в німецьких документах — день.місяць.рік.', SM),
@@ -197,6 +205,13 @@ story += person('Семена Анастасія, нар. 15.03.1910 (місце
     'Є припущення (дуже обережно): наша прабабуся Анастасія Макарівна Семена народилася приблизно 1909–1911 р., і в записі 1934 р. вона ще під дівочим прізвищем. Але в 1942 р. вона мала дітей 7–11 років, а матерів вивозили рідше; місця народження в документі немає. Чи хтось чув, що баба Настя була в Німеччині?',
     [('semena_anastasiia_1910_loburg_spysok.jpg', 170 * mm, 'Рядок 736: Semena, Anastasia, 15.3.10')],
     'Arolsen Archives, 2.1.4.2, документ 4685034 (DocID 70978154)')
+
+story += person('Перчета Валентин, нар. 05.03.1925, Київ',
+    ['Картка концтабору Дахау: Pertscheta Valentin, № 29982, «Sch» (в’язень «превентивного арешту»), нар. 5.3.1925 у Києві, учень, адреса — Київ, вул. Борщагівська, 102; прибув 6 травня 1942, переведений 5 червня 1942. Пізніше — номери 46489 / 2555 (довідкова картка табору Флоссенбюрг, ще один варіант написання — Piertscheta).'],
+    'Прізвище Перчета — рідкісне; Перчети нашого дерева — з Озерян (Степан Діомидович Перчета, кінець XIX ст.). Чи Валентин з Києва — з тієї ж родини, невідомо. Можливо, хтось із Перчетів знає?',
+    [('perchet_valentyn_1925_dachau_karta.jpg', 80 * mm, 'Картка КТ Дахау'),
+     ('perchet_valentyn_1925_flossenburg_hinweis.jpg', 100 * mm, 'Довідкова картка (КТ Флоссенбюрг)')],
+    'Arolsen Archives: 1.1.6 (Дахау), 1.1.8 (Флоссенбюрг), DocID 10724210, 1681737')
 
 story += [Paragraph('Що далі', H2),
     Paragraph('Якщо хтось упізнає людину — напишіть, ким вона доводилася, чи повернулася додому, чи є фото або листи. Записи про народження 1922–1927 рр. (з іменами батьків) зберігаються в архіві; ми готуємо запит.', P),
