@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072240';
+const BUILD = '202611072243';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -521,28 +521,28 @@ function treeBar(tabs, extra = '') {
         <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
         <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button>${extra}</div></details>${sxCount()}</div>`;
 }
-// Вибрана гілка — на дереві лишаються лише її люди (+ їхні чоловіки/дружини і ланцюжок від центральної людини до гілки);
-// порожні колонки стискаються, щоб гілку було зручно дивитись
-function famOnly(L, center, fam) {
-  if (!fam) return L;
-  const ids = Object.keys(L.N), M = new Set(ids.filter(id => (P[id].fam || []).includes(fam)));
-  if (!M.size) return L;
-  const keep = new Set(M); keep.add(center);
-  M.forEach(id => (SPOUSES[id] || []).forEach(s => L.N[s.id] && keep.add(s.id)));
-  const hasAncIn = (id, seen = new Set()) => { if (!id || seen.has(id) || !P[id]) return false; seen.add(id); if (M.has(id)) return true; return hasAncIn(P[id].f, seen) || hasAncIn(P[id].mo, seen); };
-  const hasDescIn = (id, seen = new Set()) => { if (seen.has(id)) return false; seen.add(id); return (KIDS[id] || []).some(k => M.has(k) || hasDescIn(k, seen)); };
-  ids.forEach(id => { if (keep.has(id)) return; if ((isAncOf(id, center) && hasAncIn(id)) || (isAncOf(center, id) && hasDescIn(id))) keep.add(id); });
-  const N = {}; keep.forEach(id => { if (L.N[id]) N[id] = { ...L.N[id] }; });
-  const xs = [...new Set(Object.values(N).map(o => o.x))].sort((a, b) => a - b), STEP = T2.W + T2.GX, map = {};
-  let nx = T2.PAD; xs.forEach((x, i) => { if (i) nx += Math.min(x - xs[i - 1], STEP); map[x] = nx; });
-  Object.values(N).forEach(o => { o.x = map[o.x]; });
-  const rows = L.rows.filter(r => Object.values(N).some(o => o.r === r)), ri = Object.fromEntries(rows.map((r, i) => [r, i]));
-  Object.values(N).forEach(o => { o.y = T2.PAD + ri[o.r] * (T2.H + T2.GY); });
-  return { ...L, N, w: Math.max(...Object.values(N).map(o => o.x)) + T2.W + T2.PAD, h: rows.length * (T2.H + T2.GY) - T2.GY + T2.PAD * 2, rows, fam };
+// Вибрана гілка — дерево будується заново лише з її людей (+ їхні чоловіки/дружини і ланцюжок від центральної людини до гілки),
+// усе розгорнуто; інших людей на дереві немає
+function famLayout(center, fam) {
+  const f = S.ui.tf ||= {}; const all = Object.keys(P), M = new Set(all.filter(id => (P[id].fam || []).includes(fam)));
+  if (!M.size) return layoutTD(center);
+  const keep = new Set(M); M.forEach(id => (SPOUSES[id] || []).forEach(s => P[s.id] && keep.add(s.id)));
+  const ancIn = (id, seen = new Set()) => { if (!id || seen.has(id) || !P[id]) return false; seen.add(id); return M.has(id) || ancIn(P[id].f, seen) || ancIn(P[id].mo, seen); };
+  const descIn = (id, seen = new Set()) => { if (seen.has(id)) return false; seen.add(id); return (KIDS[id] || []).some(k => M.has(k) || descIn(k, seen)); };
+  const chain = new Set(); (function up(id) { if (!id || !P[id] || chain.has(id)) return; if (ancIn(id)) chain.add(id); up(P[id].f); up(P[id].mo); })(center);
+  (function dn(id, seen = new Set()) { (KIDS[id] || []).forEach(k => { if (seen.has(k)) return; seen.add(k); if (M.has(k) || descIn(k)) { chain.add(k); dn(k, seen); } }); })(center);
+  let c = center; if (!keep.has(center) && !chain.size) { /* центральна людина з гілкою не пов'язана — будуємо від найдавнішого в гілці */ const r = FAM[fam]?.root; c = r && P[r] ? r : [...M].sort(byBirth)[0]; } else chain.forEach(id => keep.add(id)), keep.add(center);
+  const P0 = P, K0 = KIDS, S0 = SPOUSES, ao = f.allOpen;
+  try {
+    P = Object.fromEntries([...keep].map(id => [id, P0[id]]));
+    KIDS = Object.fromEntries(Object.entries(K0).filter(([id]) => keep.has(id)).map(([id, ks]) => [id, ks.filter(k => keep.has(k))]));
+    SPOUSES = Object.fromEntries(Object.entries(S0).filter(([id]) => keep.has(id)).map(([id, ss]) => [id, ss.filter(x => keep.has(x.id))]));
+    f.allOpen = true; const L = layoutTD(c); L.c = c; return L;
+  } finally { P = P0; KIDS = K0; SPOUSES = S0; f.allOpen = ao; }
 }
 const isAncOf = (a, b, seen = new Set()) => { /* a — предок b? */ if (!b || seen.has(b) || !P[b]) return false; seen.add(b); const p = P[b]; return p.f === a || p.mo === a || isAncOf(a, p.f, seen) || isAncOf(a, p.mo, seen); };
 function vAll(tabs) {
-  const center = treeCenter(); const f = S.ui.tf || {}; const L = famOnly(layoutTD(center), center, f.fam); S.ui.tl = L; const V = new Set(Object.keys(L.N));
+  let center = treeCenter(); const f = S.ui.tf || {}; const L = f.fam ? famLayout(center, f.fam) : layoutTD(center); if (L.c) center = L.c; S.ui.tl = L; const V = new Set(Object.keys(L.N));
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
   let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
@@ -4014,7 +4014,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', async e => {
   const t = e.target;
   if (['pf-fam', 'pf-liv', 'pf-sex'].includes(t.id)) { (S.ui.pf ||= {})[t.id.slice(3)] = t.value; render(); return; }
-  if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; render(); return; }
+  if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; delete S.ui.vp?.all; delete S.ui.vp?.anc; delete S.ui.vp?.desc; render(); return; }
   if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
   if (t.dataset.upload) { const fs = [...t.files]; t.value = ''; if (fs.length === 1 && /^image\//.test(fs[0].type)) return openAskNew({ person: t.dataset.upload, file: fs[0] }); return upload(t.dataset.upload, fs); }
   if (t.dataset.udate) { const v = t.value.trim(); try { await api('/api/data', { body: { op: 'union.date', id: t.dataset.udate, date: v } }); const u = S.data.unions.find(x => x.id === t.dataset.udate); if (u) u.date = v; index(); toast('Дату шлюбу збережено'); } catch (er) { toast('Не вдалося зберегти дату шлюбу'); } return; }
