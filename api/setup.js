@@ -161,7 +161,7 @@ export default handler(async (req, res, _c, url) => {
       } else if (it.kind === 'map' || it.kind === 'doc') { // стара карта (type='map', geo) або архівний документ зі сканами
         const id = String(it.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 60); if (!id) continue;
         const cur = await db.get('documents', { eq: { id } });
-        const pages = cur?.data?.pages ? [...cur.data.pages] : [];
+        const pages = cur?.data?.pages && !it.replacePages ? [...cur.data.pages] : []; // replacePages: нові скани замість старих (напр. чіткіші знімки)
         let added = 0;
         for (const [n, f] of (it.files || []).entries()) {
           const p = `docs/imp-${key}-${n}.jpg`; if (pages.includes(p)) continue;
