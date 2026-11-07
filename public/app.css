@@ -361,7 +361,7 @@ body.noscroll{overflow:hidden}
 a.pv-mi{text-decoration:none;display:block}
 .pv-stage{position:relative;overflow:hidden;display:grid;place-items:center;touch-action:none;cursor:default;min-height:0}
 .pv-img{cursor:zoom-in}
-.pv-img{position:absolute;inset:0;margin:auto;max-width:calc(100% - 32px);max-height:calc(100% - 16px);object-fit:contain;transform-origin:center center;box-shadow:0 10px 50px rgba(0,0,0,.5);will-change:transform;-webkit-user-drag:none}
+.pv-img{position:absolute;inset:0;margin:auto;max-width:calc(100% - 32px);max-height:calc(100% - 16px);object-fit:contain;transform-origin:center center;box-shadow:0 10px 50px rgba(0,0,0,.5);-webkit-user-drag:none;image-rendering:auto}
 .pv.zoomed .pv-stage,.pv.zoomed .pv-img{cursor:grab}
 .pv.zoomed .pv-stage:active{cursor:grabbing}
 .pv-empty{color:#A39B8E}
@@ -1626,7 +1626,7 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .dvwrap:fullscreen{height:100vh;border-radius:0}
 .dvmap{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;background:#B9C98A}
 .dvmap.drag{cursor:grabbing}
-.dvw{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}.dvw.glide{transition:transform .45s ease}
+.dvw{position:absolute;left:0;top:0;transform-origin:0 0}.dvw.glide{transition:transform .45s ease}
 .dv-load{padding:20px}
 .dvsvg{display:block;user-select:none;-webkit-user-select:none}.dvsvg image{pointer-events:none}.dvsvg .dh image{pointer-events:auto}
 .dvbar{position:absolute;z-index:3;left:12px;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;pointer-events:none}

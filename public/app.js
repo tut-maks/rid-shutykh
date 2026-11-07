@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072208';
+const BUILD = '202611072210';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3029,7 +3029,7 @@ function dvPanel(st) {
 // перегляд: зсув і масштаб (як у карти роду) — тягнути мишкою/пальцем, коліщатко й два пальці — масштаб
 const DVV = { x: 0, y: 0, z: 1 };
 let dvRaf = 0; // перетягування й масштаб — не частіше за кадр екрана
-function dvApply() { if (dvRaf) return; dvRaf = requestAnimationFrame(() => { dvRaf = 0; const w = $('#dvw'); if (w) w.style.transform = `translate3d(${DVV.x}px,${DVV.y}px,0) scale(${DVV.z})`; }); }
+function dvApply() { if (dvRaf) return; dvRaf = requestAnimationFrame(() => { dvRaf = 0; const w = $('#dvw'); if (w) w.style.transform = `translate(${DVV.x}px,${DVV.y}px) scale(${DVV.z})`; }); }
 let dvStillT = 0; const dvStill = () => { const m = $('#dvmap'); if (!m) return; m.classList.add('moving'); clearTimeout(dvStillT); dvStillT = setTimeout(() => m.classList.remove('moving'), 220); }; // під час руху анімації на паузі
 function dvClamp() { const m = $('#dvmap'), L = S.ui.dvL; if (!m || !L) return; const vw = m.clientWidth, vh = m.clientHeight, w = L.W * DVV.z, h = L.H * DVV.z;
   DVV.x = w <= vw ? (vw - w) / 2 : Math.min(0, Math.max(vw - w, DVV.x)); DVV.y = h <= vh ? (vh - h) / 2 : Math.min(0, Math.max(vh - h, DVV.y)); }
