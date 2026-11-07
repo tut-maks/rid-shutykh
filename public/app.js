@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071624';
+const BUILD = '202611071650';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3883,7 +3883,7 @@ function render() {
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'geo') requestAnimationFrame(geoMount);
-  if (S.view === 'dvory') requestAnimationFrame(dvMount);
+  if (S.view === 'dvory') { requestAnimationFrame(dvMount); setTimeout(dvMount, 250); } // setTimeout — якщо вкладка прихована (rAF не спрацьовує)
   if (S.view === 'routes' && S.arg) requestAnimationFrame(rtMount);
   if (S.view === 'stats') requestAnimationFrame(stFold);
   if (S.data && S.me && !ivNudge.done) { ivNudge.done = 1; ivNudge(); }
