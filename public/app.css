@@ -1714,3 +1714,4 @@ body:has(#layer .scrim) .ivnudge{display:none}
   .dv-bird{transform-box:fill-box;transform-origin:50% 100%;animation:dvPeck 3.2s ease-in-out infinite}.dv-bird+.dv-bird{animation-delay:1.1s}@keyframes dvPeck{0%,70%,100%{transform:none}78%{transform:rotate(14deg) translateY(1px)}86%{transform:none}}
 }
 @media (prefers-reduced-motion:reduce){.dv-cart{display:none}}
+.dv-note{background:#F6EEDC;border-left:3px solid var(--wine);padding:6px 10px;border-radius:6px}

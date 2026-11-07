@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071604';
+const BUILD = '202611071607';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2988,12 +2988,13 @@ function dvPanel(st) {
   const L = S.ui.dvL || dvLayout(D, st.vil), k = L.order.indexOf(h.id), nb = [L.order[k - 1], L.order[k + 1]].filter(Boolean).map(id => D.find(x => x.id === id));
   const live = DV_LIVE.filter(([k]) => h.live?.[k]).map(([k, e, t]) => `<span class="dv-lv" title="${t}">${e} <b>${esc(h.live[k])}</b> <i>${t}</i></span>`).join('');
   const sur = dvSur(h), vs = DV_VIL[st.vil].slice(0, 6), docs = (S.data?.documents || []).filter(x => x.title && x.title.includes(st.y) && x.title.includes(vs) && ((h.no && new RegExp('№\\s?' + h.no + '(?!\\d)').test(x.title)) || (sur.length > 3 && x.title.includes(sur.slice(0, -2)))));
-  const ppl = (h.people || []).map(p => `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`).join('');
+  const ppl = (h.people || []).map(p => `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}${p.book ? ` <small class="muted">(у книзі: ${esc(p.book)})</small>` : ''}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`).join('');
   return `<button class="dv-x" data-dvsel="" aria-label="Закрити">×</button>
     <p class="dv-k small muted">${/^\d/.test(h.no || '') ? 'Двір №' + esc(h.no) : esc(h.type || 'Двір')}${h.street ? ' · ' + esc(h.side || '') + (h.sno ? ', №' + esc(h.sno) + ' у вуличному списку' : '') : ''}</p>
     <h3 class="dv-h">${esc(h.head || h.owner_list || '—')}</h3>
     <p class="small">${[dvSt(h.status), h.type && h.no ? h.type : '', h.khaty ? 'хат: ' + h.khaty : ''].filter(Boolean).map(esc).join(' · ')}${h.ours ? ' <span class="dv-ours">★ прізвище з нашого дерева</span>' : ''}</p>
     ${h.street ? `<p class="small muted">Вулиця: ${esc(h.street)}</p>` : ''}
+    ${h.note ? `<p class="small dv-note">Примітка: ${esc(h.note)}${docs.length ? ` Запис: ${docs.map(x => `<a href="#" data-doc="${esc(x.id)}">${esc(x.title)}</a>`).join('; ')}.` : ''}</p>` : ''}
     ${(h.people || []).length ? `<div class="dv-fam">${h.people.slice(0, 9).map(p => dvFig(p)).join('')}</div>` : ''}
     ${ppl ? `<h4>Мешканці</h4><ul class="dv-pl">${ppl}</ul>` : h.owner_list ? `<h4>У вуличному списку</h4><p class="small">${esc(h.owner_list)}</p>` : ''}
     ${live || h.hosp || (h.feats || []).length ? `<h4>Господарство</h4>${live ? `<div class="dv-lvs">${live}</div>` : ''}${(h.feats || []).length ? `<p class="small">${h.feats.map(esc).join(' · ')}</p>` : ''}${h.hosp ? `<p class="small dv-hosp">${esc(h.hosp)}</p>` : ''}` : ''}

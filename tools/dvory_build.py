@@ -102,6 +102,21 @@ else:
     D['veprik']['1767'] = vep
 
 os.makedirs(R + 'facts/dvory', exist_ok=True)
+
+# «Шут» у книзі → пишемо «Шутий» (жінки — «Шута»), як в усьому дереві; у примітці — як записано в книзі (правило власника, 07.11)
+import re as _re
+def _shut(t, sex=''):
+    return _re.sub(r'(?<![А-Яа-яІіЇїЄєҐґ])Шут(?![А-Яа-яІіЇїЄєҐґ])', 'Шута' if sex == 'ж' else 'Шутий', t or '')
+for _v in D:
+    for _y in D[_v]:
+        for h in D[_v][_y]:
+            was = any(_re.search(r'(?<![А-Яа-яІіЇїЄєҐґ])Шут(?![А-Яа-яІіЇїЄєҐґ])', x or '') for x in [h.get('sur'), h.get('head'), h.get('owner_list')] + [q['s'] for q in h['people']])
+            if not was: continue
+            for q in h['people']:
+                if _re.search(r'(?<![А-Яа-яІіЇїЄєҐґ])Шут(?![А-Яа-яІіЇїЄєҐґ])', q['s']): q['book'] = q['s']; q['s'] = _shut(q['s'], q.get('sex'))
+            h['head'] = _shut(h.get('head')); h['sur'] = _shut(h.get('sur'))
+            h['note'] = (h.get('note', '') + ' ' if h.get('note') else '') + 'У книзі прізвище записано «Шут»; на сайті пишемо «Шутий» (жінок — «Шута»), як в усьому дереві.'
+
 json.dump(D, open(R + 'facts/dvory/dvory.json', 'w'), ensure_ascii=False)
 for v in D:
     for y in D[v]:
