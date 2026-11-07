@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071611';
+const BUILD = '202611071614';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2982,13 +2982,16 @@ function dvBar(st) {
     <input type="search" id="dv-q" placeholder="Знайти людину або прізвище" value="${esc(S.ui.dvQ || '')}" aria-label="Пошук">
     <p class="small dv-sum">${D.length} дворів · ${ppl} людей · ★ ${ours}${st.ys.length < 2 ? ` · для ${st.vil === 'veprik' ? 'Веприка' : 'села'} поки є лише ${st.y} р.` : ''}${st.q ? ` · знайдено тут: ${st.hit.size}` : ''}${all.length ? ` · ще: ${all.join(' ')}` : ''}</p>`;
 }
+// мешканець двору → картка в дереві: те саме ім'я й прізвище, рік народження ±3 і в описі картки згадано цей рік книги
+function dvTree(p, y) { const age = parseInt(p.age, 10); if (isNaN(age) || !p.n) return null; const by = +y - age, nm = p.n.toLowerCase().slice(0, 4), sr = String(p.s || '').replace(/\(.*?\)|\?/g, '').trim().toLowerCase().slice(0, 3); if (!sr) return null;
+  const L = Object.values(P).filter(q => { const qb = parseInt(String(q.b || '').match(/1[67]\d\d/)?.[0] || 0); return qb && Math.abs(qb - by) <= 3 && String(q.n || '').toLowerCase().includes(nm) && String(q.s || '').toLowerCase().startsWith(sr) && String(q.note || '').includes(y); }); return L.length === 1 ? L[0].id : null; }
 function dvPanel(st) {
   const d = S.ui.dvD || {}, D = (d[st.vil] || {})[st.y] || [], h = D.find(x => x.id === st.sel);
   if (!h) { const O = D.filter(x => x.ours); return `<h3>${DV_VIL[st.vil]}, ${st.y}</h3><p class="small muted">Натисніть на хату. Двори з прізвищами нашого дерева:</p><div class="dv-ol">${O.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">★ ${esc(dvLabel(x))}</button>`).join('') || '<span class="small muted">немає</span>'}</div>`; }
   const L = S.ui.dvL || dvLayout(D, st.vil), k = L.order.indexOf(h.id), nb = [L.order[k - 1], L.order[k + 1]].filter(Boolean).map(id => D.find(x => x.id === id));
   const live = DV_LIVE.filter(([k]) => h.live?.[k]).map(([k, e, t]) => `<span class="dv-lv" title="${t}">${e} <b>${esc(h.live[k])}</b> <i>${t}</i></span>`).join('');
   const sur = dvSur(h), vs = DV_VIL[st.vil].slice(0, 6), docs = (S.data?.documents || []).filter(x => x.title && x.title.includes(st.y) && x.title.includes(vs) && ((h.no && new RegExp('№\\s?' + h.no + '(?!\\d)').test(x.title)) || (sur.length > 3 && x.title.includes(sur.slice(0, -2)))));
-  const ppl = (h.people || []).map(p => `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}${p.book ? ` <small class="muted">(у книзі: ${esc(p.book)})</small>` : ''}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`).join('');
+  const ppl = (h.people || []).map(p => { const tid = dvTree(p, st.y); return `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}${tid ? ` <a class="dv-tl" href="${href('p', tid)}" title="Картка в дереві: ${esc(short(P[tid]))}">у дереві →</a>` : ''}${p.book ? ` <small class="muted">(у книзі: ${esc(p.book)})</small>` : ''}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`; }).join('');
   return `<button class="dv-x" data-dvsel="" aria-label="Закрити">×</button>
     <p class="dv-k small muted">${/^\d/.test(h.no || '') ? 'Двір №' + esc(h.no) : esc(h.type || 'Двір')}${h.street ? ' · ' + esc(h.side || '') + (h.sno ? ', №' + esc(h.sno) + ' у вуличному списку' : '') : ''}</p>
     <h3 class="dv-h">${esc(h.head || h.owner_list || '—')}</h3>
