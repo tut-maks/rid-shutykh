@@ -1743,3 +1743,6 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .dvmap.moving .dh-i,.dvmap.drag .dh-i{transition:none}
 .dvw{backface-visibility:hidden}
 .dvsvg image{image-rendering:auto}
+.hyp-st{font-size:13px;padding:6px 10px;border-radius:8px;margin:-2px 0 8px}.hyp-st.st-ok{background:#E8F4E4;color:#2F5E23}.hyp-st.st-ko{background:#F7E6E3;color:#8A2B1E}.hyp-st.st-weak{background:#FFF3D6;color:#7A5300}
+.hyp-c.st-ko,.hyp-c.st-weak{opacity:.8}.hyp-how{margin:6px 0 12px}.hyp-how ul{margin:6px 0 0;padding-left:18px}
+.vd-ok span{color:#2F5E23;font-weight:600}.vd-ko span{color:#8A2B1E;font-weight:600}.v-ok{color:#2F5E23}.v-ko{color:#8A2B1E}

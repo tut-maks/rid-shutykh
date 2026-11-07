@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072117';
+const BUILD = '202611072132';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3810,8 +3810,30 @@ function hypItems() {
 const HYPCAT = [['', 'Усі'], ['kin', 'Можлива рідня'], ['hyp', 'Наші припущення'], ['tree', 'У дереві'], ['card', 'У картках і документах'], ['hist', 'В «Історії роду»']];
 const hypAns = id => S.data.stories.filter(s => s.target === 'hyp:' + id);
 const VERD = { yes: ['✓', 'Підтверджую — так і є'], no: ['✗', 'Спростовую — було не так'], add: ['✎', 'Доповнюю'] };
-const verdOf = s => (String(s.text).match(/^\[(yes|no|add)\]\s*/) || [])[1] || 'add';
-const ansText = s => String(s.text).replace(/^\[(yes|no|add)\]\s*/, '');
+const VERDO = { ok: ['✔', 'Остаточно: підтверджено'], ko: ['✘', 'Остаточно: спростовано'] }; // лише власник; сервер не дасть іншим
+const verdOf = s => (String(s.text).match(/^\[(yes|no|add|ok|ko)\]\s*/) || [])[1] || 'add';
+const ansText = s => String(s.text).replace(/^\[(yes|no|add|ok|ko)\]\s*/, '');
+const verdLbl = v => (VERD[v] || VERDO[v] || VERD.add);
+/* Логіка припущень (як одне впливає на інше):
+   • Рішення власника [ok]/[ko] — остаточне: «✔ Підтверджено» / «✘ Спростовано». Для карток «у дереві» підтвердження одразу знімає позначку гіпотези (сервер).
+   • Голоси родичів: кожне «так» +8 до ймовірності (до +24), кожне «ні» −12 (до −36).
+   • Зв'язки в text:hyps: alt — взаємовиключні варіанти (підтвердили один → інші «мало ймовірно»); needs — тримається на іншому
+     (те спростовано → «під сумнівом», підтверджено → +15); then — якщо це підтверджено, ті теж «випливає з підтвердженого».
+   • Решта пов'язаних (ті самі люди) — позначка «⚡ Перегляньте». */
+function hypStates(all) {
+  if (S.ui.hypStK === S.data.stories.length + ':' + all.length && S.ui.hypSt) return S.ui.hypSt;
+  const by = new Map(all.map(x => [x.id, x])), st = {};
+  all.forEach(x => { const A = hypAns(x.id), fin = [...A].reverse().find(a => /^(ok|ko)$/.test(verdOf(a))), y = A.filter(a => verdOf(a) === 'yes').length, n = A.filter(a => verdOf(a) === 'no').length;
+    st[x.id] = { s: fin ? verdOf(fin) : '', p: Math.max(1, Math.min(99, (x.p ?? 40) + Math.min(24, 8 * y) - Math.min(36, 12 * n))), why: fin ? (verdOf(fin) === 'ok' ? 'підтвердив власник сайту' : 'спростував власник сайту') : '' }; });
+  for (let k = 0; k < 3; k++) all.forEach(x => { const c = st[x.id]; if (c.s === 'ok' || c.s === 'ko') return;
+    const alt = (x.alt || []).map(i => by.get(i)).filter(h => h && st[h.id].s.startsWith('ok')), need = (x.needs || []).map(i => by.get(i)).filter(Boolean), src = all.filter(h => (h.then || []).includes(x.id) && st[h.id].s.startsWith('ok'));
+    if (src.length) { c.s = 'ok-a'; c.p = 95; c.why = 'випливає з підтвердженого: «' + src[0].title + '»'; return; }
+    if (alt.length) { c.s = 'ko-a'; c.p = Math.min(c.p, 5); c.why = 'підтверджено інший варіант: «' + alt[0].title + '»'; return; }
+    const bad = need.find(h => st[h.id].s.startsWith('ko')); if (bad) { c.s = 'weak'; c.p = Math.min(c.p, 15); c.why = 'спростовано те, на чому воно трималось: «' + bad.title + '»'; return; }
+    if (need.length && need.every(h => st[h.id].s.startsWith('ok'))) { c.p = Math.min(95, c.p + 15); c.why = 'підтверджено те, на чому воно тримається'; } });
+  S.ui.hypStK = S.data.stories.length + ':' + all.length; S.ui.hypSt = st; return st;
+}
+const HYPST = { ok: ['st-ok', '✔ Підтверджено'], 'ok-a': ['st-ok', '✔ Випливає з підтвердженого'], ko: ['st-ko', '✘ Спростовано'], 'ko-a': ['st-ko', '✘ Мало ймовірно'], weak: ['st-weak', '⚠ Під сумнівом'] };
 // Автоматичний «ланцюжок»: щойно пов'язане припущення хтось підтвердив або спростував — це позначається «⚡ Перегляньте»
 function hypChg(x, all) {
   let seen = 0; try { seen = +localStorage.getItem('rs_hrev:' + x.id) || 0; } catch {}
@@ -3820,9 +3842,10 @@ function hypChg(x, all) {
   return out;
 }
 function hypCard(x, all) {
-  const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0 }; A.forEach(s => c[verdOf(s)]++); const CH = all ? hypChg(x, all) : [];
-  return `<article class="hyp-c hc-${x.cat}${CH.length ? ' hyp-chg' : ''}">${CH.length ? `<div class="hypchg">⚡ <b>Змінилось пов'язане припущення:</b> ${CH.slice(0, 3).map(r => `«<button class="lnk" data-act="hyp-open" data-id="${esc(r.h.id)}">${esc(r.h.title)}</button>» — ${r.v === 'yes' ? 'підтвердили' : 'спростували'}`).join('; ')}. Перегляньте — можливо, це відкриває щось і тут.${isOwner() ? ` <button class="btn line small" data-act="hyp-seen" data-id="${esc(x.id)}">✓ Переглянуто</button>` : ''}</div>` : ''}
-    <div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
+  const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0, ok: 0, ko: 0 }; A.forEach(s => c[verdOf(s)]++); const CH = all ? hypChg(x, all) : [];
+  const ST = (all ? hypStates(all) : {})[x.id] || { s: '', p: x.p }; x = { ...x, p: ST.p }; const SB = HYPST[ST.s];
+  return `<article class="hyp-c hc-${x.cat}${CH.length ? ' hyp-chg' : ''}${SB ? ' ' + SB[0] : ''}">${CH.length ? `<div class="hypchg">⚡ <b>Змінилось пов'язане припущення:</b> ${CH.slice(0, 3).map(r => `«<button class="lnk" data-act="hyp-open" data-id="${esc(r.h.id)}">${esc(r.h.title)}</button>» — ${r.v === 'yes' ? 'підтвердили' : 'спростували'}`).join('; ')}. Перегляньте — можливо, це відкриває щось і тут.${isOwner() ? ` <button class="btn line small" data-act="hyp-seen" data-id="${esc(x.id)}">✓ Переглянуто</button>` : ''}</div>` : ''}
+    ${SB ? `<div class="hyp-st ${SB[0]}"><b>${SB[1]}</b>${ST.why ? ' — ' + esc(ST.why) : ''}</div>` : ''}<div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
     <h3>${esc(x.title)}</h3><p>${glossify(mdLinks(esc(x.text)))}</p>
     ${x.basis ? `<p class="hyp-b"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
     ${(x.people || []).length ? `<div class="hyp-p">${x.people.filter(id => P[id]).map(mini).join('')}</div>` : ''}
@@ -3832,13 +3855,15 @@ function hypCard(x, all) {
 }
 function vHyp() {
   const all = hypItems(), cat = S.ui.hypCat || '', q = (S.ui.hypQ || '').toLowerCase();
-  const chgN = all.filter(x => hypChg(x, all).length).length;
-  const L = all.filter(x => (cat === 'chg' ? hypChg(x, all).length : !cat || x.cat === cat) && (!q || [x.title, x.text, x.basis].join(' ').toLowerCase().includes(q)))
-    .sort((a, b) => (b.p - a.p) || ({ hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[a.cat] - { hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[b.cat])); // зверху — найімовірніші
+  const chgN = all.filter(x => hypChg(x, all).length).length, HS = hypStates(all), sOf = x => (HS[x.id] || {}).s || '', fin = x => /^(ok|ko)/.test(sOf(x)), pOf = x => (HS[x.id] || {}).p ?? x.p;
+  const okN = all.filter(x => sOf(x).startsWith('ok')).length, koN = all.filter(x => /^(ko|weak)/.test(sOf(x))).length;
+  const L = all.filter(x => (cat === 'chg' ? hypChg(x, all).length : cat === 'st-ok' ? sOf(x).startsWith('ok') : cat === 'st-ko' ? /^(ko|weak)/.test(sOf(x)) : (!cat || x.cat === cat) && !fin(x)) && (!q || [x.title, x.text, x.basis].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => (pOf(b) - pOf(a)) || ({ hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[a.cat] - { hyp: 0, kin: 1, tree: 2, card: 3, hist: 4 }[b.cat])); // зверху — найімовірніші
   const n = k => all.filter(x => !k || x.cat === k).length;
   const intro = loadText('hyps', true)?.intro || 'Тут усе, що ще не підтверджено документами. Знаєте щось — натисніть «Щось знаю, можу доповнити».';
   return `<div class="lede"><h1>Припущення</h1><p class="small muted">${esc(intro)}</p></div>
-  <div class="hypbar"><div class="seg">${HYPCAT.filter(([k]) => !k || n(k)).map(([k, t]) => `<button data-act="hyp-cat" data-v="${k}" class="${cat === k ? 'on' : ''}">${t} <i>${n(k)}</i></button>`).join('')}${chgN ? `<button data-act="hyp-cat" data-v="chg" class="${cat === 'chg' ? 'on' : ''}">⚡ Переглянути <i>${chgN}</i></button>` : ''}</div>
+  <div class="hypbar"><div class="seg">${HYPCAT.filter(([k]) => !k || n(k)).map(([k, t]) => `<button data-act="hyp-cat" data-v="${k}" class="${cat === k ? 'on' : ''}">${t} <i>${n(k)}</i></button>`).join('')}${chgN ? `<button data-act="hyp-cat" data-v="chg" class="${cat === 'chg' ? 'on' : ''}">⚡ Переглянути <i>${chgN}</i></button>` : ''}${okN ? `<button data-act="hyp-cat" data-v="st-ok" class="${cat === 'st-ok' ? 'on' : ''}">✔ Підтверджено <i>${okN}</i></button>` : ''}${koN ? `<button data-act="hyp-cat" data-v="st-ko" class="${cat === 'st-ko' ? 'on' : ''}">✘ Спростовано / під сумнівом <i>${koN}</i></button>` : ''}</div>
+  <details class="hyp-how small"><summary>Як працюють припущення</summary><ul><li>Родичі відповідають «так», «ні» або доповнюють — кожне «так» трохи піднімає ймовірність, «ні» — опускає.</li><li>Остаточно підтверджує чи спростовує власник сайту. Тоді припущення одразу переходить у «✔ Підтверджено» або «✘ Спростовано»; якщо це було «місце в дереві» чи «шлюб не підтверджено» — дерево змінюється одразу, без чекання.</li><li>Пов'язані припущення змінюються самі: якщо підтвердили один варіант, інші варіанти того самого стають «мало ймовірно»; якщо спростували те, на чому трималось інше, — воно «під сумнівом»; що прямо випливає з підтвердженого — теж стає підтвердженим.</li><li>Тексти карток і «Історії роду» Максим (з помічником) переписує після підтвердження — до того біля речення залишається позначка.</li></ul></details>
     <input class="in search" id="hyp-q" type="search" value="${esc(S.ui.hypQ || '')}" placeholder="Пошук: ім'я, село…" aria-label="Пошук"></div>
   <div class="hyp-l">${L.map(x => hypCard(x, all)).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
 }
@@ -3852,9 +3877,9 @@ function openHyp(id) {
   const A = hypAns(id);
   modal(`<h2>${esc(x.title)}</h2><p>${glossify(mdLinks(esc(x.text)))}</p>${x.basis ? `<p class="small muted"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
     ${REL_.length ? `<details class="hyprel"${REL_.some(r => r.a) ? ' open' : ''}><summary>🔗 Пов'язані припущення (${REL_.length}) — якщо це підтвердиться чи спростується, їх треба переглянути</summary><ul>${REL_.map(r => `<li><button class="lnk" data-act="hyp-open" data-id="${esc(r.h.id)}">${esc(r.h.title)}</button> <span class="small muted">${r.a ? 'ті самі люди' : 'їхня найближча рідня'}</span></li>`).join('')}</ul></details>` : ''}
-    <h3>Що кажуть родичі</h3>${A.length ? `<div class="hyp-ans">${A.map(s => `<div class="story"><div><b class="v-${verdOf(s)}">${VERD[verdOf(s)][0]} ${VERD[verdOf(s)][1]}</b><br>${glossify(esc(ansText(s)))}</div><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted small">Ще ніхто не відповів. Будьте першим!</p>'}
+    <h3>Що кажуть родичі</h3>${A.length ? `<div class="hyp-ans">${A.map(s => `<div class="story"><div><b class="v-${verdOf(s)}">${verdLbl(verdOf(s))[0]} ${verdLbl(verdOf(s))[1]}</b><br>${glossify(esc(ansText(s)))}</div><div class="m"><span>${esc(who(s.by))} · ${esc(when(s.at))}</span>${isOwner() || s.by === S.me.id ? `<button data-delstory="${s.id}">видалити</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted small">Ще ніхто не відповів. Будьте першим!</p>'}
     <div class="sec" style="gap:8px">
-      <div class="verd">${Object.entries(VERD).map(([k, [ic, t]]) => `<label class="vd vd-${k}"><input type="radio" name="hyp-v" value="${k}"${k === 'add' ? ' checked' : ''}> <span>${ic} ${t}</span></label>`).join('')}</div>
+      <div class="verd">${Object.entries(isOwner() ? { ...VERD, ...VERDO } : VERD).map(([k, [ic, t]]) => `<label class="vd vd-${k}"><input type="radio" name="hyp-v" value="${k}"${k === 'add' ? ' checked' : ''}> <span>${ic} ${t}</span></label>`).join('')}</div>
       <textarea class="in" id="hyp-t" placeholder="Що знаєте? Звідки (хто розповідав, який документ, фото)? Навіть «здається, баба казала…» — теж допоможе."></textarea>
       <div class="btns"><button class="btn" data-act="hyp-send" data-id="${esc(id)}">Надіслати</button><button class="btn line" data-act="close">Закрити</button><span class="msg" id="hypmsg"></span></div></div>`);
 }
@@ -3868,7 +3893,7 @@ document.addEventListener('click', async e => {
     const txt = $('#hyp-t').value.trim(), v = (document.querySelector('input[name="hyp-v"]:checked') || {}).value || 'add', m = $('#hypmsg');
     if (!txt && v === 'add') { m.className = 'msg err'; m.textContent = 'Напишіть кілька слів.'; return; }
     t.disabled = true;
-    try { const r = await api('/api/data', { body: { op: 'story.add', target: 'hyp:' + t.dataset.id, text: `[${v}] ${txt || VERD[v][1]}` } }); S.data.stories.push(r.story); S.ui.keepScroll = true; render(); openHyp(t.dataset.id); toast('Дякуємо! Максим побачить вашу відповідь.'); }
+    try { const r = await api('/api/data', { body: { op: 'story.add', target: 'hyp:' + t.dataset.id, text: `[${v}] ${txt || verdLbl(v)[1]}` } }); S.data.stories.push(r.story); if (v === 'ok' || v === 'ko') { S.ui.hypSt = null; await load().catch(() => {}); } S.ui.keepScroll = true; render(); openHyp(t.dataset.id); toast('Дякуємо! Максим побачить вашу відповідь.'); }
     catch (err) { t.disabled = false; m.className = 'msg err'; m.textContent = errText(err); }
   }
 });

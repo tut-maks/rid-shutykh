@@ -446,8 +446,16 @@ export default handler(async (req, res, ctx, url) => {
     else if (/^rt:[\w-]{1,20}$/.test(target)) open = (await cfgGet('routes')).some(x => x.id === target.slice(3)); // спогади до сімейного маршруту
     else if (/^iv:[\w-]{1,60}$/.test(target)) open = !!(await db.get('persons', { eq: { id: target.slice(3), deleted: false } })); // відповіді на «Питання для розмови» — кожен родич // «Припущення»: підтвердити, спростувати чи доповнити може кожен родич
     if (!open && !(await canAddTo(me, target))) return fail(res, 403, 'branch');
+    // «Припущення»: остаточне рішення [ok] (підтверджено) / [ko] (спростовано) — лише власник; родичі голосують [yes]/[no]/[add]
+    const fin = /^hyp:/.test(target) && (/^\[(ok|ko)\]/.exec(text) || [])[1];
+    if (fin && !owner) return fail(res, 403, 'forbidden');
     const [s] = await db.insert('stories', { target, text, created_by: me.id });
     await revision('story', s.id, 'create', null, { target, text }, me.id);
+    if (fin === 'ok') { // підтвердження власника одразу міняє дерево: картка більше не «гіпотеза», шлюб — підтверджений
+      const k = target.slice(4), when = new Date().toISOString().slice(0, 10).split('-').reverse().join('.');
+      if (/^pt:/.test(k)) { const p = await db.get('persons', { eq: { id: k.slice(3), deleted: false } }); if (p?.data?.hyp) { const data = cleanPerson({ ...p.data, hyp: false }); await db.update('persons', { eq: { id: p.id } }, { data, version: p.version + 1, updated_by: me.id, updated_at: new Date().toISOString() }); await revision('person', p.id, 'update', p.data, data, me.id); } }
+      if (/^u:/.test(k)) { const u = await db.get('unions', { eq: { id: k.slice(2), deleted: false } }); if (u && /не підтвердж/i.test(u.date || '')) { await db.update('unions', { eq: { id: u.id } }, { date: 'підтверджено родиною ' + when }); await revision('union', u.id, 'update', { date: u.date }, { date: 'підтверджено родиною ' + when }, me.id); } }
+    }
     return done({ story: { id: s.id, target, text, by: me.id, at: s.created_at } }, target);
   }
   if (op === 'story.delete') {
