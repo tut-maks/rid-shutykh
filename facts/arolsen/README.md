@@ -68,3 +68,13 @@
   - Супруненки (Weprik, Gadjatsch) — Веприк на Полтавщині, не наш.
   - Списки Люденшайда/Альтени (Вестфалія) з десятками дівчат з «Woronki» (ті самі, що й Вовк Анастасія) — hq2/aro2_luedenscheid_*, aro2_altena_*, aro2_woronki2_* (ще не переписані).
   - Красновиди без місця (Pawel 1901, Anna 1925, Paul 1926, Iwan 1918, Mitrosan 1898…) — hq2/aro2_krasnowid_* (ще не прочитані).
+
+## Янок Микола 1924 — повна справа Бухенвальда (прочитано 07.11, вечір; facts/arolsen/hq2/janok_bw/)
+- Arolsen, справа КТ Бухенвальд (записаний як JANAK Nikolaj, objId 6166762; 9 документів): **Häftlings-Personal-Karte № 46252** — «Janak Nikolaj, geb. 28.8.1924 in Webrij, ledig, Wohnort Webrij, Prov. Tschernigow, orth., UdSSR; Wohnort d. Angehörigen: Katja J. …; eingewiesen durch Stapo Danzig, in KL Dachau; Grund: Russ. Zivilarbeiter»; переведений 23.3.1944 у Бухенвальд; на звороті — «Erlernter Beruf: Dreher» (токар); штамп «I.T.S. FOTO No. 1341 c» — **фото, ймовірно, було на картці й зберігається окремо в ITS** (запитати Arolsen).
+- Картка-ордер: «Adresse der Angehörigen: Katja geb. Tschalenko, Webrij – Tschernigow»; «Letzter Wohnort: Danzig»; «Verhaftet am Juni 1942 durch Stapo Danzig»; «In Schutzhaft seit Juni 1942»; «Im KLBu. seit 23.3.44»; громадянство — «Ukrainer».
+- Картка речей: «Mutter: Katja J., Webrij /Tschernigow/»; прибув 23.III.44 з KL Dachau.
+- Поштова картка й номерна: «Kommando Emma»(?) ; **штамп «3. APR. 1945 SACHSENHAUSEN»**; трудова картка: «Sachsenh. 31/3», «Kdo. Emma»; ще одна трудова — «Eisenach». Отже: з квітня 1944 р. — у зовнішній команді Бухенвальда (Emma / Ейзенах?), 31.3–3.4.1945 відправлений у Заксенгаузен. Що з ним було далі — не знайдено.
+- Ревір-картка (Krankenblatt) — «21.2 ✕»(?) без діагнозу.
+- Список Бухенвальда 7.4.1944 (5282766): 199 в'язнів із Дахау, переведених у «Kommando E m m a»; № 46252 Janok, Nikolaj — серед «Russische Zivilarbeiter».
+- Книга реєстрації Дахау (130431319): № 40302 Janok Nikolaj, Sch-R, 28.8.24, Weprig; прибув 19.11.1942 з Штуттгофа.
+- **Мати — «Katja (Катерина) з дому Чаленко»** — збігається з метрикою Любові 1918 (мати Катерина Петрівна) → син Андрія Дмитровича Янка (див. facts/fs_yanok/README.md).
