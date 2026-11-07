@@ -1,6 +1,8 @@
 import os, sys
-sys.path.insert(0,'/home/claude')
-from translations import T
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from arolsen_translations import T
+import json
+MODE = sys.argv[1] if len(sys.argv) > 1 else 'rodyna'  # rodyna — легший файл; hq — оригінальна роздільність
 from PIL import Image, ImageOps
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -16,10 +18,13 @@ pdfmetrics.registerFont(TTFont('DVB', F + 'DejaVuSans-Bold.ttf'))
 pdfmetrics.registerFont(TTFont('DVS', F + 'DejaVuSerif.ttf'))
 pdfmetrics.registerFont(TTFont('DVSB', F + 'DejaVuSerif-Bold.ttf'))
 
-SRC = '/home/claude/rid-shutykh/facts/arolsen/'
+SRC = '/home/claude/rid-shutykh/facts/arolsen/hq/'
+HERE = os.path.dirname(os.path.abspath(__file__))
+# старі назви (скріншоти) -> оригінал з Arolsen + рамка вирізу (None = уся сторінка)
+MAP = json.load(open(HERE + '/arolsen_hq_map.json'))
 TMP = '/home/claude/pdf_tmp/'
 os.makedirs(TMP, exist_ok=True)
-OUT = '/home/claude/out/Arolsen_Вороньки_Веприк_документи.pdf'
+OUT = '/home/claude/out/' + ('Arolsen_Вороньки_Веприк_документи.pdf' if MODE == 'rodyna' else 'Arolsen_Вороньки_Веприк_документи_висока_якість.pdf')
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
 INK = colors.HexColor('#2b2118'); WINE = colors.HexColor('#7a2335'); GREY = colors.HexColor('#6b6158')
@@ -35,14 +40,19 @@ W = A4[0] - 36 * mm
 
 
 def img(name, maxh=110 * mm, cap=None):
-    p = SRC + name
-    im = Image.open(p).convert('RGB')
-    g = ImageOps.grayscale(im)
-    bbox = g.point(lambda v: 255 if v > 28 else 0).getbbox()
-    if bbox:
-        im = im.crop(bbox)
-    out = TMP + name
-    im.save(out, quality=92)
+    hqname, box = MAP[name]
+    im = Image.open(SRC + hqname).convert('RGB')
+    if box:
+        im = im.crop(tuple(box))
+    else:
+        g = ImageOps.grayscale(im)
+        bb = g.point(lambda v: 255 if v > 28 else 0).getbbox()
+        if bb:
+            im = im.crop(bb)
+    if MODE == 'rodyna' and max(im.size) > 1800:
+        im.thumbnail((1800, 1800), Image.LANCZOS)
+    out = TMP + MODE + '_' + name
+    im.save(out, quality=(85 if MODE == 'rodyna' else 97))
     w, h = im.size
     sc = min(W / w, maxh / h)
     r = RLImage(out, width=w * sc, height=h * sc)
@@ -112,10 +122,11 @@ story += person('Шутий Дмитро, 1915 р. н., Веприк',
 
 # ---- Веприк, Штуттгоф
 story += person('Янок Микола, нар. 28.08.1924, Веприк',
-    ['Картка в’язня концтабору Штуттгоф (біля Данцига) № 15680: Janok Nikolaj, 28.8.24, Weprik, Kr. Czernikow; сільгоспробітник, православний; <b>батьки — Андрій Янок і Катерина, з дому Тщеленко(?)</b>; заарештований гестапо Данцига, причина — «seinen Arbeitsplatz verlassen» (залишив робоче місце); у таборі з 10.8.1942; позначка «Erziehung» (виховний в’язень).'],
+    ['Картка в’язня концтабору Штуттгоф (біля Данцига) № 15680: Janok Nikolaj, 28.8.24, Weprik, Kr. Czernikow; сільгоспробітник, православний; <b>батьки — Андрій Янок і Катерина, з дому Тщеленко(?)</b>; заарештований гестапо Данцига, причина — «seinen Arbeitsplatz verlassen» (залишив робоче місце); у таборі з 10.8.1942; позначка «Erziehung» (виховний в’язень).',
+     '<b>На звороті картки (видно лише в оригінальному скані): «Überführt am 14.11.42 KL. Dachau» — 14 листопада 1942 року переведений у концтабір Дахау.</b> Що з ним було далі — поки невідомо (в архіві є ще справа розшуку на 29 сторінок, ми її не відкривали).'],
     'Є припущення: Яноки — й наша родина (Григорій Юхимович Янок, 1909). Якщо Андрій Янок — його брат, то Микола 1924 — двоюрідний брат Миколи Григоровича Янка (1939). Це не доведено.',
     [('janok_mykola_1924_kl_karta.jpg', 120 * mm, 'Картка політвідділу КТ Штуттгоф'),
-     ('janok_mykola_1924_kl_obkl.jpg', 90 * mm, 'Обкладинка особової справи')],
+     ('janok_mykola_1924_kl_zvorot.jpg', 110 * mm, 'Зворот картки: «Überführt am 14.11.42 KL. Dachau» — переведений у Дахау 14.11.1942')],
     'Arolsen Archives, 1.1.41.2, особова справа 01014102 052.111 (DocID 4502354)')
 
 story += person('Левченко Іван, нар. 30.01.1924, Веприк',
@@ -131,6 +142,7 @@ story += person('Дривинський Володимир, нар. 12.03.1923, 
     'Не родич (наскільки відомо), але Дривинські — давній веприцький рід. Можливо, хтось знає родину Петра й Христини (Шиян) Дривинських.',
     [('dryvynskyi_volodymyr_1923_gestapo_rishennia.jpg', 150 * mm, 'Рішення гестапо (Einweisungsbeschluss), 30.7.1942'),
      ('dryvynskyi_volodymyr_1923_karta.jpg', 110 * mm, 'Картка в’язня'),
+     ('dryvynskyi_volodymyr_1923_karta_zvorot.jpg', 110 * mm, 'Зворот картки: «verstorben am 13. Oktober 1942», «eingeäschert am 17. Oktober 1942» — помер 13.10.1942, спалений у крематорії 17.10.1942'),
      ('dryvynskyi_volodymyr_1923_povidomlennia_smert.jpg', 110 * mm, 'Повідомлення про смерть 13.10.1942'),
      ('dryvynskyi_volodymyr_1923_stutthof_smert.jpg', 110 * mm, 'Довідка табірної лікарні')],
     'Arolsen Archives, 1.1.41.2, особова справа 01014102 024.437 (DocID 4453743)')
@@ -142,10 +154,12 @@ story += person('Сутуга Олексій, нар. 21.04.1924, Веприк �
      ('sutuha_oleksii_1924_stutthof_full.jpg', 150 * mm, 'Картка повністю')],
     'Arolsen Archives, 1.1.41.2, особова справа 01014102 130.166 (DocID 4655445)')
 
-story += person('Василяк Андрій, нар. 07.04.1924, Веприк',
-    ['Картка в’язня КТ Штуттгоф № 15523: Wasylak Andrej, 7.4.24, Weprik, Kr. Czernikow; сільгоспробітник, православний; батько помер, <b>мати — Ганна, з дому Лукашевська(?)</b>; гестапо Бромберга, причина — «Arbeitsverweigerung» (відмова працювати); у таборі з 6.8.1942; позначка «Erziehung».'],
+story += person('Василяк Андрій, нар. 07.04.1924, Веприк — помер у концтаборі',
+    ['Картка в’язня КТ Штуттгоф № 15523: Wasylak Andrej, 7.4.24, Weprik, Kr. Czernikow; сільгоспробітник, православний; батько помер, <b>мати — Ганна, з дому Лукашевська(?)</b>; гестапо Бромберга, причина — «Arbeitsverweigerung» (відмова працювати); у таборі з 6.8.1942; позначка «Erziehung».',
+     '<b>На звороті картки: «verstorben am 4. Dezember 1942» — помер 4 грудня 1942 року; «eingeäschert am 8. Dezember 1942» — спалений у крематорії 8 грудня 1942.</b>'],
     None,
-    [('vasylak_andrii_1924_stutthof_karta.jpg', 120 * mm, None)],
+    [('vasylak_andrii_1924_stutthof_karta.jpg', 120 * mm, None),
+     ('vasylak_andrii_1924_stutthof_zvorot.jpg', 110 * mm, 'Зворот: помер 4.12.1942, спалений 8.12.1942')],
     'Arolsen Archives, 1.1.41.2, особова справа 01014102 140.334 (DocID 4675810)')
 
 story += person('Дривинський Олексій, 1926 р. н., Веприк',
@@ -163,10 +177,13 @@ story += person('Галай(?) Катерина, нар. 05.12.1927, Вепри�
 
 # ---- Вороньки
 story += person('Турчин Микола, нар. 25.12.1901, Вороньки — військовополонений',
-    ['Картка радянського військовополоненого, шталаг X B (Зандбостель): № 125447, «sowjet. Soldat», Turtschin Nikolaj, нар. 25.12.1901, д. Вороньки, Ново-Басанський р-н, Чернігівщина; селянин. 5.7.1942 прибув у шталаг X B; з 5.7.1942 — портове підприємство (Gesamthafenbetrieb, Бремен), з 10.12.1942 — робоча команда 301 (ремісник); 20.7.1944 — щеплення від тифу.'],
+    ['Картка радянського військовополоненого, шталаг X B (Зандбостель): № 125447, «sowjet. Soldat», Turtschin Nikolaj, нар. 25.12.1901, д. Вороньки, Ново-Басанський р-н, Чернігівщина; селянин. 5.7.1942 прибув у шталаг X B; з 5.7.1942 — портове підприємство (Gesamthafenbetrieb, Бремен), з 10.12.1942 — робоча команда 301 (ремісник); 20.7.1944 — щеплення від тифу.',
+     '<b>На звороті картки — опис: статура міцна, зріст 172 см, волосся чорне, очі блакитні, бороди немає, особливих прикмет немає; одружений; <b>дітей — 5</b>; домашня адреса — «див. місце народження» (тобто Вороньки).</b> Віросповідання записане нерозбірливо.'],
     'Турчини — давній вороньківський рід, у переписах 1767 і 1782 рр. Чи повернувся Микола — невідомо.',
     [('turchyn_mykola_1901_stalag_karta.jpg', 120 * mm, 'Картка військовополоненого'),
-     ('turchyn_mykola_1901_robocha_karta.jpg', 110 * mm, 'Робоча картка')],
+     ('turchyn_mykola_1901_stalag_zvorot.jpg', 120 * mm, 'Зворот картки: зріст 172, одружений, 5 дітей'),
+     ('turchyn_mykola_1901_robocha_karta.jpg', 110 * mm, 'Робоча картка'),
+     ('turchyn_mykola_1901_robocha_zvorot.jpg', 110 * mm, 'Зворот робочої картки: Gesamthafen(betrieb), 9. Komp., Ako-Lager')],
     'Arolsen Archives, 2.2.2.1 (DocID 76670389)')
 
 story += person('Турчин Пелагея, 1911 р. н., Вороньки',
@@ -176,11 +193,14 @@ story += person('Турчин Пелагея, 1911 р. н., Вороньки',
     'Arolsen Archives, 10006147 (DocID 75813930)')
 
 story += person('Самойлик Анна, нар. 19.12.1922, Вороньки',
-    ['Книга реєстрації громади Нідергебра (Тюрингія), № 35: Samojlik Anna, 19.12.22, «Woronki Kr. Nowo-Bas.» (Ново-Басанський р-н); прибула 10.06.1942.'],
+    ['Книга реєстрації громади Нідергебра (Тюрингія), № 35: Samojlik Anna, 19.12.22, «Woronki Kr. Nowo-Bas.» (Ново-Басанський р-н); прибула 10.06.1942.',
+     '<b>Ще один документ — домовий список на 10 жовтня 1943 р. (перепис населення), громада Нідергебра, «Ostarbeiterlager» (табір остарбайтерів) ткацької фабрики Отто Егелера (Leinen- und Baumwollweberei, Bleicherode): № 15 — Ssamojlik Anna, 19.12.22, Woronki; неодружена, «sow. russ.», «gr. orth.» (православна), <b>Weberin — ткаля</b>; працює в Нідергебрі.</b>'],
     'Самойлики — вороньківський рід, у нашому дереві є давні Самойлики; чия Анна дочка — невідомо.',
     [('samoilyk_anna_1922_ryadok.jpg', 110 * mm, 'Рядки 33–36: № 35 — Samojlik Anna'),
-     ('samoilyk_anna_1922_niedergebra_full.jpg', 120 * mm, 'Розворот книги')],
-    'Arolsen Archives, 10008197 (DocID 71028289)')
+     ('samoilyk_anna_1922_niedergebra_full.jpg', 120 * mm, 'Розворот книги'),
+     ('samoilyk_anna_1922_hausliste_1943.jpg', 170 * mm, 'Домовий список 10.10.1943, рядок 15: Ssamojlik Anna, 19.12.22, Woronki, Weberin'),
+     ('samoilyk_anna_1922_hausliste_1943_tytul.jpg', 150 * mm, 'Титульний аркуш домового списку: табір остарбайтерів, Отто Егелер')],
+    'Arolsen Archives, 10008197 (DocID 71028289; домовий список — 919397)')
 
 story += person('Вовк Анастасія Яківна, нар. 03.04.1922, Вороньки',
     ['Список іноземців, Amt Lüdenscheid, Kreis Altena (Вестфалія), № 199: Wolk Anastasija Jakowlewna, 3.4.22, Woronki; працювала з 6.11.42 по 7.8.43, примітка — <b>«zurück in die Heimat» (повернулася на батьківщину)</b>. У тому ж списку № 203 — Величко Олександра Михайлівна, 25.3.22, Вороньки (6.11.42 – 11.4.45).'],
@@ -188,10 +208,12 @@ story += person('Вовк Анастасія Яківна, нар. 03.04.1922, �
     [('vovk_anastasiia_1922_ludenscheid.jpg', 170 * mm, None)],
     'Arolsen Archives, 2.1.2.1 NW 004 (DocID 70572989)')
 
-story += person('Лесек(?) Іван, нар. 10.03.1924, Вороньки',
-    ['Картка в’язня КТ Штуттгоф № 15871: Lessek Iwan, 10.3.24, Woronki, Kr. Czernikow; сільгоспробітник, православний, неодружений; <b>батьки померли</b>; гестапо Дірхау(?)/Данцига, причина — «Arbeitsvertragsbruch» (порушення трудового договору); у таборі з 20.8.1942; позначка «Erziehung».'],
+story += person('Лесек(?) Іван, нар. 10.03.1924, Вороньки — помер у концтаборі',
+    ['Картка в’язня КТ Штуттгоф № 15871: Lessek Iwan, 10.3.24, Woronki, Kr. Czernikow; сільгоспробітник, православний, неодружений; <b>батьки померли</b>; гестапо Дірхау(?)/Данцига, причина — «Arbeitsvertragsbruch» (порушення трудового договору); у таборі з 20.8.1942; позначка «Erziehung».',
+     '<b>На звороті картки: «verstorben am 1. 3. 43» — помер 1 березня 1943 року; «eingeäschert 4. 3. 43» — спалений у крематорії 4 березня 1943.</b>'],
     'Прізвище в документі — Lessek; як воно звучало по-нашому (Лесик? Лісик?), невідомо.',
-    [('lesek_ivan_1924_stutthof_karta.jpg', 120 * mm, None)],
+    [('lesek_ivan_1924_stutthof_karta.jpg', 120 * mm, None),
+     ('lesek_ivan_1924_stutthof_zvorot.jpg', 110 * mm, 'Зворот: помер 1.3.1943, спалений 4.3.1943')],
     'Arolsen Archives, 1.1.41.2, особова справа 01014102 076.220 (DocID 4549206)')
 
 story += person('Цюцюра Володимир, нар. 26.11.1925, Вороньки',
