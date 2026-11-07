@@ -140,6 +140,11 @@ export default handler(async (req, res, ctx, url) => {
         const it = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'seed/import/manifest.json'), 'utf8')).find(x => x.kind === 'text' && x.id === tk); text = it?.value || null;
       } catch {}
       return send(res, 200, { text }); }
+    if (url?.searchParams?.get('dvory')) { // «Карта дворів» 1767/1782 — двори з книг (facts/dvory/dvory.json, збирає tools/dvory_build.py); для всіх, хто увійшов
+      let d = null; try { d = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'facts/dvory/dvory.json'), 'utf8')); } catch {}
+      track(me.id, ctx.sid, 'open', 'dvory', 'dvory');
+      return send(res, 200, { dvory: d });
+    }
     if (url?.searchParams?.get('baza')) { // «База»: усі люди, прочитані в джерелах (і не наші) — facts/baza/src_*.csv з репозиторію; ЛИШЕ власнику (вимога Максима, 06.11)
       if (!can(me, 'owner')) return fail(res, 403, 'forbidden');
       const dir = path.join(process.cwd(), 'facts/baza'), out = [];

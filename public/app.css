@@ -1623,3 +1623,77 @@ body:has(#layer .scrim) .ivnudge{display:none}
 /* Головна: «Цифри роду» зверху (06.11) */
 .h-stats{margin:0 0 18px}.h-stats .tiles{margin:6px 0 8px}.hk-nums{margin:0;line-height:1.7}.hk-nums a{color:var(--ink);text-decoration:none}.hk-nums a:hover b{text-decoration:underline}.hk-nums b{color:var(--wine)}
 .holod .war-n span b{color:var(--ink)}
+/* ── «Де жили наші» — карта дворів (#/dvory) ── */
+.dvwrap{position:relative;height:calc(100vh - 190px);min-height:460px;border-radius:14px;overflow:hidden;box-shadow:var(--sh1);border:1px solid var(--rule);background:#B9C98A}
+.dvwrap.fs{position:fixed;inset:0;height:auto;z-index:60;border-radius:0;border:0}
+.dvwrap:fullscreen{height:100vh;border-radius:0}
+.dvmap{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;background:#B9C98A}
+.dvmap.drag{cursor:grabbing}
+.dvw{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}.dvw.glide{transition:transform .45s ease}
+.dv-load{padding:20px}
+.dvsvg{display:block;user-select:none;-webkit-user-select:none}.dvsvg image{pointer-events:none}.dvsvg .dh image{pointer-events:auto}
+.dvbar{position:absolute;z-index:3;left:12px;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;pointer-events:none}
+.dvbar>*{pointer-events:auto}
+.dvbar .seg{background:rgba(255,253,247,.94);box-shadow:var(--sh1);border-radius:999px;border:0}.dvbar .seg button{background:none;padding:8px 14px;font-size:14px}.dvbar .seg button.on{background:var(--wine);color:#fff}
+.dv-yr{display:flex;align-items:center;gap:8px;font-size:13px;background:rgba(255,253,247,.94);border-radius:999px;padding:6px 14px;box-shadow:var(--sh1)}.dv-yr input{width:130px;accent-color:var(--wine)}.dv-yr b{font-size:18px;color:var(--wine);min-width:46px}
+#dv-q{flex:0 1 300px;padding:9px 14px;border:0;border-radius:999px;background:rgba(255,253,247,.96);box-shadow:var(--sh1);font:inherit;font-size:14px}
+.dv-sum{flex-basis:100%;margin:0;color:var(--ink2);display:inline;background:rgba(255,253,247,.85);border-radius:8px;padding:3px 10px;max-width:max-content}
+.dv-sum .dv-chip{padding:2px 8px}
+.dv-ctl{position:absolute;z-index:3;left:12px;bottom:42px;display:flex;flex-direction:column;gap:6px}
+.dv-ctl button{width:40px;height:40px;border:0;border-radius:10px;background:rgba(255,253,247,.95);box-shadow:var(--sh1);font-size:18px;cursor:pointer}
+.dv-legend{position:absolute;z-index:3;left:50%;bottom:10px;transform:translateX(-50%);margin:0;background:rgba(255,253,247,.9);border-radius:999px;padding:4px 14px;font-size:13px;color:var(--wine);white-space:nowrap}
+.dvpanel{position:absolute;z-index:4;right:12px;top:64px;bottom:12px;width:350px;background:rgba(255,253,247,.97);border-radius:14px;box-shadow:0 10px 40px -10px rgba(40,25,10,.35);padding:16px 18px;overflow:auto}
+.dvwrap:not(.open) .dvpanel{bottom:auto;max-height:calc(100% - 80px)}
+.dv-road{fill:none;stroke:#E4D3A8;opacity:.9;stroke-width:26;stroke-linecap:round}.dv-road.main{stroke-width:36;stroke:#DCC796}
+.dv-st{font:italic 20px var(--f-display);fill:#4B3D2A;paint-order:stroke;stroke:#F4EFDD;stroke-width:5px}
+.dv-rl{font:italic 26px var(--f-display);fill:#2F5D6C;paint-order:stroke;stroke:#EEF4F2;stroke-width:5px}
+.dh{cursor:pointer;transition:opacity .25s}.dh:focus{outline:none}
+.dh-hit{fill:transparent}
+.dh .dh-i{transition:filter .2s}.dh:hover .dh-i{filter:drop-shadow(0 0 4px #fff) brightness(1.05)}
+.dh.sel .dh-i,.dh:focus-visible .dh-i{filter:drop-shadow(0 0 2px var(--wine)) drop-shadow(0 0 7px var(--wine))}
+.dh.hit .dh-i{filter:drop-shadow(0 0 3px #E0A020) drop-shadow(0 0 8px #E0A020)}
+.dh.dim{opacity:.28}
+.dh-l{font:13px var(--f-body);fill:#3C3328;text-anchor:middle;paint-order:stroke;stroke:#F7F3E3;stroke-width:4px}
+.dh.ours .dh-l{fill:var(--wine);font-weight:600}
+.dh-star circle{fill:var(--wine);stroke:#fff;stroke-width:1.5}.dh-star text{fill:#fff;font-size:12px;text-anchor:middle}
+.smoke circle{fill:#D8D4CC;opacity:0}
+.dv-tree,.dv-walk{pointer-events:none}
+.dvpanel h3{font-family:var(--f-display);margin:2px 0 6px}.dv-h{font-size:24px;color:var(--wine);line-height:1.15}
+.dvpanel h4{font:600 12px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px;border-top:1px solid var(--rule);padding-top:10px}
+.dv-k{margin:0}.dv-ours{color:var(--wine);font-weight:600;white-space:nowrap}
+.dv-pl{list-style:none;margin:0;padding:0}.dv-pl li{display:grid;grid-template-columns:22px 1fr auto 34px;gap:6px;align-items:center;padding:4px 0;border-bottom:1px dotted var(--rule);font-size:14px}.dv-pl i{color:var(--muted);font-size:12px}.dv-pl b{text-align:right}.dv-pf{height:26px;width:auto;justify-self:center}
+.dv-lvs{display:flex;flex-wrap:wrap;gap:6px}.dv-lv{background:var(--tint);border-radius:8px;padding:4px 8px;font-size:14px}.dv-lv i{font-style:normal;color:var(--muted);font-size:12px}
+.dv-hosp{color:var(--ink2)}
+.dv-ol{display:flex;flex-wrap:wrap;gap:6px}.dv-chip{border:1px solid var(--rule2);background:var(--sheet);border-radius:999px;padding:5px 10px;font-size:13px;cursor:pointer}.dv-chip:hover{border-color:var(--wine);color:var(--wine)}
+.dv-doc{display:grid;grid-template-columns:64px 1fr;gap:4px 10px;width:100%;text-align:left;border:1px solid var(--rule);background:var(--paper);border-radius:10px;padding:8px;margin:6px 0;cursor:pointer;font-size:13px}
+.dv-doc img{grid-row:span 2;width:64px;height:64px;object-fit:cover;border-radius:6px}.dv-doc b{color:var(--wine);font-size:13px}
+.dv-x{float:right;border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:var(--muted);min-width:36px;min-height:36px}
+.dv-fam{display:flex;align-items:flex-end;margin:10px 0 2px;padding:8px 6px 4px;background:linear-gradient(#fff0,#E6EBCF);border-radius:10px;overflow-x:auto}
+.dv-f{height:72px;width:auto;margin-right:-8px;flex:none}
+.dv-foot{margin-top:10px}
+@media (prefers-reduced-motion:no-preference){
+  .dvw.enter .dh{animation:dvIn .5s ease-out both;animation-delay:calc(var(--i) * 15ms)}@keyframes dvIn{from{opacity:0}}
+  .smoke circle{animation:dvSmoke 4.5s ease-out infinite}.smoke circle+circle{animation-delay:2.2s}
+  @keyframes dvSmoke{0%{opacity:0;transform:translate(0,0) scale(.6)}20%{opacity:.75}100%{opacity:0;transform:translate(10px,-32px) scale(2.4)}}
+  .dv-an{animation:dvGraze 5s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}.dv-an+.dv-an{animation-delay:1.7s}
+  @keyframes dvGraze{0%,100%{transform:none}45%{transform:translateX(2px) rotate(-3deg)}55%{transform:translateX(2px) rotate(2deg)}}
+  .dv-mill{transform-box:fill-box;transform-origin:50% 100%;animation:dvSway 6s ease-in-out infinite}@keyframes dvSway{50%{transform:rotate(1.4deg)}}
+  .dv-tree{transform-box:fill-box;transform-origin:50% 100%;animation:dvSway 7s ease-in-out infinite}
+  .dv-walk{transform-box:fill-box;animation:dvWalk 14s ease-in-out infinite alternate}@keyframes dvWalk{to{transform:translateX(34px)}}
+  .dv-folk image{animation:dvPop .4s ease-out both;animation-delay:calc(var(--j) * 60ms);transform-box:fill-box;transform-origin:50% 100%}
+  .dv-fam .dv-f{animation:dvPop .4s ease-out both}
+  @keyframes dvPop{from{opacity:0;transform:translateY(8px) scale(.9)}}
+}
+@media (max-width:820px){
+  .dvwrap{height:calc(100vh - 210px);border-radius:12px}
+  .dvbar{left:8px;right:8px;top:8px;gap:6px}.dvbar .seg button{min-height:40px;padding:6px 11px}.dv-yr{padding:4px 10px;gap:5px}.dv-yr input{width:64px}.dv-yr span{display:none}
+  #dv-q{font-size:16px;flex:1 1 100%;min-height:42px;padding:8px 14px}.dv-sum{font-size:12px}.dvwrap.open .dvbar{display:none}
+  .dv-ctl{bottom:40px;left:8px}.dv-ctl button{width:44px;height:44px}
+  .dvpanel{display:none;left:0;right:0;top:auto;bottom:0;width:auto;max-height:62%;border-radius:16px 16px 0 0}
+  .dvwrap.open .dvpanel{display:block}
+  .dv-legend{font-size:11px}
+}
+/* шапка: додано «Двори» й «Цифри» — щільніше на середніх екранах */
+@media (max-width:1600px) and (min-width:1241px){.top .nav{gap:0}.top .nav a{padding-left:9px!important;padding-right:9px!important;font-size:15px}}
+@media (max-width:1240px) and (min-width:1001px){.top .nav{gap:0}.top .nav a{padding-left:6px!important;padding-right:6px!important;font-size:13.5px}}
+@media (max-width:1000px) and (min-width:821px){.top .nav a{padding-left:4px!important;padding-right:4px!important;font-size:12.5px}}

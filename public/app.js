@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611062153';
+const BUILD = '202611071556';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -101,7 +101,7 @@ addEventListener('hashchange', () => { parse(); if (S.view === 'p') { S.ui.pp = 
 
 /* ───── Шапка ───── */
 function top() {
-  const nav = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія роду'], ['villages', 'Історія сіл'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Карти'], ['hyp', 'Припущення'], ['q', 'Запитання й уточнення']];
+  const nav = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія роду'], ['villages', 'Історія сіл'], ['people', 'Люди'], ['docs', 'Архів'], ['maps', 'Карти'], ['dvory', 'Двори'], ['stats', 'Цифри'], ['hyp', 'Припущення'], ['q', 'Запитання й уточнення']];
   const cur = S.view === 'p' ? 'people' : S.view === 'fam' ? 'families' : S.view;
   const qb = qBadge() || 0, jb = isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0;
   const me = { n: String(S.me.name || S.me.email || '?').split(/\s+/)[0], s: String(S.me.name || '').split(/\s+/)[1] || '' };
@@ -343,6 +343,7 @@ const MI = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h4.5v-5h3v5H18V9.5"/></svg>',
   kin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="19" r="2.4"/><path d="M6 8.4v2.6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8.4M12 13v3.6"/></svg>',
   help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M9.3 9.4a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M11 14v.1"/></svg>',
+  dvory: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l5-4 5 4v8H3z"/><path d="M13 13l4-3 4 3v6h-8"/><path d="M6.5 19v-4h3v4"/></svg>',
   geo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
   stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>',
   dna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c0 6 10 6 10 12s-10 3-10 6M17 3c0 6-10 6-10 12M17 21c0-2-1.4-3.2-3.3-4"/><path d="M8.5 6h7M8.5 18h7"/></svg>',
@@ -362,7 +363,7 @@ const MI = {
   iv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5M9 20.5h6"/></svg>',
 };
 function mNav(cur) {
-  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dna', 'hyp', 'terms', 'iv', 'fbook', 'words', 'routes'].includes(cur) ? 'more' : cur;
+  const more = ['maps', 'villages', 'q', 'admin', 'docs', 'kin', 'stats', 'help', 'geo', 'dvory', 'dna', 'hyp', 'terms', 'iv', 'fbook', 'words', 'routes'].includes(cur) ? 'more' : cur;
   const B = [['home', 'Головна'], ['tree', 'Дерево'], ['families', 'Історія'], ['people', 'Люди']];
   const badge = (qBadge() || 0) + (isOwner() ? (S.data?.joinPending || 0) + (S.data?.photoPending || 0) : 0);
   return `<nav class="bnav" aria-label="Розділи">${B.map(([k, t]) => `<a href="${href(k)}" class="${more === k ? 'on' : ''}">${MI[k]}<span>${t}</span></a>`).join('')}<button type="button" data-act="msheet" class="${more === 'more' ? 'on' : ''}">${MI.more}<span>Ще</span>${badge ? `<i class="bn-badge">${badge}</i>` : ''}</button></nav>`;
@@ -371,7 +372,7 @@ function mNav(cur) {
 const SURN = ['Шуті', 'Красновиди', 'Левченки', 'Янки', 'Семени', 'Вдовинці']; // головні прізвища роду (Шуті — перші); назва сайту «Наш родовід: …»
 const creditHtml = () => { const me = Object.values(P).find(p => p.root); return `<footer class="credit"><span class="cr-orn">✥</span><p>Сайт створив і веде <b>${me ? `<a href="${href('p', me.id)}">Максим Шутий</a>` : 'Максим Шутий'}</b> — зібрав разом документи, розшукав предків в архівах і записав історію роду.</p><p class="cr-s">Наш родовід · ${new Date().getFullYear()}</p></footer>`; };
 function mSheet() {
-  const L = [['hyp', 'Припущення — допоможіть підтвердити', ''], ['voices', 'Голоси роду — усі записи', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ivOpen().length || ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['stats', 'Цифри роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
+  const L = [['dvory', 'Де жили наші — двори 1767 і 1782', ''], ['stats', 'Цифри роду', ''], ['hyp', 'Припущення — допоможіть підтвердити', ''], ['voices', 'Голоси роду — усі записи', ''], ['docs', 'Архів документів', ''], ['villages', 'Історія сіл', ''], ['kin', 'Ким ми доводимось', ''], ['help', 'Допоможіть знайти · Хто на фото?', ''], ['routes', 'Сімейні маршрути', ''], ['iv', 'Питання для розмови з родичами', ivOpen().length || ''], ['words', 'Наші слова (говірка)', ''], ['fbook', 'Сімейна книга (PDF)', ''], ['geo', 'Карта роду', ''], ['terms', 'Словник і джерела', ''], ['dna', 'ДНК-тести', ''], ['maps', 'Старі карти', ''], ['q', 'Запитання й уточнення', qBadge() || ''], ...(isOwner() ? [['admin', 'Власнику', ((S.data?.joinPending || 0) + (S.data?.photoPending || 0)) || '']] : [])];
   $('#layer').innerHTML = `<div class="msh-scrim" data-act="mshclose"><div class="msh" role="dialog" aria-modal="true" aria-label="Ще"><div class="msh-grip"></div>
     ${L.map(([k, t, n]) => `<a class="msh-row" href="${href(k)}" data-act="mshclose">${MI[k]}<span>${t}</span>${n ? `<i class="bn-badge in">${n}</i>` : ''}<b>›</b></a>`).join('')}
     <div class="msh-me">${esc(S.me.name || S.me.email || '')}</div>
@@ -2869,6 +2870,180 @@ function geoMount() {
   if (S.ui.geoPlacing) box.classList.add('placing');
 }
 
+/* ───── «Де жили наші» — схематична карта дворів (#/dvory). Двори з книг: Рум'янцевський опис 1767 (Вороньки, Веприк) і перепис 1782 (Вороньки).
+   Дані — facts/dvory/dvory.json (tools/dvory_build.py), віддає /api/data?dvory=1. Розташування умовне: двори стоять у порядку запису в книзі,
+   у Веприку — по вулицях і сторонах з вуличного списку 1767 р. Млини, пасіки, церква малюються лише там, де вони є в записі. ───── */
+const DV_VIL = { voronky: 'Вороньки', veprik: 'Веприк' };
+const DV_LIVE = [['koni', '🐎', 'коні'], ['voly', '🐂', 'воли'], ['korovy', '🐄', 'корови'], ['vivci', '🐑', 'вівці'], ['svyni', '🐖', 'свині'], ['kozy', '🐐', 'кози'], ['vulyky', '🐝', 'вулики']];
+const dvSt = s => String(s || '').replace(/посполитый/, 'посполитий').replace(/графский/, 'графський');
+const dvSur = h => String(h.sur || h.head || h.owner_list || '').replace(/\(\?\)|\[.*?\]/g, '').trim().split(/\s+/).filter(w => /^[А-ЯІЇЄҐ]/.test(w)).pop() || '';
+const dvLabel = h => (/^\d/.test(h.no || '') ? '№' + h.no + ' ' : '') + (dvSur(h) || (h.type ? h.type : ''));
+const dvLeft = h => /лев|слева|зліва/.test(h.side || '');
+const dvHash = t => { let x = 2166136261; for (const ch of String(t)) x = Math.imul(x ^ ch.charCodeAt(0), 16777619) >>> 0; return x; };
+// Люди: малюнки за статтю й віком (вік — як у книзі; без віку — дорослий)
+const DV_FIG = { m: [[4, ['a10']], [9, ['a12']], [14, ['a20']], [19, ['a22', 'b00']], [34, ['b00', 'b12', 'a00', 'b02']], [54, ['a00', 'b02', 'b10', 'b20']], [69, ['a02', 'b22', 'b20']], [200, ['b30', 'b32', 'a02']]],
+  f: [[4, ['a11']], [9, ['a13']], [14, ['a21']], [19, ['a23', 'b01']], [34, ['b01', 'b03', 'a01', 'b11']], [54, ['a01', 'b11', 'b13', 'b21', 'b03']], [69, ['a03', 'b23', 'b33']], [200, ['b31', 'b33', 'a03']]] };
+const dvFigN = p => { const age = parseInt(p.age, 10), L = DV_FIG[p.sex === 'ж' ? 'f' : 'm'].find(([a]) => (isNaN(age) ? 40 : age) <= a)[1]; return L[dvHash((p.n || '') + (p.s || '')) % L.length]; };
+const dvFigH = p => { const age = parseInt(p.age, 10); return isNaN(age) ? 1 : age < 5 ? .55 : age < 10 ? .66 : age < 15 ? .85 : 1; };
+const dvFig = (p, c = 'dv-f') => `<img class="${c}" src="/img/dv/p/${dvFigN(p)}.webp" alt="" loading="lazy" title="${esc([p.n, p.s].filter(Boolean).join(' ') + (p.age ? ', ' + p.age : ''))}">`;
+const DVI = n => `/img/dv/${n}.webp`;
+const dvImg = (n, x, y, w, h, c = '') => `<image href="${DVI(n)}" x="${(+x).toFixed(0)}" y="${(+y).toFixed(0)}" width="${(+w).toFixed(0)}" height="${(+h).toFixed(0)}"${c ? ` class="${c}"` : ''} preserveAspectRatio="xMidYMax meet"/>`;
+const DV_ANI = { koni: 'kin', voly: 'vil', korovy: 'korova', vivci: 'vivtsia', svyni: 'svynia', kozy: 'koza' };
+function dvKind(h) { const t = h.type || '';
+  if (/церк/.test(t) || /священ/.test(h.status)) return 'cerkva'; if (/плецо|выгон/.test(t)) return 'pleco'; if (/огород/.test(t)) return 'horod'; if (/бездвор/.test(t)) return 'khatka';
+  return (/двор/.test(t) || Object.keys(h.live || {}).length || (h.feats || []).length) ? 'dvir' : 'khata'; }
+const DV_SZ = { dvir: [104, 88], khata: [80, 75], khatka: [66, 61], pleco: [84, 52], horod: [76, 52], cerkva: [96, 108] };
+// розкладка: «світ» 16:9 під намальований фон; хати — у полі ліворуч від річки (x 4–82 %, y 15–95 %)
+function dvLayout(H, vil) {
+  const SW = 128, RH1 = 150, RH2 = 260; let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const streets = []; if (vil === 'veprik') { const G = new Map(); H.forEach(h => { const k = h.street || 'Двори'; if (!G.has(k)) G.set(k, []); G.get(k).push(h); }); for (const [k, L] of G) streets.push({ name: k, side: !/не знайдено/.test(k), L }); streets.sort((a, b) => a.side === b.side ? 0 : a.side ? -1 : 1); }
+  else streets.push({ name: 'Двори в порядку запису в книзі', side: false, L: H });
+  const plan = PR => { let h = 0; streets.forEach(g => { if (g.side) { const r = g.L.filter(x => !dvLeft(x)).length, l = g.L.length - r; h += Math.ceil(Math.max(r, l, 1) / PR) * RH2 + 40; } else h += Math.ceil(g.L.length / PR) * RH1 + 40; }); return h; };
+  let PR = 8, best = 1e9; for (let k = 8; k <= 34; k++) { const r = (k * SW) / plan(k); const d = Math.abs(Math.log(r / 1.62)); if (d < best) { best = d; PR = k; } }
+  const cw = PR * SW + (vil === 'veprik' ? 120 : 40), ch = plan(PR); let W = cw / .74, Hh = W * 9 / 16; if (ch > Hh * .76) { Hh = ch / .76; W = Hh * 16 / 9; }
+  const X0 = W * .08 + (vil === 'veprik' ? 120 : 20); let y = Hh * .15; const pos = {}, roads = [], labels = [], order = [], deco = [];
+  streets.forEach(g => {
+    labels.push({ x: X0, y: y + 6, t: g.name });
+    if (g.side) { const R = g.L.filter(h => !dvLeft(h)), Lf = g.L.filter(dvLeft), n = Math.max(1, Math.ceil(Math.max(R.length, Lf.length) / PR));
+      for (let r = 0; r < n; r++) { const ry = y + 128; const a = R.slice(r * PR, r * PR + PR), b = Lf.slice(r * PR, r * PR + PR), cnt = Math.max(a.length, b.length, 1);
+        roads.push({ d: `M${X0 - 70} ${ry} H${X0 + cnt * SW}`, y: ry });
+        a.forEach((h, i) => { pos[h.id] = { x: X0 + i * SW + SW / 2, y: ry - 20 }; order.push(h.id); });
+        b.forEach((h, i) => { pos[h.id] = { x: X0 + i * SW + SW / 2, y: ry + 112 }; order.push(h.id); });
+        y += RH2; }
+    } else { const n = Math.ceil(g.L.length / PR);
+      for (let r = 0; r < n; r++) { const ry = y + 122, row = g.L.slice(r * PR, r * PR + PR), rev = r % 2 === 1, xa = X0 - 30, xb = X0 + PR * SW + 30;
+        roads.push({ d: `M${xa} ${ry} H${xb}` + (r < n - 1 ? (rev ? '' : ` C${xb + 70} ${ry} ${xb + 70} ${ry + RH1} ${xb} ${ry + RH1}`) : ''), y: ry });
+        if (rev && r < n - 1) roads.push({ d: `M${xa} ${ry} C${xa - 70} ${ry} ${xa - 70} ${ry + RH1} ${xa} ${ry + RH1}` });
+        row.forEach((h, i) => { const j = rev ? PR - 1 - i : i; pos[h.id] = { x: X0 + j * SW + SW / 2, y: ry - 20 }; order.push(h.id); });
+        y += RH1; } }
+    y += 40; });
+  // дерева й кущі між рядами (для краси)
+  const TR = ['verba', 'topolia', 'kush', 'yablunia', 'grusha', 'vyshnia', 'kalyna', 'kush'];
+  for (let k = 0; k < Math.round(W * Hh / 90000); k++) { const x = W * (.07 + rnd() * .76), yy = Hh * (.16 + rnd() * .74); if (Object.values(pos).some(p => Math.abs(p.x - x) < 60 && Math.abs(p.y - yy) < 90) || roads.some(r => r.y && Math.abs(r.y - yy) < 26)) continue; deco.push({ n: TR[k % TR.length], x, y: yy, s: .7 + rnd() * .5 }); }
+  return { W, H: Hh, pos, roads, labels, order, deco, main: vil === 'veprik' ? { x: X0 - 70, y1: Hh * .1, y2: y } : null };
+}
+function dvHouse(h, p, i, st) {
+  const k = dvKind(h), ours = h.ours, sel = st.sel === h.id, cls = 'dh k-' + k + (ours ? ' ours' : '') + (sel ? ' sel' : '') + (st.q && !st.hit.has(h.id) ? ' dim' : '') + (st.q && st.hit.has(h.id) ? ' hit' : '');
+  const sz = DV_SZ[k], r = dvHash(h.id), f = h.feats || [], hs = String(h.hosp || '');
+  const smoke = /khat|dvir/.test(k) && (i % 3 === 0 || ours) ? `<g class="smoke" transform="translate(${k === 'dvir' ? -17 : -11},${k === 'dvir' ? -78 : -70})"><circle r="3.5"/><circle r="3.5"/></g>` : '';
+  const mill = f.includes('млин') ? dvImg(/вод|став|гребл/i.test(hs) ? 'vodmlyn' : 'vitriak', sz[0] / 2 - 4, -70, 52, 70, 'dv-mill') : '';
+  const hive = f.includes('пасіка') ? dvImg('pasika', -sz[0] / 2 - 36, -36, 40, 38) : '';
+  const hay = f.includes('сінокіс') && !mill ? dvImg(r % 2 ? 'kopytsia' : 'stih', sz[0] / 2 - 10, -28, 30, 28) : '';
+  const plow = f.includes('ниви') && !mill && r % 3 === 0 ? dvImg('plug', -sz[0] / 2 - 18, -14, 30, 20) : '';
+  const prop = /khat|dvir/.test(k) && !hive && r % 4 === 1 ? dvImg(['krynytsia', 'drova', 'bochky', 'viz', 'snopy', 'lava', 'glek'][r % 7], -sz[0] / 2 - 30, -34, 34, 34) : '';
+  const an = Object.keys(DV_ANI).filter(x => +h.live?.[x] > 0).slice(0, 3).map((x, j) => dvImg(DV_ANI[x], -sz[0] / 2 + 2 + j * 30, 2, 30, 24, 'dv-an')).join('');
+  const star = ours ? `<g class="dh-star" transform="translate(0,${-sz[1] - 6})"><circle r="10"/><text y="4">★</text></g>` : '';
+  const folk = sel && (h.people || []).length ? `<g class="dv-folk">${h.people.slice(0, 10).map((pp, j) => { const fh = 46 * dvFigH(pp); return `<image href="/img/dv/p/${dvFigN(pp)}.webp" x="${-sz[0] / 2 - 10 + j * 19}" y="${20 - fh + 22}" width="${fh * .45}" height="${fh}" style="--j:${j}"/>`; }).join('')}</g>` : '';
+  return `<g class="${cls}" data-dv="${esc(h.id)}" transform="translate(${p.x.toFixed(0)},${p.y.toFixed(0)})" style="--i:${Math.min(i, 60)}" role="button" tabindex="0" aria-label="${esc(dvLabel(h))}"><title>${esc(dvLabel(h))}</title><rect class="dh-hit" x="${-sz[0] / 2}" y="${-sz[1]}" width="${sz[0]}" height="${sz[1] + 26}"/>${hive}${prop}${plow}${dvImg(k, -sz[0] / 2, -sz[1] + 6, sz[0], sz[1], 'dh-i')}${smoke}${mill}${hay}${an}${star}<text class="dh-l" x="0" y="${folk ? 52 : 20}">${esc(dvLabel(h)).slice(0, 18)}</text>${folk}</g>`;
+}
+function dvSvg(D, st) {
+  const L = dvLayout(D, st.vil);
+  const roads = L.roads.map(r => `<path class="dv-road" d="${r.d}"/>`).join('');
+  const main = L.main ? `<path class="dv-road main" d="M${L.main.x} ${L.main.y1} V${L.main.y2}"/>${L.roads.filter(r => r.y).map(r => `<path class="dv-road" d="M${L.main.x} ${r.y} H${L.main.x + 70}"/>`).join('')}<text class="dv-st" transform="translate(${L.main.x - 22},${L.main.y1 + 220}) rotate(-90)">велика дорога</text>` : '';
+  const deco = L.deco.map(t => { const w = (t.n === 'topolia' ? 30 : 64) * t.s, hh = (/kush|kalyna/.test(t.n) ? 50 : 84) * t.s; return dvImg(t.n, t.x - w / 2, t.y - hh, w, hh, 'dv-tree'); }).join('');
+  const folk = L.order.filter((_, j) => j % 9 === 4).map((id, j) => { const p = L.pos[id]; return dvImg('p/w' + (dvHash(id) % 12), p.x + 46, p.y - 50, 26, 56, 'dv-walk'); }).join('');
+  const river = '';
+  const labels = L.labels.map(l => `<text class="dv-st" x="${l.x}" y="${l.y}">${esc(l.t)}</text>`).join('');
+  const houses = D.map((h, i) => L.pos[h.id] ? dvHouse(h, L.pos[h.id], i, st) : '').join('');
+  return { svg: `<svg class="dvsvg" viewBox="0 0 ${L.W.toFixed(0)} ${L.H.toFixed(0)}" width="${L.W.toFixed(0)}" height="${L.H.toFixed(0)}" role="img" aria-label="Схема дворів ${DV_VIL[st.vil]} ${st.y}"><image href="/img/dv-bg.jpg" x="0" y="0" width="${L.W.toFixed(0)}" height="${L.H.toFixed(0)}" preserveAspectRatio="none"/>${river}${main}${roads}${labels}${deco}<g class="dv-hs">${houses}</g>${folk}</svg>`, L };
+}
+function dvState() { const u = S.ui; const d = u.dvD || {}; u.dvV ||= 'voronky'; const ys = Object.keys(d[u.dvV] || {}).sort(); if (!ys.includes(String(u.dvY))) u.dvY = ys[0] || '1767'; return { vil: u.dvV, y: String(u.dvY), ys, sel: u.dvSel, q: (u.dvQ || '').trim().toLowerCase() }; }
+const dvTxt = h => [h.head, h.owner_list, h.sur, ...(h.people || []).map(p => [p.n, p.pt, p.s].join(' '))].join(' ').toLowerCase();
+function vDvory() {
+  return `<div class="lede"><h1>Де жили наші</h1><p class="small muted">Двори Вороньків і Веприка з Рум'янцевського опису 1767 р. і перепису 1782 р. Тягніть карту, наближайте, натискайте на хату.</p></div>
+  <div class="dvwrap" id="dvwrap"><div class="dvbar" id="dvbar"></div><div class="dvmap" id="dvmap"><div class="dvw" id="dvw"><p class="muted small dv-load">Розкладаю двори…</p></div></div>
+    <div class="dv-ctl"><button data-dvz="1" aria-label="Наблизити">+</button><button data-dvz="-1" aria-label="Віддалити">−</button><button data-dvz="fit" aria-label="Усе село">⤢</button><button data-dvfs aria-label="На весь екран">⛶</button><button data-dvmus aria-label="Музика" id="dv-mus">${S.ui.dvMus ? '🔊' : '🔇'}</button></div>
+    <aside class="dvpanel" id="dvpanel"></aside>
+    <p class="dv-legend">★ Наш рід (прізвище з дерева) · Розташування умовне</p></div>
+  <p class="small muted dv-foot">★ — прізвище, яке є в нашому дереві (це ще не доводить спорідненості). <b>Розташування умовне:</b> двори стоять у тому порядку, як їх записано в книзі; у Веприку — по вулицях і сторонах з вуличного списку 1767 р. Справжнього плану села тих років у нас немає. Люди біля хати — за статтю й віком із запису; худоба, млини, пасіки, сінокоси — як у книзі; дерева, криниці, вози та інші дрібниці — лише для краси. Малюнки — Максим Шутий (за допомогою ШІ); музика — власна мелодія в народному дусі.</p>${creditHtml()}`;
+}
+function dvBar(st) {
+  const d = S.ui.dvD || {}, D = (d[st.vil] || {})[st.y] || [], ppl = D.reduce((a, h) => a + (h.people || []).length, 0), ours = D.filter(h => h.ours).length;
+  const all = []; if (st.q) for (const v in d) for (const y in d[v]) { const n = d[v][y].filter(h => dvTxt(h).includes(st.q)).length; if (n && !(v === st.vil && y === st.y)) all.push(`<button class="dv-chip" data-dvgo="${v}|${y}">${DV_VIL[v]} ${y}: ${n}</button>`); }
+  return `<div class="seg">${Object.keys(DV_VIL).map(v => `<button data-dvv="${v}" class="${st.vil === v ? 'on' : ''}">${DV_VIL[v]}</button>`).join('')}</div>
+    ${st.ys.length < 2 ? `<span class="dv-yr"><b class="mono">${st.y}</b></span>` : `<label class="dv-yr"><span class="mono">${st.ys[0] || ''}</span><input type="range" id="dv-y" min="0" max="${Math.max(0, st.ys.length - 1)}" step="1" value="${st.ys.indexOf(st.y)}" ${st.ys.length < 2 ? 'disabled' : ''} aria-label="Рік книги"><span class="mono">${st.ys[st.ys.length - 1] || ''}</span><b class="mono">${st.y}</b></label>`}
+    <input type="search" id="dv-q" placeholder="Знайти людину або прізвище" value="${esc(S.ui.dvQ || '')}" aria-label="Пошук">
+    <p class="small dv-sum">${D.length} дворів · ${ppl} людей · ★ ${ours}${st.ys.length < 2 ? ` · для ${st.vil === 'veprik' ? 'Веприка' : 'села'} поки є лише ${st.y} р.` : ''}${st.q ? ` · знайдено тут: ${st.hit.size}` : ''}${all.length ? ` · ще: ${all.join(' ')}` : ''}</p>`;
+}
+function dvPanel(st) {
+  const d = S.ui.dvD || {}, D = (d[st.vil] || {})[st.y] || [], h = D.find(x => x.id === st.sel);
+  if (!h) { const O = D.filter(x => x.ours); return `<h3>${DV_VIL[st.vil]}, ${st.y}</h3><p class="small muted">Натисніть на хату. Двори з прізвищами нашого дерева:</p><div class="dv-ol">${O.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">★ ${esc(dvLabel(x))}</button>`).join('') || '<span class="small muted">немає</span>'}</div>`; }
+  const L = S.ui.dvL || dvLayout(D, st.vil), k = L.order.indexOf(h.id), nb = [L.order[k - 1], L.order[k + 1]].filter(Boolean).map(id => D.find(x => x.id === id));
+  const live = DV_LIVE.filter(([k]) => h.live?.[k]).map(([k, e, t]) => `<span class="dv-lv" title="${t}">${e} <b>${esc(h.live[k])}</b> <i>${t}</i></span>`).join('');
+  const sur = dvSur(h), vs = DV_VIL[st.vil].slice(0, 6), docs = (S.data?.documents || []).filter(x => x.title && x.title.includes(st.y) && x.title.includes(vs) && ((h.no && new RegExp('№\\s?' + h.no + '(?!\\d)').test(x.title)) || (sur.length > 3 && x.title.includes(sur.slice(0, -2)))));
+  const ppl = (h.people || []).map(p => `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`).join('');
+  return `<button class="dv-x" data-dvsel="" aria-label="Закрити">×</button>
+    <p class="dv-k small muted">${/^\d/.test(h.no || '') ? 'Двір №' + esc(h.no) : esc(h.type || 'Двір')}${h.street ? ' · ' + esc(h.side || '') + (h.sno ? ', №' + esc(h.sno) + ' у вуличному списку' : '') : ''}</p>
+    <h3 class="dv-h">${esc(h.head || h.owner_list || '—')}</h3>
+    <p class="small">${[dvSt(h.status), h.type && h.no ? h.type : '', h.khaty ? 'хат: ' + h.khaty : ''].filter(Boolean).map(esc).join(' · ')}${h.ours ? ' <span class="dv-ours">★ прізвище з нашого дерева</span>' : ''}</p>
+    ${h.street ? `<p class="small muted">Вулиця: ${esc(h.street)}</p>` : ''}
+    ${(h.people || []).length ? `<div class="dv-fam">${h.people.slice(0, 9).map(p => dvFig(p)).join('')}</div>` : ''}
+    ${ppl ? `<h4>Мешканці</h4><ul class="dv-pl">${ppl}</ul>` : h.owner_list ? `<h4>У вуличному списку</h4><p class="small">${esc(h.owner_list)}</p>` : ''}
+    ${live || h.hosp || (h.feats || []).length ? `<h4>Господарство</h4>${live ? `<div class="dv-lvs">${live}</div>` : ''}${(h.feats || []).length ? `<p class="small">${h.feats.map(esc).join(' · ')}</p>` : ''}${h.hosp ? `<p class="small dv-hosp">${esc(h.hosp)}</p>` : ''}` : ''}
+    ${nb.length ? `<h4>Сусіди за записом</h4><div class="dv-ol">${nb.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">${x.ours ? '★ ' : ''}${esc(dvLabel(x))}</button>`).join('')}</div>` : ''}
+    <h4>Джерело</h4><p class="small">${st.y === '1782' ? 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' : `Рум'янцевський опис 1767 р., ЦДІАК, ф. 57, спр. ${st.vil === 'veprik' ? '170' : '169'}`}${h.ark ? ', ' + esc(h.ark) : ''}${h.kadr ? ', кадр ' + esc(h.kadr) : ''}${h.list_frame ? ', вуличний список — кадр ' + esc(h.list_frame) : ''}</p>
+    ${docs.map(x => `<button class="dv-doc" data-doc="${esc(x.id)}">${x.pages ? `<img src="${img('doc=' + x.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(x.title)}</span><b>Переглянути запис ›</b></button>`).join('')}
+    <p class="small"><a href="${href('dvory', h.id)}">Посилання на цей двір</a></p>`;
+}
+// перегляд: зсув і масштаб (як у карти роду) — тягнути мишкою/пальцем, коліщатко й два пальці — масштаб
+const DVV = { x: 0, y: 0, z: 1 };
+function dvApply() { const w = $('#dvw'); if (w) w.style.transform = `translate(${DVV.x}px,${DVV.y}px) scale(${DVV.z})`; }
+function dvClamp() { const m = $('#dvmap'), L = S.ui.dvL; if (!m || !L) return; const vw = m.clientWidth, vh = m.clientHeight, w = L.W * DVV.z, h = L.H * DVV.z;
+  DVV.x = w <= vw ? (vw - w) / 2 : Math.min(0, Math.max(vw - w, DVV.x)); DVV.y = h <= vh ? (vh - h) / 2 : Math.min(0, Math.max(vh - h, DVV.y)); }
+function dvFit() { const m = $('#dvmap'), L = S.ui.dvL; if (!m || !L) return; DVV.z = Math.max(.2, Math.min(m.clientWidth / L.W, m.clientHeight / L.H)); DVV.x = DVV.y = 0; dvClamp(); dvApply(); }
+function dvZoom(f, cx, cy) { const m = $('#dvmap'); if (!m) return; if (cx == null) { cx = m.clientWidth / 2; cy = m.clientHeight / 2; } const nz = Math.max(.15, Math.min(2.5, DVV.z * f)); DVV.x = cx - (cx - DVV.x) * nz / DVV.z; DVV.y = cy - (cy - DVV.y) * nz / DVV.z; DVV.z = nz; dvClamp(); dvApply(); }
+function dvFocus(id, z) { const m = $('#dvmap'), p = S.ui.dvL?.pos[id]; if (!m || !p) return; if (z) DVV.z = Math.max(DVV.z, z); DVV.x = m.clientWidth / 2 - (m.clientWidth > 820 && $('#dvwrap').classList.contains('open') ? 180 : 0) - p.x * DVV.z; DVV.y = m.clientHeight / 2 - p.y * DVV.z; dvClamp(); const w = $('#dvw'); if (w) { w.classList.add('glide'); dvApply(); setTimeout(() => w.classList.remove('glide'), 450); } }
+function dvPaint() {
+  const st = dvState(), d = S.ui.dvD; if (!d) return; const D = (d[st.vil] || {})[st.y] || [];
+  st.hit = new Set(st.q ? D.filter(h => dvTxt(h).includes(st.q)).map(h => h.id) : []);
+  const bar = $('#dvbar'), w = $('#dvw'), pan = $('#dvpanel'); if (!w) return;
+  const ae = document.activeElement?.id; bar.innerHTML = dvBar(st); if (ae === 'dv-q') { const q = $('#dv-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  const key = st.vil + st.y, fresh = w.dataset.key !== key; const { svg, L } = dvSvg(D, st); S.ui.dvL = L;
+  w.innerHTML = svg; w.classList.toggle('enter', fresh); w.dataset.key = key;
+  pan.innerHTML = dvPanel(st); $('#dvwrap').classList.toggle('open', !!(st.sel && D.some(h => h.id === st.sel)));
+  if (fresh) { dvFit(); const zmin = innerWidth <= 820 ? .42 : .36; if (DVV.z < zmin && !st.sel) { DVV.z = zmin; const o = D.find(h => h.ours) || D[0]; if (o) { const m = $('#dvmap'), p = L.pos[o.id]; DVV.x = m.clientWidth / 2 - p.x * DVV.z; DVV.y = m.clientHeight / 2 - p.y * DVV.z; dvClamp(); dvApply(); } } }
+}
+// музика: власна мелодія в народному дусі (public/audio/dvory.mp3), вмикається лише кнопкою; вибір пам'ятає localStorage rs_dvmus
+let dvAudio = null;
+function dvMusic(on) { S.ui.dvMus = on; try { localStorage.setItem('rs_dvmus', on ? '1' : '0'); } catch {}
+  if (on) { dvAudio ||= Object.assign(new Audio('/audio/dvory.mp3'), { loop: true, volume: .45 }); dvAudio.play().catch(() => {}); } else dvAudio?.pause();
+  const b = $('#dv-mus'); if (b) b.textContent = on ? '🔊' : '🔇'; }
+addEventListener('hashchange', () => { if (S.view !== 'dvory') dvAudio?.pause(); });
+async function dvMount() {
+  const wrap = $('#dvwrap'); if (!wrap || wrap.dataset.on) return; wrap.dataset.on = 1;
+  if (!S.ui.dvD) { try { const r = await api('/api/data?dvory=1'); S.ui.dvD = r.dvory || {}; } catch (e) { $('#dvw').innerHTML = `<p class="small muted">${errText(e)}</p>`; return; } }
+  if (S.arg && S.ui.dvArg !== S.arg) { S.ui.dvArg = S.arg; const [v, y] = S.arg.split('-'); if (S.ui.dvD[v]?.[y]) { S.ui.dvV = v; S.ui.dvY = y; S.ui.dvSel = S.arg; } }
+  $('#dvw').dataset.key = ''; dvPaint(); if (S.ui.dvSel) dvFocus(S.ui.dvSel, .9);
+  let wantMus = false; try { wantMus = localStorage.getItem('rs_dvmus') === '1'; } catch {} if (wantMus) dvMusic(true); // браузер може не дати грати до першого дотику — тоді заграє з першим кліком по карті
+  const map = $('#dvmap'), P_ = new Map(); let st0 = null, pin = null; S.ui.dvMoved = false;
+  map.addEventListener('pointerdown', e => { if (S.ui.dvMus && dvAudio?.paused) dvAudio.play().catch(() => {}); if (e.button > 0) return; P_.set(e.pointerId, [e.clientX, e.clientY]); if (P_.size === 1) { st0 = { x: e.clientX, y: e.clientY, ox: DVV.x, oy: DVV.y }; S.ui.dvMoved = false; } if (P_.size === 2) { const [[a, b], [c, d]] = [...P_.values()]; pin = { d: Math.hypot(a - c, b - d), z: DVV.z, ox: DVV.x, oy: DVV.y, cx: (a + c) / 2, cy: (b + d) / 2 }; } });
+  map.addEventListener('pointermove', e => { if (!P_.has(e.pointerId)) return; P_.set(e.pointerId, [e.clientX, e.clientY]); const r = map.getBoundingClientRect();
+    if (P_.size === 2 && pin) { const [[a, b], [c, d]] = [...P_.values()]; const nz = Math.max(.15, Math.min(2.5, pin.z * Math.hypot(a - c, b - d) / pin.d)), cx = pin.cx - r.left, cy = pin.cy - r.top; DVV.x = cx - (cx - pin.ox) * nz / pin.z + ((a + c) / 2 - pin.cx); DVV.y = cy - (cy - pin.oy) * nz / pin.z + ((b + d) / 2 - pin.cy); DVV.z = nz; S.ui.dvMoved = true; dvClamp(); dvApply(); return; }
+    if (st0) { const dx = e.clientX - st0.x, dy = e.clientY - st0.y; if (!S.ui.dvMoved && Math.abs(dx) + Math.abs(dy) < 6) return; if (!S.ui.dvMoved) { S.ui.dvMoved = true; map.setPointerCapture?.(e.pointerId); map.classList.add('drag'); } DVV.x = st0.ox + dx; DVV.y = st0.oy + dy; dvClamp(); dvApply(); } });
+  const up = e => { P_.delete(e.pointerId); if (P_.size < 2) pin = null; if (!P_.size) { st0 = null; map.classList.remove('drag'); } };
+  map.addEventListener('pointerup', up); map.addEventListener('pointercancel', up);
+  map.addEventListener('click', e => { if (S.ui.dvMoved) { e.stopPropagation(); e.preventDefault(); S.ui.dvMoved = false; } }, true);
+  map.addEventListener('wheel', e => { e.preventDefault(); const r = map.getBoundingClientRect(); dvZoom(Math.exp(-e.deltaY / 400), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  if (dvMount.bound) return; dvMount.bound = 1; const root = document;
+  addEventListener('resize', () => { if ($('#dvmap')) { dvClamp(); dvApply(); } });
+  document.addEventListener('fullscreenchange', () => { const w = $('#dvwrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); setTimeout(dvFit, 60); } });
+  const sel = id => { S.ui.dvSel = id || null; dvPaint(); if (id) dvFocus(id, .8); };
+  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus]'); if (!t) return;
+    const ds = t.dataset;
+    if (ds.dv != null) { e.preventDefault(); sel(S.ui.dvSel === ds.dv ? null : ds.dv); ev('open', 'dvory', 'dv:' + ds.dv); }
+    else if (ds.dvsel != null) sel(ds.dvsel);
+    else if (ds.dvv) { S.ui.dvV = ds.dvv; S.ui.dvSel = null; dvPaint(); }
+    else if (ds.dvgo) { const [v, y] = ds.dvgo.split('|'); S.ui.dvV = v; S.ui.dvY = y; S.ui.dvSel = null; dvPaint(); }
+    else if (ds.dvz) ds.dvz === 'fit' ? dvFit() : dvZoom(ds.dvz === '1' ? 1.35 : 1 / 1.35);
+    else if (t.hasAttribute('data-dvfs')) { const w = $('#dvwrap'); if (document.fullscreenElement) document.exitFullscreen?.(); else if (w.requestFullscreen) w.requestFullscreen().catch(() => w.classList.toggle('fs')); else { w.classList.toggle('fs'); setTimeout(dvFit, 60); } }
+    else if (t.hasAttribute('data-dvmus')) dvMusic(!S.ui.dvMus); });
+  root.addEventListener('keydown', e => { const g = e.target.closest?.('[data-dv]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); sel(g.dataset.dv); }
+    if (e.target.id === 'dv-q' && e.key === 'Enter') { const st = dvState(), D = (S.ui.dvD[st.vil] || {})[st.y] || []; const h = st.q && D.find(x => dvTxt(x).includes(st.q)); if (h) sel(h.id); }
+    if (e.key === 'Escape' && $('#dvwrap')?.classList.contains('fs') && !document.fullscreenElement) { $('#dvwrap').classList.remove('fs'); setTimeout(dvFit, 60); } });
+  root.addEventListener('input', e => { if (e.target.id === 'dv-y') { const st = dvState(); S.ui.dvY = st.ys[+e.target.value]; S.ui.dvSel = null; dvPaint(); }
+    if (e.target.id === 'dv-q') { S.ui.dvQ = e.target.value; dvPaint(); } });
+}
+
 /* ── Допоможіть знайти ── */
 function wantList(max) {
   const L = (CFG_().wanted || []).filter(x => !x.done);
@@ -3428,6 +3603,7 @@ function vHome() {
       <div class="hcard h-ask"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}${askDone(false)}</div>
       <div class="hcard"><h3>Запросіть родичів</h3><p class="small muted">${living ? `У дереві ще ${living} живих родичів без доступу до сайту.` : ''} Надішліть посилання у Viber чи Telegram одним дотиком.</p><div class="btns"><button class="btn" data-act="inv" data-id="">Запросити</button><a class="btn line" href="#/people">Знайти людину</a></div></div>
       <div class="hcard links3">
+        <a href="#/dvory"><b>🏡 Де жили наші</b><span>Двори Вороньків і Веприка 1767 і 1782 р. — хто з ким по сусідству</span></a>
         <a href="#/geo"><b>🗺 Карта роду</b><span>Де жили наші — з 1780-х до сьогодні</span></a>
         <button data-act="poster"><b>🖼 Дерево-плакат</b><span>Велика картинка для друку на стіну</span></button>
         <a href="#/dna"><b>🧬 ДНК-тести</b><span>Як знайти родичів у світі</span></a>
@@ -3666,7 +3842,7 @@ function render() {
   if (!S.data) { app.innerHTML = top() + '<main class="wrap"><p class="muted">Завантаження…</p></main>'; return; }
   if (!S.data.persons.length && isOwner()) { app.innerHTML = vSeed(); return; }
   curTarget = null;
-  const V = { routes: vRoutes, words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, voices: vVoices, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
+  const V = { routes: vRoutes, words: vWords, fbook: () => { setTimeout(() => openFBook(startId()), 0); return vHome(); }, iv: vIv, home: vHome, terms: vTerms, hyp: vHyp, voices: vVoices, kin: vKin, stats: vStats, help: vHelp, geo: vGeo, dvory: vDvory, dna: vDna, tree: vTree, p: vPerson, families: vFamilies, fam: vFamily, people: vPeople, docs: vDocs, admin: vAdmin, q: vQuestions, maps: vMaps, villages: vVillages }[S.view] || vHome;
   const sy = window.scrollY;
   const bkKeep = document.getElementById('bk'); // книгу не перебудовуємо, якщо сторінка та сама — щоб нічого не блимало
   app.innerHTML = top() + `<main class="wrap${S.view === 'tree' ? ' wide' : ''}">${V()}</main>${S.view === 'tree' ? '' : creditHtml()}`;
@@ -3674,6 +3850,7 @@ function render() {
   if (S.ui.keepScroll) { window.scrollTo(0, sy); S.ui.keepScroll = false; }
   if (S.view === 'tree') requestAnimationFrame(vpMount);
   if (S.view === 'geo') requestAnimationFrame(geoMount);
+  if (S.view === 'dvory') requestAnimationFrame(dvMount);
   if (S.view === 'routes' && S.arg) requestAnimationFrame(rtMount);
   if (S.view === 'stats') requestAnimationFrame(stFold);
   if (S.data && S.me && !ivNudge.done) { ivNudge.done = 1; ivNudge(); }
