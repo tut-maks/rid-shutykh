@@ -1746,3 +1746,9 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .hyp-st{font-size:13px;padding:6px 10px;border-radius:8px;margin:-2px 0 8px}.hyp-st.st-ok{background:#E8F4E4;color:#2F5E23}.hyp-st.st-ko{background:#F7E6E3;color:#8A2B1E}.hyp-st.st-weak{background:#FFF3D6;color:#7A5300}
 .hyp-c.st-ko,.hyp-c.st-weak{opacity:.8}.hyp-how{margin:6px 0 12px}.hyp-how ul{margin:6px 0 0;padding-left:18px}
 .vd-ok span{color:#2F5E23;font-weight:600}.vd-ko span{color:#8A2B1E;font-weight:600}.v-ok{color:#2F5E23}.v-ko{color:#8A2B1E}
+/* позначки з підписом (карти): не заважають читати — видно лише крапку, рамка й підпис — при наведенні або «Показати наш запис» */
+.pv-mark.lbl{border-color:transparent!important;background:transparent!important;box-shadow:none!important;pointer-events:auto;border-radius:50%}
+.pv-mark.lbl i{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:rgba(196,30,40,.75);box-shadow:0 0 0 2px rgba(255,255,255,.8)}
+.pv-mark.lbl span{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;white-space:nowrap;background:rgba(255,250,235,.95);color:#9b1d24;font:600 12px var(--f-body);padding:2px 7px;border-radius:6px;border:1px solid #c41e28;opacity:0;transition:opacity .2s}
+.pv-mark.lbl:hover,.pv-marks.show .pv-mark.lbl{border:2px solid #c41e28!important}
+.pv-mark.lbl:hover span,.pv-marks.show .pv-mark.lbl span{opacity:1}.pv-mark.lbl:hover i,.pv-marks.show .pv-mark.lbl i{opacity:0}

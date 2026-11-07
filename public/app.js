@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072132';
+const BUILD = '202611072207';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1872,11 +1872,11 @@ function viewer({ title, pages, thumbs, line, text, src, people, photoId, docId,
   // Рамки «наш запис»: шар точно над зображенням, з тим самим масштабом і зсувом
   const pageMarks = () => mk.filter(m => (m.p || 0) === i);
   const placeMarks = () => { if (!im || !mkEl) return; Object.assign(mkEl.style, { left: im.offsetLeft + 'px', top: im.offsetTop + 'px', width: im.offsetWidth + 'px', height: im.offsetHeight + 'px' });
-    mkEl.innerHTML = pageMarks().map(m => `<div class="pv-mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></div>`).join('') + (draw?.box ? `<div class="pv-mark draft" style="left:${draw.box.x * 100}%;top:${draw.box.y * 100}%;width:${draw.box.w * 100}%;height:${draw.box.h * 100}%"></div>` : '')
+    mkEl.innerHTML = pageMarks().map(m => `<div class="pv-mark${m.t ? ' lbl' : ''}" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%">${m.t ? `<i></i><span>${esc(m.t)}</span>` : ''}</div>`).join('') + (draw?.box ? `<div class="pv-mark draft" style="left:${draw.box.x * 100}%;top:${draw.box.y * 100}%;width:${draw.box.w * 100}%;height:${draw.box.h * 100}%"></div>` : '')
       + (cut ? [...(cut.mode === 'crop' && cut.box ? [] : cut.boxes), ...(cut.box ? [cut.box] : [])].map((m, k) => `<div class="pv-mark draft cut${cut.mode === 'crop' ? ' dim' : ''}" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%">${cut.mode === 'split' ? `<span>${k + 1}</span>` : ''}</div>`).join('') : '');
     const fb = root.querySelector('.pv-find'); if (fb) fb.hidden = !pageMarks().length; };
   const toMark = () => { const m = pageMarks()[0]; if (!m || !im) return; const W = im.offsetWidth, H = im.offsetHeight, r = stage.getBoundingClientRect();
-    sc = Math.min(6, Math.max(1.6, Math.min(r.width * 0.9 / (m.w * W), r.height * 0.6 / (m.h * H)))); tx = -((m.x + m.w / 2) - 0.5) * W * sc; ty = -((m.y + m.h / 2) - 0.5) * H * sc; clamp(); apply(true); };
+    sc = Math.min(6, Math.max(1.6, Math.min(r.width * 0.9 / (m.w * W), r.height * 0.6 / (m.h * H)))); tx = -((m.x + m.w / 2) - 0.5) * W * sc; ty = -((m.y + m.h / 2) - 0.5) * H * sc; clamp(); apply(true); mkEl.classList.add('show'); clearTimeout(mkEl._t); mkEl._t = setTimeout(() => mkEl.classList.remove('show'), 6000); };
   const saveMarks = async () => { try { const r = await api('/api/data', { body: { op: 'doc.marks', id: docId, marks: mk } }); mk = r.marks; const d = S.data.documents.find(x => x.id === docId); if (d) d.marks = mk; placeMarks(); toast(mk.length ? 'Рамку збережено' : 'Рамки прибрано'); } catch (err) { toast(errText(err)); } };
   const apply = (anim) => { if (!im) return; setT(`translate(${tx}px,${ty}px) scale(${sc})`, anim); root.classList.toggle('zoomed', sc > 1.01); const zb = root.querySelector('[data-pv=zoom]'); zb.innerHTML = sc > 1.01 ? ICO.unzoom : ICO.zoom; zb.title = sc > 1.01 ? 'Зменшити' : 'Збільшити (або двічі клацніть по фото)'; };
   const clamp = () => { if (!im) return; const r = stage.getBoundingClientRect(), w = im.offsetWidth * sc, h = im.offsetHeight * sc; const mx = Math.max(0, (w - r.width) / 2), my = Math.max(0, (h - r.height) / 2); tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty)); };

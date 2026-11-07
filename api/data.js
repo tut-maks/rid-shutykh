@@ -409,7 +409,7 @@ export default handler(async (req, res, ctx, url) => {
     if (!editor) return fail(res, 403, 'forbidden');
     const doc = await db.get('documents', { eq: { id: S(body.id, 60) } }); if (!doc) return fail(res, 404, 'not_found');
     const n = Number(doc.data.pages) || (doc.data.pages?.length) || 0, f = v => Math.round(Math.min(1, Math.max(0, Number(v) || 0)) * 10000) / 10000;
-    const marks = (Array.isArray(body.marks) ? body.marks : []).slice(0, 8).map(m => ({ p: Math.max(0, Math.min(n - 1, parseInt(m.p) || 0)), x: f(m.x), y: f(m.y), w: f(m.w), h: f(m.h) })).filter(m => m.w > 0.005 && m.h > 0.003);
+    const marks = (Array.isArray(body.marks) ? body.marks : []).slice(0, 8).map(m => ({ p: Math.max(0, Math.min(n - 1, parseInt(m.p) || 0)), x: f(m.x), y: f(m.y), w: f(m.w), h: f(m.h), ...(m.t ? { t: String(m.t).slice(0, 60) } : {}) })).filter(m => m.w > 0.005 && m.h > 0.003);
     const data = { ...doc.data, marks };
     await db.update('documents', { eq: { id: doc.id } }, { data, updated_by: me.id, updated_at: new Date().toISOString() });
     await revision('document', doc.id, 'update', { marks: doc.data.marks || [] }, { marks }, me.id);
