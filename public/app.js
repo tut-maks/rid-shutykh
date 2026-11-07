@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072314';
+const BUILD = '202611072332';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2851,7 +2851,7 @@ const life_ = p => life(p);
 
 /* ── Карта роду в часі ── */
 const placeKey = s => String(s || '').split(',')[0].replace(/^(с\.|село|смт|м\.|місто|хутір|х\.)\s*/i, '').trim();
-const PLACE0 = { 'Вороньки': [50.684, 31.587], 'Веприк': [50.676, 31.615], 'Лідин': [50.698, 31.674], 'Київ': [50.4501, 30.5234], 'Бровари': [50.511, 30.7909], 'Чернігів': [51.4982, 31.2893], 'Ніжин': [51.048, 31.8869], 'Бобровиця': [50.7469, 31.3886] }; // OpenStreetMap (research/11)
+const PLACE0 = { 'Вороньки': [50.684, 31.587], 'Веприк': [50.676, 31.615], 'Лідин': [50.698, 31.674], 'Київ': [50.4501, 30.5234], 'Бровари': [50.511, 30.7909], 'Чернігів': [51.4982, 31.2893], 'Ніжин': [51.048, 31.8869], 'Бобровиця': [50.7469, 31.3886], 'Ємилівка': [50.68778, 28.72806], 'Іршанськ': [50.75139, 28.72111] }; // OpenStreetMap (research/11)
 const placeLL = k => (CFG_().places || {})[k] || PLACE0[k] || null;
 function geoEvents() {
   const E = [];
@@ -2873,7 +2873,7 @@ function vGeo() {
   <div class="geomap" id="geomap"><div class="gm-tiles"></div><div class="gm-pins"></div><div class="gm-base">${Object.entries(BASES).map(([k, b]) => `<button type="button" data-act="map-base" data-v="${k}" class="${(S.ui.rtBase || 'sat') === k ? 'on' : ''}">${b.name}</button>`).join('')}</div><div class="gm-attr">${esc(BASES[S.ui.rtBase || 'sat'].attr)}</div><div class="gm-z"><button data-act="geo-z" data-v="1" aria-label="Збільшити">+</button><button data-act="geo-z" data-v="-1" aria-label="Зменшити">−</button></div></div>
   <div class="geolist" id="geolist"></div>
   ${miss.length ? `<div class="sec"><p class="small muted">Ще не стоять на карті: ${miss.map(k => `<b>${esc(k)}</b>`).join(', ')}.${canEdit() ? ' Натисніть назву нижче, потім клацніть на карті, де це місце.' : ''}</p>${canEdit() ? `<div class="btns">${miss.map(k => `<button class="btn line small" data-act="geo-place" data-k="${esc(k)}">📍 ${esc(k)}</button>`).join('')}</div>` : ''}</div>` : ''}
-  ${canEdit() && Object.keys(CFG_().places || {}).length ? `<details class="small"><summary>Поставлені вручну місця</summary>${Object.entries(CFG_().places).map(([k, v]) => `<div>${esc(k)} — ${v.join(', ')} <button class="btn line small" data-act="geo-unplace" data-k="${esc(k)}">прибрати</button></div>`).join('')}</details>` : ''}`;
+  ${canEdit() && Object.keys(CFG_().places || {}).length ? `<div class="sec geo-man"><h3>Місця, поставлені вручну</h3><p class="small muted">Якщо місце стоїть не там — «Перемістити» і клацніть на карті в правильному місці, або «Прибрати», щоб повернути як було.</p>${Object.entries(CFG_().places).map(([k, v]) => `<div class="geo-mrow"><b>${esc(k)}</b> <span class="small muted mono">${v.join(', ')}</span> <button class="btn line small" data-act="geo-place" data-k="${esc(k)}">Перемістити</button> <button class="btn line small" data-act="geo-unplace" data-k="${esc(k)}">Прибрати</button></div>`).join('')}</div>` : ''}`;
 }
 function geoMount() {
   const box = $('#geomap'); if (!box) return;
