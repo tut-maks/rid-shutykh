@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072236';
+const BUILD = '202611072240';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -521,8 +521,28 @@ function treeBar(tabs, extra = '') {
         <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
         <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button>${extra}</div></details>${sxCount()}</div>`;
 }
+// Вибрана гілка — на дереві лишаються лише її люди (+ їхні чоловіки/дружини і ланцюжок від центральної людини до гілки);
+// порожні колонки стискаються, щоб гілку було зручно дивитись
+function famOnly(L, center, fam) {
+  if (!fam) return L;
+  const ids = Object.keys(L.N), M = new Set(ids.filter(id => (P[id].fam || []).includes(fam)));
+  if (!M.size) return L;
+  const keep = new Set(M); keep.add(center);
+  M.forEach(id => (SPOUSES[id] || []).forEach(s => L.N[s.id] && keep.add(s.id)));
+  const hasAncIn = (id, seen = new Set()) => { if (!id || seen.has(id) || !P[id]) return false; seen.add(id); if (M.has(id)) return true; return hasAncIn(P[id].f, seen) || hasAncIn(P[id].mo, seen); };
+  const hasDescIn = (id, seen = new Set()) => { if (seen.has(id)) return false; seen.add(id); return (KIDS[id] || []).some(k => M.has(k) || hasDescIn(k, seen)); };
+  ids.forEach(id => { if (keep.has(id)) return; if ((isAncOf(id, center) && hasAncIn(id)) || (isAncOf(center, id) && hasDescIn(id))) keep.add(id); });
+  const N = {}; keep.forEach(id => { if (L.N[id]) N[id] = { ...L.N[id] }; });
+  const xs = [...new Set(Object.values(N).map(o => o.x))].sort((a, b) => a - b), STEP = T2.W + T2.GX, map = {};
+  let nx = T2.PAD; xs.forEach((x, i) => { if (i) nx += Math.min(x - xs[i - 1], STEP); map[x] = nx; });
+  Object.values(N).forEach(o => { o.x = map[o.x]; });
+  const rows = L.rows.filter(r => Object.values(N).some(o => o.r === r)), ri = Object.fromEntries(rows.map((r, i) => [r, i]));
+  Object.values(N).forEach(o => { o.y = T2.PAD + ri[o.r] * (T2.H + T2.GY); });
+  return { ...L, N, w: Math.max(...Object.values(N).map(o => o.x)) + T2.W + T2.PAD, h: rows.length * (T2.H + T2.GY) - T2.GY + T2.PAD * 2, rows, fam };
+}
+const isAncOf = (a, b, seen = new Set()) => { /* a — предок b? */ if (!b || seen.has(b) || !P[b]) return false; seen.add(b); const p = P[b]; return p.f === a || p.mo === a || isAncOf(a, p.f, seen) || isAncOf(a, p.mo, seen); };
 function vAll(tabs) {
-  const center = treeCenter(); const L = layoutTD(center); S.ui.tl = L; const f = S.ui.tf || {}; const V = new Set(Object.keys(L.N));
+  const center = treeCenter(); const f = S.ui.tf || {}; const L = famOnly(layoutTD(center), center, f.fam); S.ui.tl = L; const V = new Set(Object.keys(L.N));
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
   let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
@@ -1808,14 +1828,29 @@ function openOverlay(id) {
   if (old.complete && old.naturalWidth) fitOld(); else { old.onload = fitOld; old.onerror = fitOld; }
 }
 
+// Фільтри списку людей: достовірність (як у легенді), гілка, живі/померлі, стать; кількість — для кожного варіанта
+const PF_REL = [['', 'Усі'], ['doc', RELK.doc.t], ['mem', RELK.mem.t], ['chk', RELK.chk.t], ['con', RELK.con.t], ['hyp', 'Гіпотези в дереві']];
+const pfRel = (p, k) => { if (!k) return true; if (k === 'hyp') return !!p.hyp; const r = relOf(p); return k === 'con' ? !!r.c : r.k === k; };
 function vPeople() {
-  const q = (S.ui.q || '').toLowerCase();
+  const q = (S.ui.q || '').toLowerCase(), F = S.ui.pf ||= {};
   const famT = p => (p.fam || []).map(x => FAM[x]?.title).filter(Boolean).join(', ');
-  const list = Object.values(P).filter(p => !q || [full(p), p.m, p.bp, famT(p)].join(' ').toLowerCase().includes(q)).sort((a, b) => (a.s || 'я').localeCompare(b.s || 'я', 'uk') || byBirth(a.id, b.id));
-  return `<div class="lede"><div class="eyebrow">Покажчик</div><h1>Усі родичі</h1><p class="small muted">${Object.keys(P).length} людей у дереві</p>${relLegend()}</div>
-  <div class="btns plbar" style="margin-bottom:6px"><input class="in search" id="q" type="search" value="${esc(S.ui.q || '')}" placeholder="Пошук: ім'я, прізвище, село" aria-label="Пошук">${canEdit() ? `<button class="btn line" data-add="new" style="margin-bottom:18px">+ Нова<span class="hm"> людина</span></button>` : ''}</div>
+  const base = Object.values(P).filter(p => (!q || [full(p), p.m, p.bp, famT(p)].join(' ').toLowerCase().includes(q))
+    && (!F.fam || (p.fam || []).includes(F.fam)) && (!F.liv || (F.liv === 'liv') === !!isLiving(p)) && (!F.sex || p.sex === F.sex));
+  const list = base.filter(p => pfRel(p, F.rel)).sort((a, b) => (a.s || 'я').localeCompare(b.s || 'я', 'uk') || byBirth(a.id, b.id));
+  const relIc = p => { const r = relOf(p); return `<i class="relb sm rel-${r.k}" title="${esc(RELK[r.k].t + (r.c ? ' · ' + RELK.con.t + ': ' + r.c : ''))}">${RELK[r.k].i}</i>${r.c ? `<i class="relb sm rel-con" title="${esc(RELK.con.t + ': ' + r.c)}">${RELK.con.i}</i>` : ''}`; };
+  const sel = (id, v, opts) => `<select class="in pfsel" id="${id}">${opts.map(([k, t]) => `<option value="${k}"${(v || '') === k ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+  const any = F.rel || F.fam || F.liv || F.sex || q;
+  return `<div class="lede"><div class="eyebrow">Покажчик</div><h1>Усі родичі</h1><p class="small muted">${Object.keys(P).length} людей у дереві</p></div>
+  <div class="pfbar">${PF_REL.map(([k, t]) => `<button class="pfc${k ? ' rel-' + k : ''}${(F.rel || '') === k ? ' on' : ''}" data-pf="rel:${k}" title="${esc(k && RELK[k] ? RELK[k].d : k === 'hyp' ? 'Зв\'язок цієї людини в дереві — поки лише припущення' : 'Показати всіх')}">${k && RELK[k] ? RELK[k].i : ''}<em>${esc(t)}</em><span class="mono">${base.filter(p => pfRel(p, k)).length}</span></button>`).join('')}</div>
+  <div class="btns plbar" style="margin-bottom:6px"><input class="in search" id="q" type="search" value="${esc(S.ui.q || '')}" placeholder="Пошук: ім'я, прізвище, село" aria-label="Пошук">
+    ${sel('pf-fam', F.fam, [['', 'Усі гілки'], ...Object.values(FAM).map(x => [x.id, x.title])])}
+    ${sel('pf-liv', F.liv, [['', 'Живі й померлі'], ['liv', 'Лише живі'], ['dead', 'Лише померлі']])}
+    ${sel('pf-sex', F.sex, [['', 'Чоловіки й жінки'], ['m', 'Чоловіки'], ['f', 'Жінки']])}
+    ${any ? `<button class="btn line small" data-pf="reset">Скинути</button>` : ''}
+    ${canEdit() ? `<button class="btn line" data-add="new">+ Нова<span class="hm"> людина</span></button>` : ''}</div>
+  <p class="small muted" style="margin:0 0 8px">Показано ${list.length} з ${Object.keys(P).length}</p>
   <div class="tablebox"><table class="t plist"><thead><tr><th>Ім'я</th><th>Роки</th><th>Місце</th><th>Гілка</th></tr></thead><tbody>
-  ${list.map(p => `<tr class="click" data-go="${p.id}"><td><b style="font-family:var(--f-display);font-size:15.5px">${esc(full(p))}</b>${p.hyp ? '<span class="badge">гіпотеза</span>' : ''}</td><td class="mono small">${esc(life(p))}</td><td class="small">${esc(p.bp || '')}</td><td class="small">${esc(famT(p))}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">Нікого не знайдено.</td></tr>`}
+  ${list.map(p => `<tr class="click" data-go="${p.id}"><td>${relIc(p)} <b style="font-family:var(--f-display);font-size:15.5px">${esc(full(p))}</b>${p.hyp ? '<span class="badge">гіпотеза</span>' : ''}</td><td class="mono small">${esc(life(p))}</td><td class="small">${esc(p.bp || '')}</td><td class="small">${esc(famT(p))}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">Нікого не знайдено.</td></tr>`}
   </tbody></table></div>`;
 }
 
@@ -3978,6 +4013,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', async e => {
   const t = e.target;
+  if (['pf-fam', 'pf-liv', 'pf-sex'].includes(t.id)) { (S.ui.pf ||= {})[t.id.slice(3)] = t.value; render(); return; }
   if (t.id === 'tfam') { S.ui.tf ||= {}; S.ui.tf.fam = t.value; render(); return; }
   if (['tcenter', 'tsort'].includes(t.id)) { S.ui.tf ||= {}; if (t.id === 'tcenter') S.ui.tf.center = t.value; if (t.id === 'tsort') S.ui.tf.sort = t.value; delete S.ui.vp?.all; render(); return; }
   if (t.dataset.upload) { const fs = [...t.files]; t.value = ''; if (fs.length === 1 && /^image\//.test(fs[0].type)) return openAskNew({ person: t.dataset.upload, file: fs[0] }); return upload(t.dataset.upload, fs); }
@@ -4000,11 +4036,12 @@ document.addEventListener('click', e => { // людина → бічна пан�
 document.addEventListener('click', e => { document.querySelectorAll('details.umenu[open], details.tmore[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.ui.pp && !document.querySelector('.pv,.scrim,.msh-scrim')) ppClose(); });
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-toh],[data-tmode],[data-act],[data-add],[data-doc],[data-photo],[data-story],[data-delstory],[data-unlink],[data-portrait],[data-delphoto],[data-famedit],[data-go],[data-atab],[data-per],[data-member],[data-k],[data-revert],[data-reset],[data-revoke],[data-active],[data-close-scrim],[data-pg],[data-zoom]');
+  const t = e.target.closest('[data-toh],[data-tmode],[data-act],[data-add],[data-doc],[data-photo],[data-story],[data-delstory],[data-unlink],[data-portrait],[data-delphoto],[data-famedit],[data-go],[data-atab],[data-per],[data-member],[data-k],[data-revert],[data-reset],[data-revoke],[data-active],[data-close-scrim],[data-pg],[data-zoom],[data-pf]');
   if (!t) return;
   if (t.hasAttribute('data-close-scrim')) { if (e.target === t) closeLayer(); return; }
   const d = t.dataset;
   try {
+    if (d.pf) { const F = S.ui.pf ||= {}; if (d.pf === 'reset') { S.ui.pf = {}; S.ui.q = ''; } else F.rel = d.pf.slice(4); render(); return; }
     if (d.tmode) { S.ui.tmode = d.tmode; delete S.ui.vp?.[d.tmode]; delete S.ui.vp?.all; render(); return; }
     if (d.go) { location.hash = href('p', d.go); return; }
     if (d.toh) { e.preventDefault(); document.getElementById(d.toh)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
@@ -4382,7 +4419,7 @@ addEventListener('resize', () => document.getElementById('tsug') && tqShow());
 
 /* Усі довгі списки людей (select) — з пошуком як на дереві: вводиш — лишаються лише ті, хто підходить */
 function pselEnhance(root) {
-  (root || document).querySelectorAll('select:not([data-psel]):not(#tfam):not(.ov-sel)').forEach(sel => {
+  (root || document).querySelectorAll('select:not([data-psel]):not(#tfam):not(.ov-sel):not(.pfsel)').forEach(sel => {
     if (sel.options.length < 20 || sel.multiple) return;
     sel.dataset.psel = '1';
     const inp = document.createElement('input');
