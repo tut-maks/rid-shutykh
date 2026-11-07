@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072207';
+const BUILD = '202611072208';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1673,6 +1673,9 @@ function vHistory() {
     const O = S.ui.hsOpen || {}, all = v.sections.length && v.sections.every((_, i) => O[i]);
     const det = (k, title, n, body) => `<details class="hsec" data-hs="${k}"${O[k] ? ' open' : ''}><summary><span class="hs-t">${title}</span><span class="hs-n">${n}</span></summary>${body}</details>`;
     return `<div class="hist">${glossify(`<p>${esc(v.intro || '')}</p><p class="hs-all"><button type="button" class="btn line small" data-act="hs-all">${all ? 'Згорнути все' : 'Читати все'}</button></p>` + v.sections.map((sec, i) => det(i, esc(sec.title), `${sec.items.length} ${sec.items.length === 1 ? 'подія' : sec.items.length < 5 ? 'події' : 'подій'}`, `<div class="hl">${sec.items.map(it => `<div class="hr"><span class="mono">${esc(it.y || '')}</span><span>${mdLinks(esc(it.t))}${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</span></div>`).join('')}</div>`)).join(''))}
+      ${(() => { const G = (S.data?.documents || []).filter(d => /^Фото( природи)?:/.test(d.title || '') || ['kochvor', 'kochport', 'volkport'].includes(d.id)); if (!G.length) return '';
+        const grp = [['Старі фото сіл', d => /^Фото:/.test(d.title) && !/воєнн/.test(d.title)], ['Маєток Кочубеїв і Волконські', d => ['kochvor', 'kochport', 'volkport'].includes(d.id)], ['Воєнні роки', d => /воєнн/.test(d.title)], ['Природа', d => /^Фото природи:/.test(d.title)]];
+        return det('ph', '📷 Фото: старі фото, природа, воєнні роки', G.length, grp.map(([t, f]) => { const L = G.filter(f); return L.length ? `<h4 class="hph-h">${t}</h4><div class="hph">${L.map(d => `<button class="hph-i" data-doc="${esc(d.id)}" title="${esc(d.title)}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(d.title.replace(/^Фото( природи)?:\s*/, ''))}${d.date ? ` <i>${esc(d.date)}</i>` : ''}</span></button>`).join('')}</div>` : ''; }).join('') + '<p class="small muted">Джерело й автор — у кожному фото (натисніть). Карти Боплана 1650 і Дзанноні 1772 — у розділі «Карти».</p>'); })()}
       ${v.ask?.length ? det('ask', 'Що варто замовити в архівах', v.ask.length, `<ul class="small">${v.ask.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`) : ''}
       ${v.sources?.length ? det('src', 'Усі джерела', v.sources.length, `<ol class="small hsrcs">${v.sources.map(x => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${shot(x.url)}` : esc(x.name)}</li>`).join('')}</ol>`) : ''}</div>`;
   }
