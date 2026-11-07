@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072210';
+const BUILD = '202611072212';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3798,6 +3798,7 @@ const hypSent = t => { // речення з «Є припущення» (і на
   return out;
 };
 function hypItems() {
+  const ck = [Object.keys(P).length, S.data.documents.length, S.data.unions.length, !!TXT.hyps, !!TXT.history].join(':'); if (S.ui.hypItK === ck && S.ui.hypItD === S.data && S.ui.hypIt) return S.ui.hypIt; // перелік рахується раз
   const L = [], cur = loadText('hyps', true);
   (cur?.items || []).forEach(x => L.push({ ...x, src: x.src || [], cat: x.kind === 'kin' ? 'kin' : 'hyp', p: x.p ?? 40 }));
   Object.values(P).forEach(p => {
@@ -3808,10 +3809,11 @@ function hypItems() {
   S.data.documents.filter(d => d.type !== 'map').forEach(d => hypSent(d.text).forEach(s => L.push({ p: 40, id: 'pd:' + d.id + ':' + hHash(s), cat: 'card', title: d.title, text: s, docs: [d.id], people: (d.people || []).filter(x => P[x]).slice(0, 4) })));
   const hist = loadText('history', true);
   if (hist?.md) hist.md.split(/\n\s*\n/).forEach(par => { if (/Є припущення/.test(par) && !/^#/.test(par.trim())) hypSent(plainMd(par)).forEach(s => L.push({ p: 35, id: 'ph:' + hHash(s), cat: 'hist', title: '«Історія роду»', text: s, people: [...par.matchAll(/\[\[p:([a-z0-9_-]+)\|/gi)].map(m => m[1]).filter(x => P[x]).slice(0, 5) })); });
-  const seen = new Set(); return L.filter(x => !seen.has(x.id) && seen.add(x.id));
+  const seen = new Set(); const out = L.filter(x => !seen.has(x.id) && seen.add(x.id)); if (TXT.hyps !== undefined && TXT.history !== undefined) { S.ui.hypIt = out; S.ui.hypItK = ck; S.ui.hypItD = S.data; } return out;
 }
 const HYPCAT = [['', 'Усі'], ['kin', 'Можлива рідня'], ['hyp', 'Наші припущення'], ['tree', 'У дереві'], ['card', 'У картках і документах'], ['hist', 'В «Історії роду»']];
-const hypAns = id => S.data.stories.filter(s => s.target === 'hyp:' + id);
+const hypAnsIx = () => { const k = S.data.stories.length + ':' + (S.data.stories[S.data.stories.length - 1]?.id || ''); if (S.ui.hypAnsK !== k) { const M = new Map(); S.data.stories.forEach(s => { if (/^hyp:/.test(s.target)) { const id = s.target.slice(4); if (!M.has(id)) M.set(id, []); M.get(id).push(s); } }); S.ui.hypAnsM = M; S.ui.hypAnsK = k; } return S.ui.hypAnsM; };
+const hypAns = id => hypAnsIx().get(id) || []; // відповіді — з покажчика, а не перебором усіх спогадів
 const VERD = { yes: ['✓', 'Підтверджую — так і є'], no: ['✗', 'Спростовую — було не так'], add: ['✎', 'Доповнюю'] };
 const VERDO = { ok: ['✔', 'Остаточно: підтверджено'], ko: ['✘', 'Остаточно: спростовано'] }; // лише власник; сервер не дасть іншим
 const verdOf = s => (String(s.text).match(/^\[(yes|no|add|ok|ko)\]\s*/) || [])[1] || 'add';
@@ -3825,11 +3827,12 @@ const verdLbl = v => (VERD[v] || VERDO[v] || VERD.add);
    • Решта пов'язаних (ті самі люди) — позначка «⚡ Перегляньте». */
 function hypStates(all) {
   if (S.ui.hypStK === S.data.stories.length + ':' + all.length && S.ui.hypSt) return S.ui.hypSt;
-  const by = new Map(all.map(x => [x.id, x])), st = {};
+  const by = new Map(all.map(x => [x.id, x])), st = {}, TH = new Map(); all.forEach(h => (h.then || []).forEach(i => { if (!TH.has(i)) TH.set(i, []); TH.get(i).push(h); }));
+  const anyLink = all.some(h => h.alt || h.needs || h.then); 
   all.forEach(x => { const A = hypAns(x.id), fin = [...A].reverse().find(a => /^(ok|ko)$/.test(verdOf(a))), y = A.filter(a => verdOf(a) === 'yes').length, n = A.filter(a => verdOf(a) === 'no').length;
     st[x.id] = { s: fin ? verdOf(fin) : '', p: Math.max(1, Math.min(99, (x.p ?? 40) + Math.min(24, 8 * y) - Math.min(36, 12 * n))), why: fin ? (verdOf(fin) === 'ok' ? 'підтвердив власник сайту' : 'спростував власник сайту') : '' }; });
-  for (let k = 0; k < 3; k++) all.forEach(x => { const c = st[x.id]; if (c.s === 'ok' || c.s === 'ko') return;
-    const alt = (x.alt || []).map(i => by.get(i)).filter(h => h && st[h.id].s.startsWith('ok')), need = (x.needs || []).map(i => by.get(i)).filter(Boolean), src = all.filter(h => (h.then || []).includes(x.id) && st[h.id].s.startsWith('ok'));
+  if (anyLink) for (let k = 0; k < 3; k++) all.forEach(x => { const c = st[x.id]; if (c.s === 'ok' || c.s === 'ko') return;
+    const alt = (x.alt || []).map(i => by.get(i)).filter(h => h && st[h.id].s.startsWith('ok')), need = (x.needs || []).map(i => by.get(i)).filter(Boolean), src = (TH.get(x.id) || []).filter(h => st[h.id].s.startsWith('ok'));
     if (src.length) { c.s = 'ok-a'; c.p = 95; c.why = 'випливає з підтвердженого: «' + src[0].title + '»'; return; }
     if (alt.length) { c.s = 'ko-a'; c.p = Math.min(c.p, 5); c.why = 'підтверджено інший варіант: «' + alt[0].title + '»'; return; }
     const bad = need.find(h => st[h.id].s.startsWith('ko')); if (bad) { c.s = 'weak'; c.p = Math.min(c.p, 15); c.why = 'спростовано те, на чому воно трималось: «' + bad.title + '»'; return; }
@@ -3868,12 +3871,14 @@ function vHyp() {
   <div class="hypbar"><div class="seg">${HYPCAT.filter(([k]) => !k || n(k)).map(([k, t]) => `<button data-act="hyp-cat" data-v="${k}" class="${cat === k ? 'on' : ''}">${t} <i>${n(k)}</i></button>`).join('')}${chgN ? `<button data-act="hyp-cat" data-v="chg" class="${cat === 'chg' ? 'on' : ''}">⚡ Переглянути <i>${chgN}</i></button>` : ''}${okN ? `<button data-act="hyp-cat" data-v="st-ok" class="${cat === 'st-ok' ? 'on' : ''}">✔ Підтверджено <i>${okN}</i></button>` : ''}${koN ? `<button data-act="hyp-cat" data-v="st-ko" class="${cat === 'st-ko' ? 'on' : ''}">✘ Спростовано / під сумнівом <i>${koN}</i></button>` : ''}</div>
   <details class="hyp-how small"><summary>Як працюють припущення</summary><ul><li>Родичі відповідають «так», «ні» або доповнюють — кожне «так» трохи піднімає ймовірність, «ні» — опускає.</li><li>Остаточно підтверджує чи спростовує власник сайту. Тоді припущення одразу переходить у «✔ Підтверджено» або «✘ Спростовано»; якщо це було «місце в дереві» чи «шлюб не підтверджено» — дерево змінюється одразу, без чекання.</li><li>Пов'язані припущення змінюються самі: якщо підтвердили один варіант, інші варіанти того самого стають «мало ймовірно»; якщо спростували те, на чому трималось інше, — воно «під сумнівом»; що прямо випливає з підтвердженого — теж стає підтвердженим.</li><li>Тексти карток і «Історії роду» Максим (з помічником) переписує після підтвердження — до того біля речення залишається позначка.</li></ul></details>
     <input class="in search" id="hyp-q" type="search" value="${esc(S.ui.hypQ || '')}" placeholder="Пошук: ім'я, село…" aria-label="Пошук"></div>
-  <div class="hyp-l">${L.map(x => hypCard(x, all)).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>`;
+  <div class="hyp-l">${L.slice(0, S.ui.hypN || 40).map(x => hypCard(x, all)).join('') || '<p class="muted">Нічого не знайдено.</p>'}</div>${L.length > (S.ui.hypN || 40) ? `<p style="text-align:center"><button class="btn line" data-act="hyp-more">Показати ще (${L.length - (S.ui.hypN || 40)})</button></p>` : ''}`;
 }
 // Пов'язані припущення: ті самі люди (сильний зв'язок) або їхні батьки, діти, подружжя (слабший). Якщо одне підтвердиться чи спростується — ці треба переглянути.
 function hypRel(x, all) {
   const mine = new Set(x.people || []), near = new Set(); mine.forEach(id => { const p = P[id]; if (!p) return; [p.f, p.mo, ...(KIDS[id] || []), ...(SPOUSES[id] || []).map(s => s.id)].forEach(y => y && !mine.has(y) && near.add(y)); });
-  return all.filter(h => h.id !== x.id).map(h => { const pp = h.people || []; const a = pp.filter(y => mine.has(y)).length, b = pp.filter(y => near.has(y)).length; return { h, w: a * 3 + b, a, b }; }).filter(r => r.w).sort((p, q) => q.w - p.w).filter((r, i, A) => r.h.title !== x.title && A.findIndex(z => z.h.title === r.h.title) === i).slice(0, 10);
+  if (S.ui.hypPIk !== all) { const I = new Map(); all.forEach(h => (h.people || []).forEach(id => { if (!I.has(id)) I.set(id, []); I.get(id).push(h); })); S.ui.hypPI = I; S.ui.hypPIk = all; } // покажчик: людина → припущення (раз на список)
+  const cand = new Set(); [...mine, ...near].forEach(id => (S.ui.hypPI.get(id) || []).forEach(h => cand.add(h)));
+  return [...cand].filter(h => h.id !== x.id).map(h => { const pp = h.people || []; const a = pp.filter(y => mine.has(y)).length, b = pp.filter(y => near.has(y)).length; return { h, w: a * 3 + b, a, b }; }).filter(r => r.w).sort((p, q) => q.w - p.w).filter((r, i, A) => r.h.title !== x.title && A.findIndex(z => z.h.title === r.h.title) === i).slice(0, 10);
 }
 function openHyp(id) {
   const all_ = hypItems(), x = all_.find(h => h.id === id); if (!x) return; const REL_ = hypRel(x, all_);
@@ -3889,7 +3894,8 @@ function openHyp(id) {
 document.addEventListener('input', e => { if (e.target.id === 'wq') { S.ui.wq = e.target.value; clearTimeout(S.ui.wqT); S.ui.wqT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#wq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); return; } if (e.target.id === 'iv-q') { const L = personFind(e.target.value), r = $('#iv-r'); if (r) r.innerHTML = e.target.value.trim() ? L.map(p => `<button type="button" class="tagopt" data-act="iv-who" data-id="${p.id}">${ph(p)}<span><b>${esc(full(p))}</b><i>${esc(life(p) || '')}</i></span></button>`).join('') || '<p class="muted small">Нікого не знайдено.</p>' : ''; return; } if (e.target.id === 'vq') { S.ui.vq = e.target.value; clearTimeout(S.ui.vqT); S.ui.vqT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#vq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); return; } if (e.target.id === 'hyp-q') { S.ui.hypQ = e.target.value; clearTimeout(S.ui.hypT); S.ui.hypT = setTimeout(() => { const p = e.target.selectionStart; S.ui.keepScroll = true; render(); const i = $('#hyp-q'); if (i) { i.focus(); i.setSelectionRange(p, p); } }, 250); } });
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-act]'); if (!t) return; const a = t.dataset.act;
-  if (a === 'hyp-cat') { S.ui.hypCat = t.dataset.v; S.ui.keepScroll = true; render(); return; }
+  if (a === 'hyp-cat') { S.ui.hypCat = t.dataset.v; S.ui.hypN = 40; S.ui.keepScroll = true; render(); return; }
+  if (a === 'hyp-more') { S.ui.hypN = (S.ui.hypN || 40) + 60; S.ui.keepScroll = true; render(); return; }
   if (a === 'hyp-open') return openHyp(t.dataset.id);
   if (a === 'hyp-seen') { try { localStorage.setItem('rs_hrev:' + t.dataset.id, Date.now()); } catch {} S.ui.keepScroll = true; render(); return; }
   if (a === 'hyp-send') {
