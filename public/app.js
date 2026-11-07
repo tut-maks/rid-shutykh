@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071650';
+const BUILD = '202611072105';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2932,7 +2932,7 @@ function dvLayout(H, vil) {
   return { W, H: Hh, pos, roads, labels, order, deco, rows };
 }
 function dvHouse(h, p, i, st) {
-  const k = dvKind(h), ours = h.ours, sel = st.sel === h.id, cls = 'dh k-' + k + (ours ? ' ours' : '') + (sel ? ' sel' : '') + (st.q && !st.hit.has(h.id) ? ' dim' : '') + (st.q && st.hit.has(h.id) ? ' hit' : '');
+  const k = dvKind(h), ours = h.ours, line = !!(st.line || {})[h.id], sel = st.sel === h.id, cls = 'dh k-' + k + (ours ? ' ours' : '') + (line ? ' line' : '') + (sel ? ' sel' : '') + (st.q && !st.hit.has(h.id) ? ' dim' : '') + (st.q && st.hit.has(h.id) ? ' hit' : '');
   const sz = DV_SZ[k], r = dvHash(h.id), f = h.feats || [], hs = String(h.hosp || ''), mx = p.m && k !== 'cerkva' ? -1 : 1;
   const chim = { dvir: [-17, -78], khata: [-11, -70], khatka: [-9, -60] }[k];
   const smoke = chim && (i % 3 === 0 || ours) ? `<g class="smoke" transform="translate(${chim[0] * mx},${chim[1]})"><circle r="3.5"/><circle r="3.5"/></g>` : '';
@@ -2943,11 +2943,12 @@ function dvHouse(h, p, i, st) {
   const prop = /khat|dvir/.test(k) && !hive && r % 3 === 1 ? dvImg(['krynytsia', 'drova', 'bochky', 'snopy', 'lava', 'glek', 'koshyk', 'koromyslo'][r % 8], -sz[0] / 2 - 30, -34, 34, 34) : '';
   const birds = /khat|dvir/.test(k) && r % 5 === 2 ? dvImg(['kurka', 'piven', 'huska', 'kachka'][r % 4], sz[0] / 2 - 2, -8, 20, 20, 'dv-bird') + dvImg(['kurka', 'huska', 'kachka', 'kurka'][(r >>> 3) % 4], sz[0] / 2 + 14, -4, 17, 17, 'dv-bird') : r % 11 === 3 ? dvImg(r % 2 ? 'pes' : 'kit', sz[0] / 2 - 4, -16, 26, 24, 'dv-bird') : '';
   const an = Object.keys(DV_ANI).filter(x => +h.live?.[x] > 0).slice(0, 3).map((x, j) => dvImg(DV_ANI[x], -sz[0] / 2 + 2 + j * 30, 2, 30, 24, 'dv-an')).join('');
-  const star = ours ? `<g class="dh-star" transform="translate(0,${-sz[1] - 6})"><circle r="10"/><text y="4">★</text></g>` : '';
+  const star = line ? `<g class="dh-line" transform="translate(0,${-sz[1] - 14})"><path d="M0 14 L-5 4 L5 4 Z"/><rect x="-44" y="-14" width="88" height="20" rx="10"/><text y="1">◆ наша лінія</text></g>` : ours ? `<g class="dh-star" transform="translate(0,${-sz[1] - 6})"><circle r="10"/><text y="4">★</text></g>` : '';
   const folk = sel && (h.people || []).length ? `<g class="dv-folk">${h.people.slice(0, 10).map((pp, j) => { const fh = 46 * dvFigH(pp); return `<image href="/img/dv/p/${dvFigN(pp)}.webp" x="${-sz[0] / 2 - 10 + j * 19}" y="${42 - fh}" width="${(fh * .45).toFixed(0)}" height="${fh.toFixed(0)}" style="--j:${j}"/>`; }).join('')}</g>` : '';
   return `<g class="${cls}" data-dv="${esc(h.id)}" transform="translate(${p.x.toFixed(0)},${p.y.toFixed(0)}) scale(${p.s.toFixed(2)})" style="--i:${Math.min(i, 60)}" role="button" tabindex="0" aria-label="${esc(dvLabel(h))}"><title>${esc(dvLabel(h))}</title><rect class="dh-hit" x="${-sz[0] / 2}" y="${-sz[1]}" width="${sz[0]}" height="${sz[1] + 26}"/><ellipse class="dh-sh" cx="0" cy="2" rx="${sz[0] * .46}" ry="7"/>${hive}${prop}${plow}<g transform="scale(${mx},1)">${dvImg(k, -sz[0] / 2, -sz[1] + 6, sz[0], sz[1], 'dh-i')}</g>${smoke}${mill}${hay}${birds}${an}${star}<text class="dh-l" x="0" y="${folk ? 52 : 20}">${esc(dvLabel(h)).slice(0, 18)}</text>${folk}</g>`;
 }
 function dvSvg(D, st) {
+  st.line = dvLineMap(D, st.y);
   const L = dvLayout(D, st.vil);
   const rd = L.roads.map(r => r.d).join(' ');
   const roads = `<path class="dv-rd0" d="${rd}"/><path class="dv-rd1" d="${rd}"/><path class="dv-rd2" d="${rd}"/><path class="dv-rd3" d="${rd}"/>`;
@@ -2986,21 +2987,26 @@ function dvBar(st) {
 // мешканець двору → картка в дереві: те саме ім'я й прізвище, рік народження ±3 і в описі картки згадано цей рік книги
 function dvTree(p, y) { const age = parseInt(p.age, 10); if (isNaN(age) || !p.n) return null; const by = +y - age, nm = p.n.toLowerCase().slice(0, 4), sr = String(p.s || '').replace(/\(.*?\)|\?/g, '').trim().toLowerCase().slice(0, 3); if (!sr) return null;
   const L = Object.values(P).filter(q => { const qb = parseInt(String(q.b || '').match(/1[67]\d\d/)?.[0] || 0); return qb && Math.abs(qb - by) <= 3 && String(q.n || '').toLowerCase().includes(nm) && String(q.s || '').toLowerCase().startsWith(sr) && String(q.note || '').includes(y); }); return L.length === 1 ? L[0].id : null; }
+// пряма лінія того, хто увійшов: предки по батьку й матері (за деревом) → у яких дворах вони жили
+function dvAnc() { const c = startId(); if (S.ui.dvAncK === c && S.ui.dvAnc) return S.ui.dvAnc; const m = new Map(); (function up(id, g) { if (!id || !P[id] || m.has(id)) return; m.set(id, g); up(P[id].f, g + 1); up(P[id].mo, g + 1); })(c, 0); S.ui.dvAncK = c; S.ui.dvAnc = m; return m; }
+function dvLineIds(h, y) { const A = dvAnc(); return (h.people || []).map(p => dvTree(p, y)).filter(id => id && A.get(id) > 0); }
+function dvLineMap(D, y) { const k = y + ':' + D.length + ':' + startId(); if (S.ui.dvLmK !== k) { const m = {}; D.forEach(h => { const l = dvLineIds(h, y); if (l.length) m[h.id] = l; }); S.ui.dvLm = m; S.ui.dvLmK = k; } return S.ui.dvLm; }
+const dvKin = id => { const g = dvAnc().get(id); return g ? kinWord(g, 0, P[id]?.sex === 'f') : ''; };
 const DV_BOOK = { '60294': 'Рум\'янцевський опис Вороньків 1767 р., ЦДІАК, ф. 57, оп. 1, спр. 169', '60295': 'Рум\'янцевський опис Веприка 1767 р., ЦДІАК, ф. 57, оп. 1, спр. 170', '60556': 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' };
 const dvScanUrl = x => `/api/data?scan=${x.v}-${x.f}`;
 function dvScanOpen(id) { const st = dvState(), h = ((S.ui.dvD || {})[st.vil] || {})[st.y]?.find(x => x.id === id); if (!h?.scan?.length) return; ev('open', 'dvory', 'scan:' + id);
   viewer({ title: `${DV_VIL[st.vil]} ${st.y}: ${dvLabel(h)} — сторінки книги`, pages: h.scan.map(dvScanUrl), thumbs: h.scan.map(dvScanUrl), line: h.scan.map(x => (x.list ? 'вуличний список — ' : '') + 'кадр ' + x.f).join(' · '), src: DV_BOOK[h.scan[0].v] + ' · Архіум ЦДІАК: https://archium.cdiak.archives.gov.ua/file-viewer/' + h.scan[0].v }); }
 function dvPanel(st) {
   const d = S.ui.dvD || {}, D = (d[st.vil] || {})[st.y] || [], h = D.find(x => x.id === st.sel);
-  if (!h) { const O = D.filter(x => x.ours); return `<h3>${DV_VIL[st.vil]}, ${st.y}</h3><p class="small muted">Натисніть на хату. Двори з прізвищами нашого дерева:</p><div class="dv-ol">${O.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">★ ${esc(dvLabel(x))}</button>`).join('') || '<span class="small muted">немає</span>'}</div>`; }
+  if (!h) { const LM = dvLineMap(D, st.y), LN = D.filter(x => LM[x.id]), O = D.filter(x => x.ours && !LM[x.id]); return `<h3>${DV_VIL[st.vil]}, ${st.y}</h3>${LN.length ? `<p class="small"><b class="dv-lnt">◆ Ваша пряма лінія</b> — двори, де жили ваші предки (за деревом):</p><div class="dv-ol">${LN.map(x => `<button class="dv-chip dv-chl" data-dvsel="${esc(x.id)}">◆ ${esc(dvLabel(x))}<small>${esc(LM[x.id].map(id => short(P[id]) + ' — ' + dvKin(id)).join('; '))}</small></button>`).join('')}</div>` : `<p class="small muted">Тут ваших прямих предків (за деревом) не знайдено.</p>`}<p class="small muted">Натисніть на хату. Інші двори з прізвищами нашого дерева:</p><div class="dv-ol">${O.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">★ ${esc(dvLabel(x))}</button>`).join('') || '<span class="small muted">немає</span>'}</div>`; }
   const L = S.ui.dvL || dvLayout(D, st.vil), k = L.order.indexOf(h.id), nb = [L.order[k - 1], L.order[k + 1]].filter(Boolean).map(id => D.find(x => x.id === id));
   const live = DV_LIVE.filter(([k]) => h.live?.[k]).map(([k, e, t]) => `<span class="dv-lv" title="${t}">${e} <b>${esc(h.live[k])}</b> <i>${t}</i></span>`).join('');
   const sur = dvSur(h), vs = DV_VIL[st.vil].slice(0, 6), docs = (S.data?.documents || []).filter(x => x.title && x.title.includes(st.y) && x.title.includes(vs) && ((h.no && new RegExp('№\\s?' + h.no + '(?!\\d)').test(x.title)) || (sur.length > 3 && x.title.includes(sur.slice(0, -2)))));
-  const ppl = (h.people || []).map(p => { const tid = dvTree(p, st.y); return `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}${tid ? ` <a class="dv-tl" href="${href('p', tid)}" title="Картка в дереві: ${esc(short(P[tid]))}">у дереві →</a>` : ''}${p.book ? ` <small class="muted">(у книзі: ${esc(p.book)})</small>` : ''}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`; }).join('');
+  const ppl = (h.people || []).map(p => { const tid = dvTree(p, st.y); return `<li>${dvFig(p, 'dv-pf')}<span>${esc([p.n, p.pt, p.s].filter(Boolean).join(' '))}${tid ? `${dvAnc().get(tid) > 0 ? ` <b class="dv-kin">◆ ${esc(dvKin(tid))}</b>` : ''} <a class="dv-tl" href="${href('p', tid)}" title="Картка в дереві: ${esc(short(P[tid]))}">у дереві →</a>` : ''}${p.book ? ` <small class="muted">(у книзі: ${esc(p.book)})</small>` : ''}</span><i>${esc(p.role || '')}</i><b class="mono">${esc(p.age || '')}</b></li>`; }).join('');
   return `<button class="dv-x" data-dvsel="" aria-label="Закрити">×</button>
     <p class="dv-k small muted">${/^\d/.test(h.no || '') ? 'Двір №' + esc(h.no) : esc(h.type || 'Двір')}${h.street ? ' · ' + esc(h.side || '') + (h.sno ? ', №' + esc(h.sno) + ' у вуличному списку' : '') : ''}</p>
     <h3 class="dv-h">${esc(h.head || h.owner_list || '—')}</h3>
-    <p class="small">${[dvSt(h.status), h.type && h.no ? h.type : '', h.khaty ? 'хат: ' + h.khaty : ''].filter(Boolean).map(esc).join(' · ')}${h.ours ? ' <span class="dv-ours">★ прізвище з нашого дерева</span>' : ''}</p>
+    <p class="small">${[dvSt(h.status), h.type && h.no ? h.type : '', h.khaty ? 'хат: ' + h.khaty : ''].filter(Boolean).map(esc).join(' · ')}${h.ours ? ' <span class="dv-ours">★ прізвище з нашого дерева</span>' : ''}</p>${(() => { const l = dvLineIds(h, st.y); return l.length ? `<p class="dv-lnbox"><b>◆ Ваша пряма лінія.</b> Тут жили: ${l.map(id => `<a href="${href('p', id)}">${esc(short(P[id]))}</a> — ${esc(dvKin(id))}`).join('; ')}. <span class="muted">(за деревом; хто це в книзі — Є припущення на підставі імені, віку й прізвища)</span></p>` : ''; })()}
     ${h.street ? `<p class="small muted">Вулиця: ${esc(h.street)}</p>` : ''}
     ${h.note ? `<p class="small dv-note">Примітка: ${esc(h.note)}${docs.length ? ` Запис: ${docs.map(x => `<a href="#" data-doc="${esc(x.id)}">${esc(x.title)}</a>`).join('; ')}.` : ''}</p>` : ''}
     ${(h.people || []).length ? `<div class="dv-fam">${h.people.slice(0, 9).map(p => dvFig(p)).join('')}</div>` : ''}
