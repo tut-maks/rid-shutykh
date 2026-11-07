@@ -9,6 +9,8 @@
 """
 import sys
 from PIL import Image
+import os
+GAP = int(os.environ.get("PN_GAP", "3"))
 
 out = sys.argv[1]
 groups, cur = [], []
@@ -37,11 +39,11 @@ for g in groups:
     rows.append(row)
 
 W = max(r.width for r in rows)
-H = sum(r.height for r in rows) + 3 * (len(rows) - 1)
+H = sum(r.height for r in rows) + GAP * (len(rows) - 1)
 res = Image.new('RGB', (W, H), (200, 200, 200))
 y = 0
 for r in rows:
-    res.paste(r, (0, y)); y += r.height + 3
+    res.paste(r, (0, y)); y += r.height + GAP
 res.save(out, quality=92)
 t = res.copy(); t.thumbnail((420, 420)); t.save(out[:-4] + '-t.jpg', quality=85)
 print(out, res.size)
