@@ -898,9 +898,6 @@ main{padding-block:14px 60px}
 .top .nav a.nav-q:hover{background:#F3E8EA}
 .top .nav a.nav-q[aria-current=page]{background:var(--wine);color:#fff}
 .top .nav a.nav-q::after{display:none!important}
-.top .nav a.nav-hist{background:#F3E8EA;border-radius:999px;padding:6px 14px!important;color:var(--wine);align-self:center;line-height:1.2}
-.top .nav a.nav-hist::after{display:none!important}
-.top .nav a.nav-hist[aria-current=page]{background:var(--wine);color:#fff}
 .top .nav a .bn-badge.in{margin-left:6px}
 .psel-in{width:100%}
 #psug{max-height:46vh}
