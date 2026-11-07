@@ -1738,3 +1738,4 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .dv-lnbox{background:#FFF6DC;border-left:3px solid #E0A020;padding:8px 10px;margin:8px 0;font-size:14px}
 .dv-kin{color:#9A6A00;font-size:12px;white-space:nowrap}
 .dv-kup{margin:0;padding-left:18px;font-size:14px}.dv-kup li{margin:3px 0}
+.hshot{white-space:nowrap;font-size:.9em;text-decoration:none;border-bottom:1px dotted currentColor;margin-left:2px}
