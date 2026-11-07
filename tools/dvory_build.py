@@ -138,6 +138,38 @@ if '1767' in D.get('voronky', {}) and '1782' in D.get('voronky', {}):
                 h1 = next(x for x in D['voronky']['1767'] if x['id'] == k)
                 h1.setdefault('link', []).append({'id': h2['id'], 'who': v})
 
+# Скани для кожного двору: кадри Архіуму (60294 — Вороньки 1767, спр.169; 60295 — Веприк 1767, спр.170; 60556 — Вороньки 1782, спр.435).
+# Вороньки 1767: аркуш → кадр за таблицею, прочитаною з номерів аркушів на кадрах (07.11): ректо N стоїть праворуч на кадрі.
+def _vor_frame(a):
+    if a <= 306: return a + 23
+    if a <= 337: return a + 22
+    if a == 338: return 360
+    if a <= 352: return a + 23
+    if a <= 392: return a + 24
+    return a + 26
+def _frames_of(s):
+    out = set()
+    for a, b in _re.findall(r'(\d+)\s*[-–]\s*(\d+)', s or ''): out.update(range(int(a), int(b) + 1))
+    out.update(int(x) for x in _re.findall(r'\d+', _re.sub(r'(\d+)\s*[-–]\s*(\d+)', '', s or '')))
+    return out
+def _ark_frames(s):
+    out = set()
+    for m in _re.finditer(r'(\d+)(зв)?(?:\s*[-–]\s*(\d+)(зв)?)?', s or ''):
+        a = int(m.group(1)); a1 = a + 1 if m.group(2) else a
+        b = int(m.group(3)) if m.group(3) else a; b1 = b + 1 if (m.group(4) or (not m.group(3) and m.group(2))) else b
+        for x in range(a1, max(a1, b1) + 1):
+            if 200 <= x <= 402: out.add(_vor_frame(x))
+    return out
+for _v in D:
+    for _y in D[_v]:
+        vw = {'voronky1767': '60294', 'veprik1767': '60295', 'voronky1782': '60556'}[_v + _y]
+        for h in D[_v][_y]:
+            fr = _frames_of(h.get('kadr', ''))
+            if _v + _y == 'voronky1767' and not fr: fr = _ark_frames(h.get('ark', ''))
+            sc = [{'v': vw, 'f': f} for f in sorted(fr)[:6]]
+            for f in sorted(_frames_of(h.get('list_frame', ''))): sc.append({'v': vw, 'f': f, 'list': 1})
+            h['scan'] = sc
+
 json.dump(D, open(R + 'facts/dvory/dvory.json', 'w'), ensure_ascii=False)
 for v in D:
     for y in D[v]:

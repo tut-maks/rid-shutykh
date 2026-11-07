@@ -145,6 +145,15 @@ export default handler(async (req, res, ctx, url) => {
       track(me.id, ctx.sid, 'open', 'dvory', 'dvory');
       return send(res, 200, { dvory: d });
     }
+    const sc = url?.searchParams?.get('scan'); // скан сторінки книги для карти дворів: лише кадри трьох справ ЦДІАК (Архіум), лише тим, хто увійшов
+    if (sc) { const m = /^(60294|60295|60556)-(\d{1,3})$/.exec(sc); if (!m) return fail(res, 400, 'bad');
+      let ids = null; try { ids = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'facts/dvory/archium_frames.json'), 'utf8'))[m[1]]; } catch {}
+      const id = ids?.[+m[2] - 1]; if (!id || !/^\d{5,9}$/.test(id)) return fail(res, 404, 'not_found');
+      const r = await fetch(`https://archium.cdiak.archives.gov.ua/static/files/${id.slice(0, 3)}/${id}.jpg`).catch(() => null);
+      if (!r || !r.ok) return fail(res, 502, 'archium');
+      const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 4.4e6) return fail(res, 502, 'too_large');
+      res.statusCode = 200; res.setHeader('content-type', 'image/jpeg'); res.setHeader('cache-control', 'private, max-age=604800'); res.setHeader('x-content-type-options', 'nosniff');
+      return res.end(buf); }
     if (url?.searchParams?.get('baza')) { // «База»: усі люди, прочитані в джерелах (і не наші) — facts/baza/src_*.csv з репозиторію; ЛИШЕ власнику (вимога Максима, 06.11)
       if (!can(me, 'owner')) return fail(res, 403, 'forbidden');
       const dir = path.join(process.cwd(), 'facts/baza'), out = [];

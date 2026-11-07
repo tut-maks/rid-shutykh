@@ -131024,5 +131024,409 @@
     }
    ]
   }
+ },
+ {
+  "key": "aro7-mykhailo1924",
+  "kind": "doc",
+  "id": "aro7mykhailo1924",
+  "files": [
+   {
+    "file": "aro7-mykhailo1924-1.jpg",
+    "thumb": "aro7-mykhailo1924-1-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Шутий Михайло, 05.09.1924, Вороньки — список іноземців (Німеччина, 1943)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/70976159",
+   "line": "Список іноземців ITS 063, № 3775: «Шутий Михайло, 05.09.1924, Woronky Tschernigow»; у колонці 8 — дата 19.5.43.",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-ivan1926",
+  "kind": "doc",
+  "id": "aro7ivan1926",
+  "files": [
+   {
+    "file": "aro7-ivan1926-1.jpg",
+    "thumb": "aro7-ivan1926-1-t.jpg"
+   },
+   {
+    "file": "aro7-ivan1926-2.jpg",
+    "thumb": "aro7-ivan1926-2-t.jpg"
+   },
+   {
+    "file": "aro7-ivan1926-3.jpg",
+    "thumb": "aro7-ivan1926-3-t.jpg"
+   },
+   {
+    "file": "aro7-ivan1926-4.jpg",
+    "thumb": "aro7-ivan1926-4-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Шутий (Schuti) Іван, 1926, Веприк — Kalle & Co. (Вісбаден), шахта в Дортмунді, Веферлінген (1942–1945)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/75793051",
+   "line": "Картка фірми Kalle & Co. AG, Вісбаден-Біберіх: № 7362, «Schuti Iwan», 03.11.1926, Weprik/Russ., Hilfswerker (підсобний робітник), прибув 10.8.42, неодружений, вибув 29.07.1943. Шахта «Adolf von Hansemann», Дортмунд, список росіян, № 328: «Schuti Iwan, 3.11.26, Weprik», працював 3.8.43–2.11.43. Список ITS 106, № 580: «Шутий Іван, 03.10.1926, Weprik Tschernigow», з 4.11.1943 — Gerhard-Schacht, Weferlingen; «v.d. amer. Besatzungstruppen abtransportiert April 1945» (вивезений американськими військами у квітні 1945).",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це. Є припущення: усі три записи — одна людина (Іван, нар. 1926 у Веприку) — на підставі імені, прізвища, села, року й того, що дати йдуть одна за одною без перерв (Kalle 10.8.42–29.7.43 → Дортмунд 3.8.43–2.11.43 → Веферлінген з 4.11.43). Дата народження в одному записі 3.10, у двох — 3.11.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-dmytro1915",
+  "kind": "doc",
+  "id": "aro7dmytro1915",
+  "files": [
+   {
+    "file": "aro7-dmytro1915-1.jpg",
+    "thumb": "aro7-dmytro1915-1-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Шутий Дмитро, 1915, Веприк — міська лікарня Лерте (1943)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/70590255",
+   "line": "Міська лікарня Лерте (біля Ганновера), список «Russen», № 179: «Шутий Дмитро, 1915, Weprik»; у лікарні 20.8.–13.9.1943, діагноз «Hypersekretion».",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-levchenko1924",
+  "kind": "doc",
+  "id": "aro7levchenko1924",
+  "files": [
+   {
+    "file": "aro7-levchenko1924-1.jpg",
+    "thumb": "aro7-levchenko1924-1-t.jpg"
+   },
+   {
+    "file": "aro7-levchenko1924-2.jpg",
+    "thumb": "aro7-levchenko1924-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Левченко Іван, 30.01.1924, Веприк — концтабір Штуттгоф (1942)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/4550741",
+   "line": "КТ Штуттгоф, № 15683, Personalbogen: «Lewtschenko Iwan, 30.01.1924, Weprik, Krs. Czernikow»; неодружений, сільгоспробітник, православний, освіта — народна школа; у в'язниці з 17.7.42, у таборі з 10.8.42; заарештований у Данцигу, причина — «seinen Arbeitsplatz verlassen» (залишив робоче місце); батько Овсій (Owschi) Левченко, мати Макрина.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це. Є припущення: батько Івана — Євсевій Іванович Левченко з Веприка (хрещений дітей Павла Яковича Левченка 1910 і 1912 рр.) — на підставі імені (Овсій — народна форма імені Євсевій), прізвища й села.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-dryvynskyi1923",
+  "kind": "doc",
+  "id": "aro7dryvynskyi1923",
+  "files": [
+   {
+    "file": "aro7-dryvynskyi1923-1.jpg",
+    "thumb": "aro7-dryvynskyi1923-1-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-2.jpg",
+    "thumb": "aro7-dryvynskyi1923-2-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-3.jpg",
+    "thumb": "aro7-dryvynskyi1923-3-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-4.jpg",
+    "thumb": "aro7-dryvynskyi1923-4-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-5.jpg",
+    "thumb": "aro7-dryvynskyi1923-5-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-6.jpg",
+    "thumb": "aro7-dryvynskyi1923-6-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-7.jpg",
+    "thumb": "aro7-dryvynskyi1923-7-t.jpg"
+   },
+   {
+    "file": "aro7-dryvynskyi1923-8.jpg",
+    "thumb": "aro7-dryvynskyi1923-8-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Дривинський Володимир, 12.03.1923, Веприк — концтабір Штуттгоф, помер 13.10.1942",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/4453743",
+   "line": "КТ Штуттгоф, № 15659: «Drywinskij Wladimir, 12.03.1923, Weprik, Nowo-Basanski Rayon, Kr. Czernikow»; рішення гестапо Данцига 30.7.1942 — 42 дні табору примусового «виховання» за те, що самовільно залишив роботу; привезений 10.8.42; батьки Петро Дривинський («verschleppt» — вивезений) і Христина, з дому Шиян. Помер 13.10.1942 у лікарні в'язнів КТ Штуттгоф, причина — «серцево-судинна недостатність»; спалений 17.10.1942.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-dryvynskyi1926",
+  "kind": "doc",
+  "id": "aro7dryvynskyi1926",
+  "files": [
+   {
+    "file": "aro7-dryvynskyi1926-1.jpg",
+    "thumb": "aro7-dryvynskyi1926-1-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Дривинський Олексій, 1926, Веприк — Kalle & Co., Вісбаден (1942–1943)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/",
+   "line": "Картка фірми Kalle & Co. AG, Вісбаден-Біберіх: № 7361, «Drywinskij Alexej, 1926, Weprik/Russ.», Hilfswerker, прибув 10.8.42, неодружений, вибув 29.3.43.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-sutuha1924",
+  "kind": "doc",
+  "id": "aro7sutuha1924",
+  "files": [
+   {
+    "file": "aro7-sutuha1924-1.jpg",
+    "thumb": "aro7-sutuha1924-1-t.jpg"
+   },
+   {
+    "file": "aro7-sutuha1924-2.jpg",
+    "thumb": "aro7-sutuha1924-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Сутуга Олексій, 21.04.1924, Веприк — концтабір Штуттгоф, помер 14.03.1943",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/4655445",
+   "line": "КТ Штуттгоф, № 16186: «Sutuga Alexej, 21.04.1924, Wejbrück Kreis Tschernikow»; сільгоспробітник; батько Микола Сутуга; привезений 4.9.42 (Stapo Danzig); «verstorben» (помер) 14.03.1943.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-vasylak1924",
+  "kind": "doc",
+  "id": "aro7vasylak1924",
+  "files": [
+   {
+    "file": "aro7-vasylak1924-1.jpg",
+    "thumb": "aro7-vasylak1924-1-t.jpg"
+   },
+   {
+    "file": "aro7-vasylak1924-2.jpg",
+    "thumb": "aro7-vasylak1924-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Василяк Андрій, 07.04.1924, Веприк — концтабір Штуттгоф, помер 4.12.1942",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/4675810",
+   "line": "КТ Штуттгоф, № 15523: «Wasiljak Andrej, 07.04.1924, Weprik, Kr. Czernikow»; сільгоспробітник; батько помер, мати Ганна, з дому Лукашевська(?); Stapo Bromberg, «Arbeitsverweigerung» (відмова працювати); привезений 6.8.42. Помер 4.12.1942, спалений 8.12.1942.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-halii1927",
+  "kind": "doc",
+  "id": "aro7halii1927",
+  "files": [
+   {
+    "file": "aro7-halii1927-1.jpg",
+    "thumb": "aro7-halii1927-1-t.jpg"
+   },
+   {
+    "file": "aro7-halii1927-2.jpg",
+    "thumb": "aro7-halii1927-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Галій(?) Катерина, 05.12.1927, Веприк — лікарня Св. Йосипа, Потсдам",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/70955928",
+   "line": "Список хворих лікарні Св. Йосипа, Потсдам (ITS 024): «Halÿ (Halij) Katharina, 05.12.1927, Weprik/Ukraine»; місце роботи — Dr. W. Kretschmer(?), Babelsberg II.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це. Є припущення: прізвище — Галай — на підставі написання й села.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-janok1924",
+  "kind": "doc",
+  "id": "aro7janok1924",
+  "files": [
+   {
+    "file": "aro7-janok1924-1.jpg",
+    "thumb": "aro7-janok1924-1-t.jpg"
+   },
+   {
+    "file": "aro7-janok1924-2.jpg",
+    "thumb": "aro7-janok1924-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Янок Микола, 28.08.1924, Веприк — концтабори Штуттгоф і Дахау (1942)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/4502354",
+   "line": "КТ Штуттгоф, № 15680: «Janok Nikolaj, 28.08.1924, Weprik, Kr. Czernikow»; сільгоспробітник, православний; батьки Андрій Янок і Катерина, з дому Тщеленко(?); заарештований Stapo Danzig, причина «seinen Arbeitsplatz verlassen»; привезений 10.8.42; «Überführt am 14.11.42 KL. Dachau» — переведений у Дахау 14.11.1942.",
+   "text": "Документ з архіву Arolsen про жителя Веприка, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це. За словами мами Максима, цей Микола Янок — не з нашої родини Янків.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-turchyn1901",
+  "kind": "doc",
+  "id": "aro7turchyn1901",
+  "files": [
+   {
+    "file": "aro7-turchyn1901-1.jpg",
+    "thumb": "aro7-turchyn1901-1-t.jpg"
+   },
+   {
+    "file": "aro7-turchyn1901-2.jpg",
+    "thumb": "aro7-turchyn1901-2-t.jpg"
+   },
+   {
+    "file": "aro7-turchyn1901-3.jpg",
+    "thumb": "aro7-turchyn1901-3-t.jpg"
+   },
+   {
+    "file": "aro7-turchyn1901-4.jpg",
+    "thumb": "aro7-turchyn1901-4-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Турчин Микола, 25.12.1901, Вороньки — радянський військовополонений, шталаг X B Зандбостель",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/76670389",
+   "line": "Особова картка військовополоненого, шталаг X B (Зандбостель), № 125447: «Turtschin Nikolaj, 25.12.1901, D. Woronki, Kr. Nowobasanskij, Gau Tschernigow», «sowjet. Sold.», селянин (Bauer); зріст 172, волосся чорне, очі блакитні, одружений, дітей 5. 5.7.42 прибув у шталаг X B; 5.7.42 — Gesamthafenbetrieb GmbH (портове підприємство, Бремен); 10.12.42 — Arbeitskommando 301, Handwerker; 20.7.44 — щеплення від тифу.",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-turchyn1911",
+  "kind": "doc",
+  "id": "aro7turchyn1911",
+  "files": [
+   {
+    "file": "aro7-turchyn1911-1.jpg",
+    "thumb": "aro7-turchyn1911-1-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Турчин Пелагея, 1911, Вороньки — анкета іноземця, громада Мозель (1943)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/75813930",
+   "line": "Анкета реєстрації іноземця, громада Мозель: «Turtschin Pelageja, 1911»; неодружена, сільгоспробітниця; прибула 22.4.1943; останнє місце проживання «Woronki, Kreis Tschernigow»; роботодавець Louis Dittmar.",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-samoilyk1922",
+  "kind": "doc",
+  "id": "aro7samoilyk1922",
+  "files": [
+   {
+    "file": "aro7-samoilyk1922-1.jpg",
+    "thumb": "aro7-samoilyk1922-1-t.jpg"
+   },
+   {
+    "file": "aro7-samoilyk1922-2.jpg",
+    "thumb": "aro7-samoilyk1922-2-t.jpg"
+   },
+   {
+    "file": "aro7-samoilyk1922-3.jpg",
+    "thumb": "aro7-samoilyk1922-3-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Самойлик Анна, 19.12.1922, Вороньки — Нідергебра, ткацька фабрика Otto Egeler (1942–1943)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/71028289",
+   "line": "Реєстраційна книга громади Нідергебра, № 35: «Samoilik Anna, 19.12.1922, Woronki Kr. Nowo-Bas.», прибула 10.06.1942. Домовий список Нідергебра на 10.10.1943 — табір остарбайтерів ткацької фабрики Otto Egeler (Bleicherode), № 15, Weberin (ткаля).",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-vovk1922",
+  "kind": "doc",
+  "id": "aro7vovk1922",
+  "files": [
+   {
+    "file": "aro7-vovk1922-1.jpg",
+    "thumb": "aro7-vovk1922-1-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Вовк Анастасія Яківна, 03.04.1922, Вороньки — Люденшайд (1942–1943), повернулася додому",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/70572989",
+   "line": "Amt Lüdenscheid, Kreis Altena (Вестфалія), № 199: «Wowk Anastasija Jakowlewna, 03.04.1922, Woronki»; працювала 6.11.42–7.8.43, примітка «zurück in die Heimat» (повернулася на батьківщину). У тому ж списку № 203 — Величко Олександра Михайлівна, 25.3.22, Вороньки, 6.11.42–11.4.45.",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-lesek1924",
+  "kind": "doc",
+  "id": "aro7lesek1924",
+  "files": [
+   {
+    "file": "aro7-lesek1924-1.jpg",
+    "thumb": "aro7-lesek1924-1-t.jpg"
+   },
+   {
+    "file": "aro7-lesek1924-2.jpg",
+    "thumb": "aro7-lesek1924-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Лесек(?) Іван, 10.03.1924, Вороньки — концтабір Штуттгоф, помер 1.3.1943",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/4549206",
+   "line": "КТ Штуттгоф, № 15871: «Lesek(?) Iwan, 10.03.1924, Woronki, Kr. Czernikow»; сільгоспробітник, православний, неодружений, батьки померли; Stapo Dirschau(?)/Danzig, «Arbeitsvertragsbruch» (порушення трудового договору); привезений 20.8.42. Помер 1.3.1943, спалений 4.3.1943.",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
+ },
+ {
+  "key": "aro7-tsiutsiura1925",
+  "kind": "doc",
+  "id": "aro7tsiutsiura1925",
+  "files": [
+   {
+    "file": "aro7-tsiutsiura1925-1.jpg",
+    "thumb": "aro7-tsiutsiura1925-1-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Arolsen: Цюцюра Володимир, 26.11.1925, Вороньки — зобов'язання робітника (1942)",
+   "place": "",
+   "src": "Arolsen Archives (Бад-Арользен), онлайн-колекція; оригінал скану з сервера архіву, вивантажено 07.11.2026.",
+   "url": "https://collections.arolsen-archives.org/en/search/person/78845836",
+   "line": "Зобов'язання робітника (нім./рос.), № 726: «Zuzura Wladimir, 26.11.1925, Woronki Kreis Tschernigow», підписане 9.5.42; підпис кирилицею «Цюцюра Владимир».",
+   "text": "Документ з архіву Arolsen про жителя Вороньків, якого під час Другої світової війни вивезли до Німеччини. До картки в дереві поки не прив'язано: родина ще не підтвердила, хто це.",
+   "people": []
+  }
  }
 ]

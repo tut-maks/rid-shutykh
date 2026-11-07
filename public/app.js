@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071614';
+const BUILD = '202611071620';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2979,12 +2979,17 @@ function dvBar(st) {
   const all = []; if (st.q) for (const v in d) for (const y in d[v]) { const n = d[v][y].filter(h => dvTxt(h).includes(st.q)).length; if (n && !(v === st.vil && y === st.y)) all.push(`<button class="dv-chip" data-dvgo="${v}|${y}">${DV_VIL[v]} ${y}: ${n}</button>`); }
   return `<div class="seg">${Object.keys(DV_VIL).map(v => `<button data-dvv="${v}" class="${st.vil === v ? 'on' : ''}">${DV_VIL[v]}</button>`).join('')}</div>
     ${st.ys.length < 2 ? `<span class="dv-yr"><b class="mono">${st.y}</b></span>` : `<label class="dv-yr"><span class="mono">${st.ys[0] || ''}</span><input type="range" id="dv-y" min="0" max="${Math.max(0, st.ys.length - 1)}" step="1" value="${st.ys.indexOf(st.y)}" ${st.ys.length < 2 ? 'disabled' : ''} aria-label="Рік книги"><span class="mono">${st.ys[st.ys.length - 1] || ''}</span><b class="mono">${st.y}</b></label>`}
+    <button class="dv-ours-b${S.ui.dvOurs ? ' on' : ''}" data-dvours aria-pressed="${S.ui.dvOurs ? 'true' : 'false'}">★ Показати родичів</button>
     <input type="search" id="dv-q" placeholder="Знайти людину або прізвище" value="${esc(S.ui.dvQ || '')}" aria-label="Пошук">
     <p class="small dv-sum">${D.length} дворів · ${ppl} людей · ★ ${ours}${st.ys.length < 2 ? ` · для ${st.vil === 'veprik' ? 'Веприка' : 'села'} поки є лише ${st.y} р.` : ''}${st.q ? ` · знайдено тут: ${st.hit.size}` : ''}${all.length ? ` · ще: ${all.join(' ')}` : ''}</p>`;
 }
 // мешканець двору → картка в дереві: те саме ім'я й прізвище, рік народження ±3 і в описі картки згадано цей рік книги
 function dvTree(p, y) { const age = parseInt(p.age, 10); if (isNaN(age) || !p.n) return null; const by = +y - age, nm = p.n.toLowerCase().slice(0, 4), sr = String(p.s || '').replace(/\(.*?\)|\?/g, '').trim().toLowerCase().slice(0, 3); if (!sr) return null;
   const L = Object.values(P).filter(q => { const qb = parseInt(String(q.b || '').match(/1[67]\d\d/)?.[0] || 0); return qb && Math.abs(qb - by) <= 3 && String(q.n || '').toLowerCase().includes(nm) && String(q.s || '').toLowerCase().startsWith(sr) && String(q.note || '').includes(y); }); return L.length === 1 ? L[0].id : null; }
+const DV_BOOK = { '60294': 'Рум\'янцевський опис Вороньків 1767 р., ЦДІАК, ф. 57, оп. 1, спр. 169', '60295': 'Рум\'янцевський опис Веприка 1767 р., ЦДІАК, ф. 57, оп. 1, спр. 170', '60556': 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' };
+const dvScanUrl = x => `/api/data?scan=${x.v}-${x.f}`;
+function dvScanOpen(id) { const st = dvState(), h = ((S.ui.dvD || {})[st.vil] || {})[st.y]?.find(x => x.id === id); if (!h?.scan?.length) return; ev('open', 'dvory', 'scan:' + id);
+  viewer({ title: `${DV_VIL[st.vil]} ${st.y}: ${dvLabel(h)} — сторінки книги`, pages: h.scan.map(dvScanUrl), thumbs: h.scan.map(dvScanUrl), line: h.scan.map(x => (x.list ? 'вуличний список — ' : '') + 'кадр ' + x.f).join(' · '), src: DV_BOOK[h.scan[0].v] + ' · Архіум ЦДІАК: https://archium.cdiak.archives.gov.ua/file-viewer/' + h.scan[0].v }); }
 function dvPanel(st) {
   const d = S.ui.dvD || {}, D = (d[st.vil] || {})[st.y] || [], h = D.find(x => x.id === st.sel);
   if (!h) { const O = D.filter(x => x.ours); return `<h3>${DV_VIL[st.vil]}, ${st.y}</h3><p class="small muted">Натисніть на хату. Двори з прізвищами нашого дерева:</p><div class="dv-ol">${O.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">★ ${esc(dvLabel(x))}</button>`).join('') || '<span class="small muted">немає</span>'}</div>`; }
@@ -3004,8 +3009,9 @@ function dvPanel(st) {
     ${(h.link || []).length ? `<h4>${st.y === '1767' ? 'Через 15 років — 1782' : '15 років тому — 1767'}</h4>${h.link.map(l => { const o = (d[st.vil] || {})[l.id.split('-')[1]]?.find(x => x.id === l.id); return o ? `<p class="small"><button class="dv-chip" data-dvjump="${esc(l.id)}">${o.ours ? '★ ' : ''}${esc(dvLabel(o))} →</button><br><span class="muted">Є припущення: ті самі люди — на підставі імені, прізвища й віку: ${esc(l.who.join(', '))}.</span></p>` : ''; }).join('')}` : ''}
     ${nb.length ? `<h4>Сусіди за записом</h4><div class="dv-ol">${nb.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">${x.ours ? '★ ' : ''}${esc(dvLabel(x))}</button>`).join('')}</div>` : ''}
     <h4>Джерело</h4><p class="small">${st.y === '1782' ? 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' : `Рум'янцевський опис 1767 р., ЦДІАК, ф. 57, спр. ${st.vil === 'veprik' ? '170' : '169'}`}${h.ark ? ', ' + esc(h.ark) : ''}${h.kadr ? ', кадр ' + esc(h.kadr) : ''}${h.list_frame ? ', вуличний список — кадр ' + esc(h.list_frame) : ''}</p>
-    ${docs.map(x => `<button class="dv-doc" data-doc="${esc(x.id)}">${x.pages ? `<img src="${img('doc=' + x.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(x.title)}</span><b>Переглянути запис ›</b></button>`).join('')}
-    <p class="small"><a href="${href('dvory', h.id)}">Посилання на цей двір</a></p>`;
+    ${(h.scan || []).length ? `<button class="dv-scan" data-dvscan="${esc(h.id)}"><img src="${dvScanUrl(h.scan[0])}" alt="Сторінка книги" loading="lazy"><span>Сторінка книги з цим двором${h.scan.length > 1 ? ` (${h.scan.length} кадри)` : ''} — відкрити скан ›</span></button><p class="small muted"><a href="https://archium.cdiak.archives.gov.ua/file-viewer/${h.scan[0].v}" target="_blank" rel="noopener">Уся книга в Архіумі ЦДІАК</a> (кадр ${h.scan[0].f})</p>` : ''}
+    ${docs.map(x => `<button class="dv-doc" data-doc=""${esc(x.id)}">${x.pages ? `<img src="${img('doc=' + x.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(x.title)}</span><b>Переглянути запис ›</b></button>`).join('')}
+    <p class="small"><button class="dv-chip" data-dvcopy="${esc(h.id)}">🔗 Скопіювати посилання на цей двір</button></p>`;
 }
 // перегляд: зсув і масштаб (як у карти роду) — тягнути мишкою/пальцем, коліщатко й два пальці — масштаб
 const DVV = { x: 0, y: 0, z: 1 };
@@ -3021,7 +3027,7 @@ function dvPaint() {
   const bar = $('#dvbar'), w = $('#dvw'), pan = $('#dvpanel'); if (!w) return;
   const ae = document.activeElement?.id; bar.innerHTML = dvBar(st); if (ae === 'dv-q') { const q = $('#dv-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
   const key = st.vil + st.y, fresh = w.dataset.key !== key; const { svg, L } = dvSvg(D, st); S.ui.dvL = L;
-  w.innerHTML = svg; w.classList.toggle('enter', fresh); w.dataset.key = key;
+  w.innerHTML = svg; w.classList.toggle('enter', fresh); w.classList.toggle('only-ours', !!S.ui.dvOurs); w.dataset.key = key;
   pan.innerHTML = dvPanel(st); $('#dvwrap').classList.toggle('open', !!(st.sel && D.some(h => h.id === st.sel)));
   if (fresh) { dvFit(); const zmin = innerWidth <= 820 ? .42 : .36; if (DVV.z < zmin && !st.sel) { DVV.z = zmin; const o = D.find(h => h.ours) || D[0]; if (o) { const m = $('#dvmap'), p = L.pos[o.id]; DVV.x = m.clientWidth / 2 - p.x * DVV.z; DVV.y = m.clientHeight / 2 - p.y * DVV.z; dvClamp(); dvApply(); } } }
 }
@@ -3050,8 +3056,11 @@ async function dvMount() {
   addEventListener('resize', () => { if ($('#dvmap')) { dvClamp(); dvApply(); } });
   document.addEventListener('fullscreenchange', () => { const w = $('#dvwrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); setTimeout(dvFit, 60); } });
   const sel = id => { S.ui.dvSel = id || null; dvPaint(); if (id) dvFocus(id, .8); };
-  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dvjump],[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus],[data-dvwolf]'); if (!t) return;
+  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dvours],[data-dvcopy],[data-dvscan],[data-dvjump],[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus],[data-dvwolf]'); if (!t) return;
     const ds = t.dataset;
+    if (t.hasAttribute('data-dvours')) { S.ui.dvOurs = !S.ui.dvOurs; dvPaint(); return; }
+    if (ds.dvcopy) { const u = location.origin + '/' + href('dvory', ds.dvcopy); (navigator.clipboard?.writeText(u) || Promise.reject()).then(() => toast('Посилання скопійовано'), () => prompt('Скопіюйте посилання:', u)); return; }
+    if (ds.dvscan) { dvScanOpen(ds.dvscan); return; }
     if (ds.dvjump) { const [v, y] = ds.dvjump.split('-'); S.ui.dvV = v; S.ui.dvY = y; S.ui.dvSel = ds.dvjump; dvPaint(); setTimeout(() => dvFocus(ds.dvjump, .8), 80); }
     else if (ds.dv != null) { e.preventDefault(); sel(S.ui.dvSel === ds.dv ? null : ds.dv); ev('open', 'dvory', 'dv:' + ds.dv); }
     else if (ds.dvsel != null) sel(ds.dvsel);
