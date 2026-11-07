@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072243';
+const BUILD = '202611072246';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -446,7 +446,7 @@ function layoutTD(center) {
     let order = g.filter(x => x !== c && !outer(x)); const ou = g.filter(outer); order = side === 'L' ? [...ou, ...order, c] : side === 'R' ? [c, ...order, ...ou] : [...g.filter(x => !outer(x)), ...ou];
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
     const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
-    if ((fa || mo) && (r >= DEF || (lim && r >= lim)) && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
+    if ((fa || mo) && ((r >= DEF && !f.deep) || (lim && r >= lim)) && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
     if (fa || mo) {
       let F = fa ? up(fa, r + 1, mo ? 'L' : 'C', lim) : null; let M = mo ? up(mo, r + 1, fa ? 'R' : 'C', lim) : null;
       let mid;
@@ -522,7 +522,7 @@ function treeBar(tabs, extra = '') {
         <button class="btn line small" data-act="t-open">${f.allOpen ? 'Згорнути все' : 'Розгорнути все'}</button>${extra}</div></details>${sxCount()}</div>`;
 }
 // Вибрана гілка — дерево будується заново лише з її людей (+ їхні чоловіки/дружини і ланцюжок від центральної людини до гілки),
-// усе розгорнуто; інших людей на дереві немає
+// пряма лінія гілки розгорнута на всю глибину, брати й сестри та бічні — кнопками ▸N / ▾N, як завжди; інших людей на дереві немає
 function famLayout(center, fam) {
   const f = S.ui.tf ||= {}; const all = Object.keys(P), M = new Set(all.filter(id => (P[id].fam || []).includes(fam)));
   if (!M.size) return layoutTD(center);
@@ -532,13 +532,13 @@ function famLayout(center, fam) {
   const chain = new Set(); (function up(id) { if (!id || !P[id] || chain.has(id)) return; if (ancIn(id)) chain.add(id); up(P[id].f); up(P[id].mo); })(center);
   (function dn(id, seen = new Set()) { (KIDS[id] || []).forEach(k => { if (seen.has(k)) return; seen.add(k); if (M.has(k) || descIn(k)) { chain.add(k); dn(k, seen); } }); })(center);
   let c = center; if (!keep.has(center) && !chain.size) { /* центральна людина з гілкою не пов'язана — будуємо від найдавнішого в гілці */ const r = FAM[fam]?.root; c = r && P[r] ? r : [...M].sort(byBirth)[0]; } else chain.forEach(id => keep.add(id)), keep.add(center);
-  const P0 = P, K0 = KIDS, S0 = SPOUSES, ao = f.allOpen;
+  const P0 = P, K0 = KIDS, S0 = SPOUSES;
   try {
     P = Object.fromEntries([...keep].map(id => [id, P0[id]]));
     KIDS = Object.fromEntries(Object.entries(K0).filter(([id]) => keep.has(id)).map(([id, ks]) => [id, ks.filter(k => keep.has(k))]));
     SPOUSES = Object.fromEntries(Object.entries(S0).filter(([id]) => keep.has(id)).map(([id, ss]) => [id, ss.filter(x => keep.has(x.id))]));
-    f.allOpen = true; const L = layoutTD(c); L.c = c; return L;
-  } finally { P = P0; KIDS = K0; SPOUSES = S0; f.allOpen = ao; }
+    f.deep = true; const L = layoutTD(c); L.c = c; return L;
+  } finally { P = P0; KIDS = K0; SPOUSES = S0; delete f.deep; }
 }
 const isAncOf = (a, b, seen = new Set()) => { /* a — предок b? */ if (!b || seen.has(b) || !P[b]) return false; seen.add(b); const p = P[b]; return p.f === a || p.mo === a || isAncOf(a, p.f, seen) || isAncOf(a, p.mo, seen); };
 function vAll(tabs) {
