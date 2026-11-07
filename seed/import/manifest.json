@@ -133254,5 +133254,58 @@
    "text": "За англійською Вікіпедією, останні роки Сергій і Марія Волконські прожили у Вороньках — маєтку їхньої доньки. За «Історією міст і сіл УРСР», на місці поховання С. Г. Волконського, О. В. Поджіо і М. М. Волконської у Вороньках до 150-річчя повстання декабристів споруджено меморіальний комплекс. Джерела — у розділі «Історія сіл».",
    "people": []
   }
+ },
+ {
+  "key": "map-zannoni1772",
+  "kind": "map",
+  "id": "map_zannoni1772",
+  "files": [
+   {
+    "file": "map-zannoni1772.jpg",
+    "thumb": "map-zannoni1772-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Вороньки («Wronce») на карті Ріцці-Дзанноні 1772 р.",
+   "date": "1772",
+   "year": 1772,
+   "place": "Київський полк / Київська губернія (лівобережжя)",
+   "src": "G. A. Rizzi-Zannoni, «Carte de la Pologne divisée par provinces et palatinats…», Париж, 1772, аркуш № 16 («Karta granic Polski y Russyi…»). Скан — SSEES Library (UCL), Wikimedia Commons, CC BY-SA 4.0; є й примірник Національної бібліотеки Польщі (суспільне надбання).",
+   "url": "https://commons.wikimedia.org/wiki/File:Rizzi-Zannoni_Carte_de_la_Pologne_No_16_1772-ssees.jpg",
+   "villages": [
+    "Вороньки",
+    "Свидовець",
+    "Озеряни"
+   ],
+   "text": "Фрагмент аркуша в повній роздільності. Червоним обведено «Wronce» — Вороньки (знак церкви, на річці). Помаранчевим — «Swirowice» (на місці Свидовця) і «Oseraki» (Озеряни). Поруч — Bobrowica, Basan, Bykow, Zuborik, Bazylia, Mostyzi, Markowka. Веприка під схожою назвою на карті немає; одразу на південь від Вороньків — «Boranow» (що це за село, з карти не встановити). Цей самий фрагмент є на блозі «село Вороньки». Позначки нанесено нами."
+  }
+ },
+ {
+  "key": "map-boplan1650",
+  "kind": "map",
+  "id": "map_boplan1650",
+  "files": [
+   {
+    "file": "map-boplan1650-1.jpg",
+    "thumb": "map-boplan1650-1-t.jpg"
+   },
+   {
+    "file": "map-boplan1650-2.jpg",
+    "thumb": "map-boplan1650-2-t.jpg"
+   }
+  ],
+  "data": {
+   "title": "Вороньки («Wronka») на карті Боплана 1650 р.",
+   "date": "1650",
+   "year": 1650,
+   "place": "Київське воєводство (лівобережжя)",
+   "src": "Г. Л. де Боплан, «Delineatio specialis et accurata Ukrainae…», гравюра В. Гондіуса, Гданськ, 1650. Скан — Wikimedia Commons (суспільне надбання).",
+   "url": "https://commons.wikimedia.org/wiki/File:Delineatio_Specialis_Et_Accurata_Ukrainae.jpg",
+   "villages": [
+    "Вороньки",
+    "Свидовець"
+   ],
+   "text": "Найдавніша знайдена карта з нашим селом. Карта Боплана орієнтована півднем догори (сторінка 1 — як в оригіналі); на сторінці 2 той самий фрагмент перевернуто, щоб північ була вгорі. Червоним обведено «Wronka» — Вороньки на річці «Supoi R.» (Супій), помаранчевим — «Swidowiec» (Свидовець). Поруч — Bykof (Биків), Bialocerkowce (Білоцерківці), Bobrowica, Basan, Kobicz (Кобижча), Iarúspol (Яблунів?). Веприка на карті не видно. Позначки нанесено нами."
+  }
  }
 ]
