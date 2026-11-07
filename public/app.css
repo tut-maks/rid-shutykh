@@ -1715,3 +1715,6 @@ body:has(#layer .scrim) .ivnudge{display:none}
 }
 @media (prefers-reduced-motion:reduce){.dv-cart{display:none}}
 .dv-note{background:#F6EEDC;border-left:3px solid var(--wine);padding:6px 10px;border-radius:6px}
+/* карта дворів — на всю ширину й висоту вікна */
+@media (min-width:821px){.dvwrap{width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);height:calc(100vh - 150px)}}
+@media (max-width:820px){.dvwrap{width:100vw;margin-left:calc(50% - 50vw);border-radius:0;border-left:0;border-right:0;height:calc(100vh - 175px)}}
