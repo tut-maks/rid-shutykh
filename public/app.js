@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072213';
+const BUILD = '202611072236';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2630,7 +2630,8 @@ function dayEvents() {
   const push = (dm, kind, ids, extra) => { if (!dm) return; let nx = new Date(now.getFullYear(), dm.m - 1, dm.d); const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()); if (nx < t0) nx = new Date(now.getFullYear() + 1, dm.m - 1, dm.d); out.push({ dm, kind, ids, extra, ny: nx.getFullYear(), days: Math.round((nx - t0) / 864e5) }); };
   Object.values(P).forEach(p => { push(dmOf(p.b), isLiving(p) ? 'bday' : 'born', [p.id]); push(dmOf(p.d), 'died', [p.id]); });
   S.data.unions.forEach(u => P[u.a] && P[u.b] && push(dmW(u.date), 'wed', [u.a, u.b]));
-  S.data.documents.filter(d => d.type !== 'map').forEach(d => { const dm = dmOf(d.date); if (dm && !/народж|смерт|помер|вінчан|шлюб/i.test(d.title)) push(dm, 'doc', [], d); });
+  // лише історичні документи: без карт, знімків сторінок, фото й сучасних публікацій (дата знімка ≠ подія роду)
+  S.data.documents.filter(d => d.type !== 'map' && !/^(Знімок|Фото|Світлина|Портрет|Карта|Презентац)/i.test(d.title || '') && !/^ph_|^shot|^map_|^koch|^volk/.test(d.id || '')).forEach(d => { const dm = dmOf(d.date); if (dm && dm.y && dm.y < 1991 && !/народж|смерт|помер|вінчан|шлюб/i.test(d.title)) push(dm, 'doc', [], d); });
   return out.sort((a, b) => a.days - b.days || (a.dm.y || 0) - (b.dm.y || 0));
 }
 function evLine(e) {
