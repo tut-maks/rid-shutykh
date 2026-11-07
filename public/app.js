@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072105';
+const BUILD = '202611072107';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3012,6 +3012,7 @@ function dvPanel(st) {
     ${(h.people || []).length ? `<div class="dv-fam">${h.people.slice(0, 9).map(p => dvFig(p)).join('')}</div>` : ''}
     ${ppl ? `<h4>Мешканці</h4><ul class="dv-pl">${ppl}</ul>` : h.owner_list ? `<h4>У вуличному списку</h4><p class="small">${esc(h.owner_list)}</p>` : ''}
     ${live || h.hosp || (h.feats || []).length ? `<h4>Господарство</h4>${live ? `<div class="dv-lvs">${live}</div>` : ''}${(h.feats || []).length ? `<p class="small">${h.feats.map(esc).join(' · ')}</p>` : ''}${h.hosp ? `<p class="small dv-hosp">${esc(h.hosp)}</p>` : ''}` : ''}
+    ${(() => { const ids = new Set((h.people || []).map(p => dvTree(p, st.y)).filter(Boolean)); const K = (S.data?.documents || []).filter(x => (x.people || []).some(id => ids.has(id)) && /^(Купча|Дарча|Уступ)/.test(x.title || '') && +(String(x.date || '').match(/1[67]\d\d/) || [9999])[0] <= +st.y).sort((a, b) => String(a.date).split('.').reverse().join('').localeCompare(String(b.date).split('.').reverse().join(''))); return K.length ? `<h4>Купчі: у кого й коли куплено</h4><ul class="dv-kup">${K.map(x => `<li><a href="#" class="doclink" data-doc="${esc(x.id)}">${esc(x.title.replace(/^Купча\s*/, ''))}</a></li>`).join('')}</ul><p class="small muted">Копії купчих з ЦДІАК (ф. 57). Хто з купчих — ці люди: Є припущення, на підставі імені, прізвища й села.</p>` : ''; })()}
     ${(h.link || []).length ? `<h4>${st.y === '1767' ? 'Через 15 років — 1782' : '15 років тому — 1767'}</h4>${h.link.map(l => { const o = (d[st.vil] || {})[l.id.split('-')[1]]?.find(x => x.id === l.id); return o ? `<p class="small"><button class="dv-chip" data-dvjump="${esc(l.id)}">${o.ours ? '★ ' : ''}${esc(dvLabel(o))} →</button><br><span class="muted">Є припущення: ті самі люди — на підставі імені, прізвища й віку: ${esc(l.who.join(', '))}.</span></p>` : ''; }).join('')}` : ''}
     ${nb.length ? `<h4>Сусіди за записом</h4><div class="dv-ol">${nb.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">${x.ours ? '★ ' : ''}${esc(dvLabel(x))}</button>`).join('')}</div>` : ''}
     <h4>Джерело</h4><p class="small">${st.y === '1782' ? 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' : `Рум'янцевський опис 1767 р., ЦДІАК, ф. 57, спр. ${st.vil === 'veprik' ? '170' : '169'}`}${h.ark ? ', ' + esc(h.ark) : ''}${h.kadr ? ', кадр ' + esc(h.kadr) : ''}${h.list_frame ? ', вуличний список — кадр ' + esc(h.list_frame) : ''}</p>
