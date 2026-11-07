@@ -1675,7 +1675,6 @@ body:has(#layer .scrim) .ivnudge{display:none}
   .dv-an{animation:dvGraze 5s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}.dv-an+.dv-an{animation-delay:1.7s}
   @keyframes dvGraze{0%,100%{transform:none}45%{transform:translateX(2px) rotate(-3deg)}55%{transform:translateX(2px) rotate(2deg)}}
   .dv-mill{transform-box:fill-box;transform-origin:50% 100%;animation:dvSway 6s ease-in-out infinite}@keyframes dvSway{50%{transform:rotate(1.4deg)}}
-  .dv-tree{transform-box:fill-box;transform-origin:50% 100%;animation:dvSway 7s ease-in-out infinite}
   .dv-walk{transform-box:fill-box;animation:dvWalk 14s ease-in-out infinite alternate}@keyframes dvWalk{to{transform:translateX(34px)}}
   .dv-folk image{animation:dvPop .4s ease-out both;animation-delay:calc(var(--j) * 60ms);transform-box:fill-box;transform-origin:50% 100%}
   .dv-fam .dv-f{animation:dvPop .4s ease-out both}
@@ -1696,11 +1695,11 @@ body:has(#layer .scrim) .ivnudge{display:none}
 @media (max-width:1000px) and (min-width:821px){.top .nav a{padding-left:4px!important;padding-right:4px!important;font-size:12.5px}}
 /* карта дворів: дороги з текстурою, тіні, вози, вовк */
 .dv-rd0,.dv-rd1,.dv-rd2,.dv-rd3{fill:none;stroke-linecap:round;stroke-linejoin:round}
-.dv-rd0{stroke:#6E8B3A;stroke-width:50;opacity:.28;filter:url(#dvsoft)}
+.dv-rd0{stroke:#6E8B3A;stroke-width:50;opacity:.2}
 .dv-rd1{stroke:url(#dvtex);stroke-width:38}
 .dv-rd2{stroke:#A47E4C;stroke-width:17;opacity:.45}
 .dv-rd3{stroke:url(#dvtex);stroke-width:12}
-.dh-sh{fill:#3E4A1E;opacity:.22;filter:url(#dvsoft)}
+.dh-sh{fill:#3E4A1E;opacity:.16}
 .dv-cart{pointer-events:none}
 .dv-wolf{cursor:pointer}.dv-wolf image{pointer-events:auto}
 .dv-bub{opacity:0;transition:opacity .25s;pointer-events:none}.dv-bub rect{fill:rgba(255,253,247,.96);stroke:var(--wine);stroke-width:1.5}.dv-bub text{font:italic 15px var(--f-display);fill:var(--wine);text-anchor:middle}
@@ -1739,3 +1738,8 @@ body:has(#layer .scrim) .ivnudge{display:none}
 .dv-kin{color:#9A6A00;font-size:12px;white-space:nowrap}
 .dv-kup{margin:0;padding-left:18px;font-size:14px}.dv-kup li{margin:3px 0}
 .hshot{white-space:nowrap;font-size:.9em;text-decoration:none;border-bottom:1px dotted currentColor;margin-left:2px}
+/* швидкодія «Дворів»: під час руху й масштабу всі анімації на паузі, малюнок — окремим шаром */
+.dvmap.moving .dvw *,.dvmap.drag .dvw *{animation-play-state:paused!important}
+.dvmap.moving .dh-i,.dvmap.drag .dh-i{transition:none}
+.dvw{backface-visibility:hidden}
+.dvsvg image{image-rendering:auto}

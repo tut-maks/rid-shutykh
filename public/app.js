@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072113';
+const BUILD = '202611072117';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2951,7 +2951,7 @@ function dvHouse(h, p, i, st) {
 }
 function dvSvg(D, st) {
   st.line = dvLineMap(D, st.y);
-  const L = dvLayout(D, st.vil);
+  const lc = (S.ui.dvLc ||= {}), lk = st.vil + st.y + ':' + D.length, L = lc[lk] ||= dvLayout(D, st.vil); // розкладка не міняється — рахуємо раз
   const rd = L.roads.map(r => r.d).join(' ');
   const roads = `<path class="dv-rd0" d="${rd}"/><path class="dv-rd1" d="${rd}"/><path class="dv-rd2" d="${rd}"/><path class="dv-rd3" d="${rd}"/>`;
   const labels = L.labels.map(l => `<text class="dv-st" x="${l.x.toFixed(0)}" y="${l.y.toFixed(0)}">${esc(l.t)}</text>`).join('');
@@ -2988,7 +2988,8 @@ function dvBar(st) {
 }
 // мешканець двору → картка в дереві: те саме ім'я й прізвище, рік народження ±3 і в описі картки згадано цей рік книги
 function dvTree(p, y) { const age = parseInt(p.age, 10); if (isNaN(age) || !p.n) return null; const by = +y - age, nm = p.n.toLowerCase().slice(0, 4), sr = String(p.s || '').replace(/\(.*?\)|\?/g, '').trim().toLowerCase().slice(0, 3); if (!sr) return null;
-  const L = Object.values(P).filter(q => { const qb = parseInt(String(q.b || '').match(/1[67]\d\d/)?.[0] || 0); return qb && Math.abs(qb - by) <= 3 && String(q.n || '').toLowerCase().includes(nm) && String(q.s || '').toLowerCase().startsWith(sr) && String(q.note || '').includes(y); }); return L.length === 1 ? L[0].id : null; }
+  if (S.ui.dvPIk !== P) { const I = new Map(); Object.values(P).forEach(q => { const qb = parseInt(String(q.b || '').match(/1[67]\d\d/)?.[0] || 0); if (!qb) return; const k = String(q.s || '').toLowerCase().slice(0, 3); if (!I.has(k)) I.set(k, []); I.get(k).push([q, qb, String(q.n || '').toLowerCase()]); }); S.ui.dvPI = I; S.ui.dvPIk = P; } // покажчик дерева за прізвищем (раз), а не перебір усіх людей для кожного жителя
+  const L = (S.ui.dvPI.get(sr) || []).filter(([q, qb, qn]) => Math.abs(qb - by) <= 3 && qn.includes(nm) && String(q.note || '').includes(y)).map(x => x[0]); return L.length === 1 ? L[0].id : null; }
 // пряма лінія того, хто увійшов: предки по батьку й матері (за деревом) → у яких дворах вони жили
 function dvAnc() { const c = startId(); if (S.ui.dvAncK === c && S.ui.dvAnc) return S.ui.dvAnc; const m = new Map(); (function up(id, g) { if (!id || !P[id] || m.has(id)) return; m.set(id, g); up(P[id].f, g + 1); up(P[id].mo, g + 1); })(c, 0); S.ui.dvAncK = c; S.ui.dvAnc = m; return m; }
 function dvLineIds(h, y) { const A = dvAnc(); return (h.people || []).map(p => dvTree(p, y)).filter(id => id && A.get(id) > 0); }
@@ -3019,12 +3020,14 @@ function dvPanel(st) {
     ${nb.length ? `<h4>Сусіди за записом</h4><div class="dv-ol">${nb.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">${x.ours ? '★ ' : ''}${esc(dvLabel(x))}</button>`).join('')}</div>` : ''}
     <h4>Джерело</h4><p class="small">${st.y === '1782' ? 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' : `Рум'янцевський опис 1767 р., ЦДІАК, ф. 57, спр. ${st.vil === 'veprik' ? '170' : '169'}`}${h.ark ? ', ' + esc(h.ark) : ''}${h.kadr ? ', кадр ' + esc(h.kadr) : ''}${h.list_frame ? ', вуличний список — кадр ' + esc(h.list_frame) : ''}</p>
     ${(h.scan || []).length ? `<button class="dv-scan" data-dvscan="${esc(h.id)}"><img src="${dvScanUrl(h.scan[0])}" alt="Сторінка книги" loading="lazy"><span>Сторінка книги з цим двором${h.scan.length > 1 ? ` (${h.scan.length} кадри)` : ''} — відкрити скан ›</span></button><p class="small muted"><a href="https://archium.cdiak.archives.gov.ua/file-viewer/${h.scan[0].v}" target="_blank" rel="noopener">Уся книга в Архіумі ЦДІАК</a> (кадр ${h.scan[0].f})</p>` : ''}
-    ${docs.map(x => `<button class="dv-doc" data-doc=""${esc(x.id)}">${x.pages ? `<img src="${img('doc=' + x.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(x.title)}</span><b>Переглянути запис ›</b></button>`).join('')}
+    ${docs.map(x => `<button class="dv-doc" data-doc="${esc(x.id)}">${x.pages ? `<img src="${img('doc=' + x.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(x.title)}</span><b>Переглянути запис ›</b></button>`).join('')}
     <p class="small"><button class="dv-chip" data-dvcopy="${esc(h.id)}">🔗 Скопіювати посилання на цей двір</button></p>`;
 }
 // перегляд: зсув і масштаб (як у карти роду) — тягнути мишкою/пальцем, коліщатко й два пальці — масштаб
 const DVV = { x: 0, y: 0, z: 1 };
-function dvApply() { const w = $('#dvw'); if (w) w.style.transform = `translate(${DVV.x}px,${DVV.y}px) scale(${DVV.z})`; }
+let dvRaf = 0; // перетягування й масштаб — не частіше за кадр екрана
+function dvApply() { if (dvRaf) return; dvRaf = requestAnimationFrame(() => { dvRaf = 0; const w = $('#dvw'); if (w) w.style.transform = `translate3d(${DVV.x}px,${DVV.y}px,0) scale(${DVV.z})`; }); }
+let dvStillT = 0; const dvStill = () => { const m = $('#dvmap'); if (!m) return; m.classList.add('moving'); clearTimeout(dvStillT); dvStillT = setTimeout(() => m.classList.remove('moving'), 220); }; // під час руху анімації на паузі
 function dvClamp() { const m = $('#dvmap'), L = S.ui.dvL; if (!m || !L) return; const vw = m.clientWidth, vh = m.clientHeight, w = L.W * DVV.z, h = L.H * DVV.z;
   DVV.x = w <= vw ? (vw - w) / 2 : Math.min(0, Math.max(vw - w, DVV.x)); DVV.y = h <= vh ? (vh - h) / 2 : Math.min(0, Math.max(vh - h, DVV.y)); }
 function dvFit() { const m = $('#dvmap'), L = S.ui.dvL; if (!m || !L) return; DVV.z = Math.max(.2, Math.min(m.clientWidth / L.W, m.clientHeight / L.H)); DVV.x = DVV.y = 0; dvClamp(); dvApply(); }
@@ -3035,8 +3038,14 @@ function dvPaint() {
   st.hit = new Set(st.q ? D.filter(h => dvTxt(h).includes(st.q)).map(h => h.id) : []);
   const bar = $('#dvbar'), w = $('#dvw'), pan = $('#dvpanel'); if (!w) return;
   const ae = document.activeElement?.id; bar.innerHTML = dvBar(st); if (ae === 'dv-q') { const q = $('#dv-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
-  const key = st.vil + st.y, fresh = w.dataset.key !== key; const { svg, L } = dvSvg(D, st); S.ui.dvL = L;
-  w.innerHTML = svg; w.classList.toggle('enter', fresh); w.classList.toggle('only-ours', !!S.ui.dvOurs); w.dataset.key = key;
+  const key = st.vil + st.y, fresh = w.dataset.key !== key;
+  if (!fresh && w.querySelector('.dvsvg')) { // та сама карта: міняємо лише те, що змінилось
+    st.line = dvLineMap(D, st.y); const L = S.ui.dvL, ix = new Map(D.map((h, i) => [h.id, i]));
+    if (S.ui.dvPq !== st.q) w.querySelectorAll('.dh[data-dv]').forEach(el => { const id = el.dataset.dv; el.classList.toggle('dim', !!st.q && !st.hit.has(id)); el.classList.toggle('hit', !!st.q && st.hit.has(id)); });
+    [...new Set([S.ui.dvPs, st.sel])].filter(Boolean).forEach(id => { const el = w.querySelector(`.dh[data-dv="${CSS.escape(id)}"]`), h = D[ix.get(id)]; if (!el || !h || !L.pos[id]) return; const t = document.createElementNS('http://www.w3.org/2000/svg', 'g'); t.innerHTML = dvHouse(h, L.pos[id], ix.get(id), st); el.replaceWith(t.firstElementChild); });
+    w.classList.remove('enter');
+  } else { const { svg, L } = dvSvg(D, st); S.ui.dvL = L; w.innerHTML = svg; w.classList.toggle('enter', fresh); }
+  S.ui.dvPq = st.q; S.ui.dvPs = st.sel; w.classList.toggle('only-ours', !!S.ui.dvOurs); w.dataset.key = key;
   pan.innerHTML = dvPanel(st); $('#dvwrap').classList.toggle('open', !!(st.sel && D.some(h => h.id === st.sel)));
   if (fresh) { dvFit(); const zmin = innerWidth <= 820 ? .42 : .36; if (DVV.z < zmin && !st.sel) { DVV.z = zmin; const o = D.find(h => h.ours) || D[0]; if (o) { const m = $('#dvmap'), p = L.pos[o.id]; DVV.x = m.clientWidth / 2 - p.x * DVV.z; DVV.y = m.clientHeight / 2 - p.y * DVV.z; dvClamp(); dvApply(); } } }
 }
@@ -3055,12 +3064,12 @@ async function dvMount() {
   const map = $('#dvmap'), P_ = new Map(); let st0 = null, pin = null; S.ui.dvMoved = false;
   map.addEventListener('pointerdown', e => { if (S.ui.dvMus && dvAudio?.paused) dvAudio.play().catch(() => {}); if (e.button > 0) return; P_.set(e.pointerId, [e.clientX, e.clientY]); if (P_.size === 1) { st0 = { x: e.clientX, y: e.clientY, ox: DVV.x, oy: DVV.y }; S.ui.dvMoved = false; } if (P_.size === 2) { const [[a, b], [c, d]] = [...P_.values()]; pin = { d: Math.hypot(a - c, b - d), z: DVV.z, ox: DVV.x, oy: DVV.y, cx: (a + c) / 2, cy: (b + d) / 2 }; } });
   map.addEventListener('pointermove', e => { if (!P_.has(e.pointerId)) return; P_.set(e.pointerId, [e.clientX, e.clientY]); const r = map.getBoundingClientRect();
-    if (P_.size === 2 && pin) { const [[a, b], [c, d]] = [...P_.values()]; const nz = Math.max(.15, Math.min(2.5, pin.z * Math.hypot(a - c, b - d) / pin.d)), cx = pin.cx - r.left, cy = pin.cy - r.top; DVV.x = cx - (cx - pin.ox) * nz / pin.z + ((a + c) / 2 - pin.cx); DVV.y = cy - (cy - pin.oy) * nz / pin.z + ((b + d) / 2 - pin.cy); DVV.z = nz; S.ui.dvMoved = true; dvClamp(); dvApply(); return; }
-    if (st0) { const dx = e.clientX - st0.x, dy = e.clientY - st0.y; if (!S.ui.dvMoved && Math.abs(dx) + Math.abs(dy) < 6) return; if (!S.ui.dvMoved) { S.ui.dvMoved = true; map.setPointerCapture?.(e.pointerId); map.classList.add('drag'); } DVV.x = st0.ox + dx; DVV.y = st0.oy + dy; dvClamp(); dvApply(); } });
+    if (P_.size === 2 && pin) { const [[a, b], [c, d]] = [...P_.values()]; const nz = Math.max(.15, Math.min(2.5, pin.z * Math.hypot(a - c, b - d) / pin.d)), cx = pin.cx - r.left, cy = pin.cy - r.top; DVV.x = cx - (cx - pin.ox) * nz / pin.z + ((a + c) / 2 - pin.cx); DVV.y = cy - (cy - pin.oy) * nz / pin.z + ((b + d) / 2 - pin.cy); DVV.z = nz; S.ui.dvMoved = true; dvStill(); dvClamp(); dvApply(); return; }
+    if (st0) { const dx = e.clientX - st0.x, dy = e.clientY - st0.y; if (!S.ui.dvMoved && Math.abs(dx) + Math.abs(dy) < 6) return; if (!S.ui.dvMoved) { S.ui.dvMoved = true; map.setPointerCapture?.(e.pointerId); map.classList.add('drag'); } DVV.x = st0.ox + dx; DVV.y = st0.oy + dy; dvStill(); dvClamp(); dvApply(); } });
   const up = e => { P_.delete(e.pointerId); if (P_.size < 2) pin = null; if (!P_.size) { st0 = null; map.classList.remove('drag'); } };
   map.addEventListener('pointerup', up); map.addEventListener('pointercancel', up);
   map.addEventListener('click', e => { if (S.ui.dvMoved) { e.stopPropagation(); e.preventDefault(); S.ui.dvMoved = false; } }, true);
-  map.addEventListener('wheel', e => { e.preventDefault(); const r = map.getBoundingClientRect(); dvZoom(Math.exp(-e.deltaY / 400), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  map.addEventListener('wheel', e => { e.preventDefault(); const r = map.getBoundingClientRect(); dvStill(); dvZoom(Math.exp(-e.deltaY / 400), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   if (dvMount.bound) return; dvMount.bound = 1; const root = document;
   addEventListener('resize', () => { if ($('#dvmap')) { dvClamp(); dvApply(); } });
   document.addEventListener('fullscreenchange', () => { const w = $('#dvwrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); setTimeout(dvFit, 60); } });
