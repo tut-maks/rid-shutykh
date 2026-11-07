@@ -30,6 +30,10 @@ for g in groups:
     x = 0
     for im in ims:
         row.paste(im, (x, 0)); x += im.width
+    # обрізати порожнє біле поле праворуч (від останньої неповної плитки)
+    import PIL.ImageOps as IO
+    bb = IO.invert(row.convert('L')).point(lambda v: 255 if v > 8 else 0).getbbox()
+    if bb: row = row.crop((0, 0, bb[2], row.height))
     rows.append(row)
 
 W = max(r.width for r in rows)
@@ -38,6 +42,6 @@ res = Image.new('RGB', (W, H), (200, 200, 200))
 y = 0
 for r in rows:
     res.paste(r, (0, y)); y += r.height + 3
-res.save(out, quality=88)
+res.save(out, quality=92)
 t = res.copy(); t.thumbnail((420, 420)); t.save(out[:-4] + '-t.jpg', quality=85)
 print(out, res.size)
