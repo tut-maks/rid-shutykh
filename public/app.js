@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071610';
+const BUILD = '202611071611';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2998,6 +2998,7 @@ function dvPanel(st) {
     ${(h.people || []).length ? `<div class="dv-fam">${h.people.slice(0, 9).map(p => dvFig(p)).join('')}</div>` : ''}
     ${ppl ? `<h4>Мешканці</h4><ul class="dv-pl">${ppl}</ul>` : h.owner_list ? `<h4>У вуличному списку</h4><p class="small">${esc(h.owner_list)}</p>` : ''}
     ${live || h.hosp || (h.feats || []).length ? `<h4>Господарство</h4>${live ? `<div class="dv-lvs">${live}</div>` : ''}${(h.feats || []).length ? `<p class="small">${h.feats.map(esc).join(' · ')}</p>` : ''}${h.hosp ? `<p class="small dv-hosp">${esc(h.hosp)}</p>` : ''}` : ''}
+    ${(h.link || []).length ? `<h4>${st.y === '1767' ? 'Через 15 років — 1782' : '15 років тому — 1767'}</h4>${h.link.map(l => { const o = (d[st.vil] || {})[l.id.split('-')[1]]?.find(x => x.id === l.id); return o ? `<p class="small"><button class="dv-chip" data-dvjump="${esc(l.id)}">${o.ours ? '★ ' : ''}${esc(dvLabel(o))} →</button><br><span class="muted">Є припущення: ті самі люди — на підставі імені, прізвища й віку: ${esc(l.who.join(', '))}.</span></p>` : ''; }).join('')}` : ''}
     ${nb.length ? `<h4>Сусіди за записом</h4><div class="dv-ol">${nb.map(x => `<button class="dv-chip" data-dvsel="${esc(x.id)}">${x.ours ? '★ ' : ''}${esc(dvLabel(x))}</button>`).join('')}</div>` : ''}
     <h4>Джерело</h4><p class="small">${st.y === '1782' ? 'Подвірний перепис Вороньків 1782 р., ЦДІАК, ф. 57, оп. 1, спр. 435' : `Рум'янцевський опис 1767 р., ЦДІАК, ф. 57, спр. ${st.vil === 'veprik' ? '170' : '169'}`}${h.ark ? ', ' + esc(h.ark) : ''}${h.kadr ? ', кадр ' + esc(h.kadr) : ''}${h.list_frame ? ', вуличний список — кадр ' + esc(h.list_frame) : ''}</p>
     ${docs.map(x => `<button class="dv-doc" data-doc="${esc(x.id)}">${x.pages ? `<img src="${img('doc=' + x.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(x.title)}</span><b>Переглянути запис ›</b></button>`).join('')}
@@ -3046,9 +3047,10 @@ async function dvMount() {
   addEventListener('resize', () => { if ($('#dvmap')) { dvClamp(); dvApply(); } });
   document.addEventListener('fullscreenchange', () => { const w = $('#dvwrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); setTimeout(dvFit, 60); } });
   const sel = id => { S.ui.dvSel = id || null; dvPaint(); if (id) dvFocus(id, .8); };
-  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus],[data-dvwolf]'); if (!t) return;
+  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dvjump],[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus],[data-dvwolf]'); if (!t) return;
     const ds = t.dataset;
-    if (ds.dv != null) { e.preventDefault(); sel(S.ui.dvSel === ds.dv ? null : ds.dv); ev('open', 'dvory', 'dv:' + ds.dv); }
+    if (ds.dvjump) { const [v, y] = ds.dvjump.split('-'); S.ui.dvV = v; S.ui.dvY = y; S.ui.dvSel = ds.dvjump; dvPaint(); setTimeout(() => dvFocus(ds.dvjump, .8), 80); }
+    else if (ds.dv != null) { e.preventDefault(); sel(S.ui.dvSel === ds.dv ? null : ds.dv); ev('open', 'dvory', 'dv:' + ds.dv); }
     else if (ds.dvsel != null) sel(ds.dvsel);
     else if (ds.dvv) { S.ui.dvV = ds.dvv; S.ui.dvSel = null; dvPaint(); }
     else if (ds.dvgo) { const [v, y] = ds.dvgo.split('|'); S.ui.dvV = v; S.ui.dvY = y; S.ui.dvSel = null; dvPaint(); }

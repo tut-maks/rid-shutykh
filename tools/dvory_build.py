@@ -117,6 +117,27 @@ for _v in D:
             h['head'] = _shut(h.get('head')); h['sur'] = _shut(h.get('sur'))
             h['note'] = (h.get('note', '') + ' ' if h.get('note') else '') + 'У книзі прізвище записано «Шут»; на сайті пишемо «Шутий» (жінок — «Шута»), як в усьому дереві.'
 
+# 1767 ↔ 1782 (Вороньки): ті самі люди? — за ім'ям, прізвищем і віком (лише чоловіки, різниця 5–24 роки — у книгах вік часто неточний). Лише як «Є припущення».
+def _stem(x): return _re.sub(r'\(.*?\)|[?]', '', x or '').strip()[:4].lower()
+if '1767' in D.get('voronky', {}) and '1782' in D.get('voronky', {}):
+    for h2 in D['voronky']['1782']:
+        hits = {}
+        for q2 in h2['people']:
+            try: a2 = int(q2.get('age') or 0)
+            except ValueError: a2 = 0
+            if not a2 or not q2.get('n') or not _stem(q2.get('s')): continue
+            for h1 in D['voronky']['1767']:
+                for q1 in h1['people']:
+                    try: a1 = int(q1.get('age') or 0)
+                    except ValueError: a1 = 0
+                    if a1 and q1.get('n') == q2['n'] and _stem(q1.get('s')) == _stem(q2['s']) and 5 <= a2 - a1 <= 24 and q1.get('sex') == 'ч' and q2.get('sex') == 'ч':
+                        hits.setdefault(h1['id'], []).append(f"{q2['n']} {q2['s']} ({a1} → {a2})")
+        if hits:
+            h2['link'] = [{'id': k, 'who': v} for k, v in hits.items()]
+            for k, v in hits.items():
+                h1 = next(x for x in D['voronky']['1767'] if x['id'] == k)
+                h1.setdefault('link', []).append({'id': h2['id'], 'who': v})
+
 json.dump(D, open(R + 'facts/dvory/dvory.json', 'w'), ensure_ascii=False)
 for v in D:
     for y in D[v]:
