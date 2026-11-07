@@ -1697,3 +1697,20 @@ body:has(#layer .scrim) .ivnudge{display:none}
 @media (max-width:1600px) and (min-width:1241px){.top .nav{gap:0}.top .nav a{padding-left:9px!important;padding-right:9px!important;font-size:15px}}
 @media (max-width:1240px) and (min-width:1001px){.top .nav{gap:0}.top .nav a{padding-left:6px!important;padding-right:6px!important;font-size:13.5px}}
 @media (max-width:1000px) and (min-width:821px){.top .nav a{padding-left:4px!important;padding-right:4px!important;font-size:12.5px}}
+/* карта дворів: дороги з текстурою, тіні, вози, вовк */
+.dv-rd0,.dv-rd1,.dv-rd2,.dv-rd3{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dv-rd0{stroke:#6E8B3A;stroke-width:50;opacity:.28;filter:url(#dvsoft)}
+.dv-rd1{stroke:url(#dvtex);stroke-width:38}
+.dv-rd2{stroke:#A47E4C;stroke-width:17;opacity:.45}
+.dv-rd3{stroke:url(#dvtex);stroke-width:12}
+.dh-sh{fill:#3E4A1E;opacity:.22;filter:url(#dvsoft)}
+.dv-cart{pointer-events:none}
+.dv-wolf{cursor:pointer}.dv-wolf image{pointer-events:auto}
+.dv-bub{opacity:0;transition:opacity .25s;pointer-events:none}.dv-bub rect{fill:rgba(255,253,247,.96);stroke:var(--wine);stroke-width:1.5}.dv-bub text{font:italic 15px var(--f-display);fill:var(--wine);text-anchor:middle}
+.dv-wolf:hover .dv-bub,.dv-wolf.on .dv-bub{opacity:1}
+.dv-bird{pointer-events:none}
+@media (prefers-reduced-motion:no-preference){
+  .dv-wolf-b{transform-box:fill-box;transform-origin:50% 100%;animation:dvHowl 5s ease-in-out infinite}@keyframes dvHowl{0%,60%,100%{transform:none}70%,85%{transform:rotate(-4deg) scale(1.02)}}
+  .dv-bird{transform-box:fill-box;transform-origin:50% 100%;animation:dvPeck 3.2s ease-in-out infinite}.dv-bird+.dv-bird{animation-delay:1.1s}@keyframes dvPeck{0%,70%,100%{transform:none}78%{transform:rotate(14deg) translateY(1px)}86%{transform:none}}
+}
+@media (prefers-reduced-motion:reduce){.dv-cart{display:none}}

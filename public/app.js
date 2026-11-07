@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611071556';
+const BUILD = '202611071604';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2893,59 +2893,76 @@ function dvKind(h) { const t = h.type || '';
   if (/церк/.test(t) || /священ/.test(h.status)) return 'cerkva'; if (/плецо|выгон/.test(t)) return 'pleco'; if (/огород/.test(t)) return 'horod'; if (/бездвор/.test(t)) return 'khatka';
   return (/двор/.test(t) || Object.keys(h.live || {}).length || (h.feats || []).length) ? 'dvir' : 'khata'; }
 const DV_SZ = { dvir: [104, 88], khata: [80, 75], khatka: [66, 61], pleco: [84, 52], horod: [76, 52], cerkva: [96, 108] };
-// розкладка: «світ» 16:9 під намальований фон; хати — у полі ліворуч від річки (x 4–82 %, y 15–95 %)
+// розкладка «як у живому селі»: вулиці — звивисті дороги, хати по обидва боки в порядку запису, з розкидом; «світ» 16:9 під намальований фон
 function dvLayout(H, vil) {
-  const SW = 128, RH1 = 150, RH2 = 260; let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const streets = []; if (vil === 'veprik') { const G = new Map(); H.forEach(h => { const k = h.street || 'Двори'; if (!G.has(k)) G.set(k, []); G.get(k).push(h); }); for (const [k, L] of G) streets.push({ name: k, side: !/не знайдено/.test(k), L }); streets.sort((a, b) => a.side === b.side ? 0 : a.side ? -1 : 1); }
-  else streets.push({ name: 'Двори в порядку запису в книзі', side: false, L: H });
-  const plan = PR => { let h = 0; streets.forEach(g => { if (g.side) { const r = g.L.filter(x => !dvLeft(x)).length, l = g.L.length - r; h += Math.ceil(Math.max(r, l, 1) / PR) * RH2 + 40; } else h += Math.ceil(g.L.length / PR) * RH1 + 40; }); return h; };
-  let PR = 8, best = 1e9; for (let k = 8; k <= 34; k++) { const r = (k * SW) / plan(k); const d = Math.abs(Math.log(r / 1.62)); if (d < best) { best = d; PR = k; } }
-  const cw = PR * SW + (vil === 'veprik' ? 120 : 40), ch = plan(PR); let W = cw / .74, Hh = W * 9 / 16; if (ch > Hh * .76) { Hh = ch / .76; W = Hh * 16 / 9; }
-  const X0 = W * .08 + (vil === 'veprik' ? 120 : 20); let y = Hh * .15; const pos = {}, roads = [], labels = [], order = [], deco = [];
-  streets.forEach(g => {
-    labels.push({ x: X0, y: y + 6, t: g.name });
-    if (g.side) { const R = g.L.filter(h => !dvLeft(h)), Lf = g.L.filter(dvLeft), n = Math.max(1, Math.ceil(Math.max(R.length, Lf.length) / PR));
-      for (let r = 0; r < n; r++) { const ry = y + 128; const a = R.slice(r * PR, r * PR + PR), b = Lf.slice(r * PR, r * PR + PR), cnt = Math.max(a.length, b.length, 1);
-        roads.push({ d: `M${X0 - 70} ${ry} H${X0 + cnt * SW}`, y: ry });
-        a.forEach((h, i) => { pos[h.id] = { x: X0 + i * SW + SW / 2, y: ry - 20 }; order.push(h.id); });
-        b.forEach((h, i) => { pos[h.id] = { x: X0 + i * SW + SW / 2, y: ry + 112 }; order.push(h.id); });
-        y += RH2; }
-    } else { const n = Math.ceil(g.L.length / PR);
-      for (let r = 0; r < n; r++) { const ry = y + 122, row = g.L.slice(r * PR, r * PR + PR), rev = r % 2 === 1, xa = X0 - 30, xb = X0 + PR * SW + 30;
-        roads.push({ d: `M${xa} ${ry} H${xb}` + (r < n - 1 ? (rev ? '' : ` C${xb + 70} ${ry} ${xb + 70} ${ry + RH1} ${xb} ${ry + RH1}`) : ''), y: ry });
-        if (rev && r < n - 1) roads.push({ d: `M${xa} ${ry} C${xa - 70} ${ry} ${xa - 70} ${ry + RH1} ${xa} ${ry + RH1}` });
-        row.forEach((h, i) => { const j = rev ? PR - 1 - i : i; pos[h.id] = { x: X0 + j * SW + SW / 2, y: ry - 20 }; order.push(h.id); });
-        y += RH1; } }
-    y += 40; });
-  // дерева й кущі між рядами (для краси)
-  const TR = ['verba', 'topolia', 'kush', 'yablunia', 'grusha', 'vyshnia', 'kalyna', 'kush'];
-  for (let k = 0; k < Math.round(W * Hh / 90000); k++) { const x = W * (.07 + rnd() * .76), yy = Hh * (.16 + rnd() * .74); if (Object.values(pos).some(p => Math.abs(p.x - x) < 60 && Math.abs(p.y - yy) < 90) || roads.some(r => r.y && Math.abs(r.y - yy) < 26)) continue; deco.push({ n: TR[k % TR.length], x, y: yy, s: .7 + rnd() * .5 }); }
-  return { W, H: Hh, pos, roads, labels, order, deco, main: vil === 'veprik' ? { x: X0 - 70, y1: Hh * .1, y2: y } : null };
+  const SW = 140, RH = 285; let seed = vil === 'veprik' ? 23 : 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const groups = []; if (vil === 'veprik') { const G = new Map(); H.forEach(h => { const k = h.street || 'Двори'; if (!G.has(k)) G.set(k, []); G.get(k).push(h); }); for (const [k, L] of G) groups.push({ name: k, side: !/не знайдено/.test(k), L }); groups.sort((a, b) => a.side === b.side ? 0 : a.side ? -1 : 1); }
+  else groups.push({ name: 'Двори в порядку запису в книзі', side: false, L: H });
+  groups.forEach(g => { if (g.side) { g.up = g.L.filter(h => !dvLeft(h)); g.dn = g.L.filter(dvLeft); } else { g.up = g.L.filter((_, i) => i % 2 === 0); g.dn = g.L.filter((_, i) => i % 2 === 1); } });
+  const rowsOf = (g, PR) => Math.max(1, Math.ceil(Math.max(g.up.length, g.dn.length) / PR));
+  const plan = PR => groups.reduce((a, g) => a + rowsOf(g, PR) * RH + 50, 0);
+  let PR = 6, best = 1e9; for (let k = 5; k <= 30; k++) { const d = Math.abs(Math.log((k * SW) / plan(k) / 1.62)); if (d < best) { best = d; PR = k; } }
+  const vep = vil === 'veprik', cw = PR * SW + (vep ? 150 : 80), ch = plan(PR); let W = cw / .72, Hh = W * 9 / 16; if (ch > Hh * .74) { Hh = ch / .74; W = Hh * 16 / 9; }
+  const XM = W * .07, X0 = XM + (vep ? 120 : 50); let y = Hh * .17;
+  const pos = {}, roads = [], labels = [], order = [], deco = [], rows = [];
+  const wave = (xa, xb, y0, amp, ph, k) => { const P = []; for (let x = xa; x <= xb + 1; x += 16) P.push([x, y0 + amp * Math.sin((x - xa) / Math.max(1, xb - xa) * Math.PI * k + ph) + amp * .35 * Math.sin((x - xa) / 97 + ph * 2)]); return P; };
+  const yAt = (P, x) => { const i = Math.max(0, Math.min(P.length - 2, Math.floor((x - P[0][0]) / 16))); const [x1, y1] = P[i], [x2, y2] = P[i + 1]; return y1 + (y2 - y1) * ((x - x1) / ((x2 - x1) || 1)); };
+  const pd = P => 'M' + P.map(p => p[0].toFixed(0) + ' ' + p[1].toFixed(0)).join(' L');
+  groups.forEach(g => {
+    const n = rowsOf(g, PR); let prev = null;
+    for (let r = 0; r < n; r++) {
+      const a = g.up.slice(r * PR, r * PR + PR), b = g.dn.slice(r * PR, r * PR + PR), cnt = Math.max(a.length, b.length, 1);
+      const y0 = y + 130, xa = vep && r === 0 ? XM : X0 - 30, xb = X0 + cnt * SW + 20, P = wave(xa, xb, y0, 22 + rnd() * 16, rnd() * 6, 1 + rnd() * 1.4);
+      roads.push({ d: pd(P), P, len: xb - xa }); rows.push(P);
+      if (r === 0) labels.push({ x: X0 + 10, y: y0 - 128, t: g.name });
+      if (prev) { const side = r % 2 ? prev[prev.length - 1] : prev[0], tgt = r % 2 ? [side[0], yAt(P, Math.min(side[0], P[P.length - 1][0]))] : P[0], dx = r % 2 ? 90 : -90; roads.push({ d: `M${side[0].toFixed(0)} ${side[1].toFixed(0)} C${(side[0] + dx).toFixed(0)} ${side[1].toFixed(0)} ${(tgt[0] + dx).toFixed(0)} ${tgt[1].toFixed(0)} ${tgt[0].toFixed(0)} ${tgt[1].toFixed(0)}` }); }
+      const rev = r % 2 === 1; // змійка: непарний рядок іде справа наліво — сусіди за записом лишаються поруч
+      const put = (L, up) => L.forEach((h, i) => { const j = rev ? cnt - 1 - i : i, x = X0 + j * SW + SW / 2 + (rnd() - .5) * 34, yr = yAt(P, x);
+        pos[h.id] = { x, y: up ? yr - 24 - rnd() * 26 : yr + 104 + rnd() * 26, m: rnd() < .45, s: .92 + rnd() * .16 }; });
+      put(a, true); put(b, false); a.forEach((h, i) => { order.push(h.id); if (b[i]) order.push(b[i].id); }); b.slice(a.length).forEach(h => order.push(h.id));
+      prev = P; y += RH; }
+    y += 50; });
+  const main = vep ? (() => { const P = []; for (let yy = Hh * .1; yy <= y; yy += 16) P.push([XM + 18 * Math.sin(yy / 260) , yy]); return P; })() : null;
+  if (main) roads.unshift({ d: 'M' + main.map(p => p[0].toFixed(0) + ' ' + p[1].toFixed(0)).join(' L'), main: true });
+  // дерева, кущі, копиці — для краси; не на дорогах і не на хатах
+  const near = (x, yy, dx, dy) => Object.values(pos).some(p => Math.abs(p.x - x) < dx && yy > p.y - dy && yy < p.y + 30) || rows.some(P => x >= P[0][0] - 10 && x <= P[P.length - 1][0] + 10 && Math.abs(yAt(P, x) - yy) < 40);
+  const TR = ['verba', 'topolia', 'kush', 'yablunia', 'grusha', 'vyshnia', 'kalyna', 'kush', 'topolia', 'malva'];
+  Object.entries(pos).forEach(([id, p], k) => { if (rnd() < .5) { const x = p.x + (rnd() < .5 ? -1 : 1) * (58 + rnd() * 20), yy = p.y - 18 - rnd() * 22; if (!near(x, yy, 40, 60)) deco.push({ n: ['yablunia', 'grusha', 'vyshnia', 'kalyna', 'malva', 'kush'][k % 6], x, y: yy, s: .7 + rnd() * .35 }); } });
+  for (let k = 0; k < Math.round(W * Hh / 60000); k++) { const x = W * (.05 + rnd() * .76), yy = Hh * (.14 + rnd() * .8); if (near(x, yy, 70, 100)) continue; deco.push({ n: TR[k % TR.length], x, y: yy, s: .75 + rnd() * .55 }); }
+  return { W, H: Hh, pos, roads, labels, order, deco, rows };
 }
 function dvHouse(h, p, i, st) {
   const k = dvKind(h), ours = h.ours, sel = st.sel === h.id, cls = 'dh k-' + k + (ours ? ' ours' : '') + (sel ? ' sel' : '') + (st.q && !st.hit.has(h.id) ? ' dim' : '') + (st.q && st.hit.has(h.id) ? ' hit' : '');
-  const sz = DV_SZ[k], r = dvHash(h.id), f = h.feats || [], hs = String(h.hosp || '');
-  const smoke = /khat|dvir/.test(k) && (i % 3 === 0 || ours) ? `<g class="smoke" transform="translate(${k === 'dvir' ? -17 : -11},${k === 'dvir' ? -78 : -70})"><circle r="3.5"/><circle r="3.5"/></g>` : '';
+  const sz = DV_SZ[k], r = dvHash(h.id), f = h.feats || [], hs = String(h.hosp || ''), mx = p.m && k !== 'cerkva' ? -1 : 1;
+  const chim = { dvir: [-17, -78], khata: [-11, -70], khatka: [-9, -60] }[k];
+  const smoke = chim && (i % 3 === 0 || ours) ? `<g class="smoke" transform="translate(${chim[0] * mx},${chim[1]})"><circle r="3.5"/><circle r="3.5"/></g>` : '';
   const mill = f.includes('млин') ? dvImg(/вод|став|гребл/i.test(hs) ? 'vodmlyn' : 'vitriak', sz[0] / 2 - 4, -70, 52, 70, 'dv-mill') : '';
   const hive = f.includes('пасіка') ? dvImg('pasika', -sz[0] / 2 - 36, -36, 40, 38) : '';
   const hay = f.includes('сінокіс') && !mill ? dvImg(r % 2 ? 'kopytsia' : 'stih', sz[0] / 2 - 10, -28, 30, 28) : '';
   const plow = f.includes('ниви') && !mill && r % 3 === 0 ? dvImg('plug', -sz[0] / 2 - 18, -14, 30, 20) : '';
-  const prop = /khat|dvir/.test(k) && !hive && r % 4 === 1 ? dvImg(['krynytsia', 'drova', 'bochky', 'viz', 'snopy', 'lava', 'glek'][r % 7], -sz[0] / 2 - 30, -34, 34, 34) : '';
+  const prop = /khat|dvir/.test(k) && !hive && r % 3 === 1 ? dvImg(['krynytsia', 'drova', 'bochky', 'snopy', 'lava', 'glek', 'koshyk', 'koromyslo'][r % 8], -sz[0] / 2 - 30, -34, 34, 34) : '';
+  const birds = /khat|dvir/.test(k) && r % 5 === 2 ? dvImg(['kurka', 'piven', 'huska', 'kachka'][r % 4], sz[0] / 2 - 2, -8, 20, 20, 'dv-bird') + dvImg(['kurka', 'huska', 'kachka', 'kurka'][(r >>> 3) % 4], sz[0] / 2 + 14, -4, 17, 17, 'dv-bird') : r % 11 === 3 ? dvImg(r % 2 ? 'pes' : 'kit', sz[0] / 2 - 4, -16, 26, 24, 'dv-bird') : '';
   const an = Object.keys(DV_ANI).filter(x => +h.live?.[x] > 0).slice(0, 3).map((x, j) => dvImg(DV_ANI[x], -sz[0] / 2 + 2 + j * 30, 2, 30, 24, 'dv-an')).join('');
   const star = ours ? `<g class="dh-star" transform="translate(0,${-sz[1] - 6})"><circle r="10"/><text y="4">★</text></g>` : '';
-  const folk = sel && (h.people || []).length ? `<g class="dv-folk">${h.people.slice(0, 10).map((pp, j) => { const fh = 46 * dvFigH(pp); return `<image href="/img/dv/p/${dvFigN(pp)}.webp" x="${-sz[0] / 2 - 10 + j * 19}" y="${20 - fh + 22}" width="${fh * .45}" height="${fh}" style="--j:${j}"/>`; }).join('')}</g>` : '';
-  return `<g class="${cls}" data-dv="${esc(h.id)}" transform="translate(${p.x.toFixed(0)},${p.y.toFixed(0)})" style="--i:${Math.min(i, 60)}" role="button" tabindex="0" aria-label="${esc(dvLabel(h))}"><title>${esc(dvLabel(h))}</title><rect class="dh-hit" x="${-sz[0] / 2}" y="${-sz[1]}" width="${sz[0]}" height="${sz[1] + 26}"/>${hive}${prop}${plow}${dvImg(k, -sz[0] / 2, -sz[1] + 6, sz[0], sz[1], 'dh-i')}${smoke}${mill}${hay}${an}${star}<text class="dh-l" x="0" y="${folk ? 52 : 20}">${esc(dvLabel(h)).slice(0, 18)}</text>${folk}</g>`;
+  const folk = sel && (h.people || []).length ? `<g class="dv-folk">${h.people.slice(0, 10).map((pp, j) => { const fh = 46 * dvFigH(pp); return `<image href="/img/dv/p/${dvFigN(pp)}.webp" x="${-sz[0] / 2 - 10 + j * 19}" y="${42 - fh}" width="${(fh * .45).toFixed(0)}" height="${fh.toFixed(0)}" style="--j:${j}"/>`; }).join('')}</g>` : '';
+  return `<g class="${cls}" data-dv="${esc(h.id)}" transform="translate(${p.x.toFixed(0)},${p.y.toFixed(0)}) scale(${p.s.toFixed(2)})" style="--i:${Math.min(i, 60)}" role="button" tabindex="0" aria-label="${esc(dvLabel(h))}"><title>${esc(dvLabel(h))}</title><rect class="dh-hit" x="${-sz[0] / 2}" y="${-sz[1]}" width="${sz[0]}" height="${sz[1] + 26}"/><ellipse class="dh-sh" cx="0" cy="2" rx="${sz[0] * .46}" ry="7"/>${hive}${prop}${plow}<g transform="scale(${mx},1)">${dvImg(k, -sz[0] / 2, -sz[1] + 6, sz[0], sz[1], 'dh-i')}</g>${smoke}${mill}${hay}${birds}${an}${star}<text class="dh-l" x="0" y="${folk ? 52 : 20}">${esc(dvLabel(h)).slice(0, 18)}</text>${folk}</g>`;
 }
 function dvSvg(D, st) {
   const L = dvLayout(D, st.vil);
-  const roads = L.roads.map(r => `<path class="dv-road" d="${r.d}"/>`).join('');
-  const main = L.main ? `<path class="dv-road main" d="M${L.main.x} ${L.main.y1} V${L.main.y2}"/>${L.roads.filter(r => r.y).map(r => `<path class="dv-road" d="M${L.main.x} ${r.y} H${L.main.x + 70}"/>`).join('')}<text class="dv-st" transform="translate(${L.main.x - 22},${L.main.y1 + 220}) rotate(-90)">велика дорога</text>` : '';
-  const deco = L.deco.map(t => { const w = (t.n === 'topolia' ? 30 : 64) * t.s, hh = (/kush|kalyna/.test(t.n) ? 50 : 84) * t.s; return dvImg(t.n, t.x - w / 2, t.y - hh, w, hh, 'dv-tree'); }).join('');
-  const folk = L.order.filter((_, j) => j % 9 === 4).map((id, j) => { const p = L.pos[id]; return dvImg('p/w' + (dvHash(id) % 12), p.x + 46, p.y - 50, 26, 56, 'dv-walk'); }).join('');
-  const river = '';
-  const labels = L.labels.map(l => `<text class="dv-st" x="${l.x}" y="${l.y}">${esc(l.t)}</text>`).join('');
-  const houses = D.map((h, i) => L.pos[h.id] ? dvHouse(h, L.pos[h.id], i, st) : '').join('');
-  return { svg: `<svg class="dvsvg" viewBox="0 0 ${L.W.toFixed(0)} ${L.H.toFixed(0)}" width="${L.W.toFixed(0)}" height="${L.H.toFixed(0)}" role="img" aria-label="Схема дворів ${DV_VIL[st.vil]} ${st.y}"><image href="/img/dv-bg.jpg" x="0" y="0" width="${L.W.toFixed(0)}" height="${L.H.toFixed(0)}" preserveAspectRatio="none"/>${river}${main}${roads}${labels}${deco}<g class="dv-hs">${houses}</g>${folk}</svg>`, L };
+  const rd = L.roads.map(r => r.d).join(' ');
+  const roads = `<path class="dv-rd0" d="${rd}"/><path class="dv-rd1" d="${rd}"/><path class="dv-rd2" d="${rd}"/><path class="dv-rd3" d="${rd}"/>`;
+  const labels = L.labels.map(l => `<text class="dv-st" x="${l.x.toFixed(0)}" y="${l.y.toFixed(0)}">${esc(l.t)}</text>`).join('');
+  const items = [];
+  L.deco.forEach(t => { const w = (t.n === 'topolia' ? 30 : t.n === 'malva' ? 34 : 64) * t.s, hh = (/kush|kalyna/.test(t.n) ? 50 : t.n === 'malva' ? 46 : 84) * t.s; items.push([t.y, dvImg(t.n, t.x - w / 2, t.y - hh, w, hh, 'dv-tree')]); });
+  D.forEach((h, i) => { const p = L.pos[h.id]; if (p) items.push([p.y, dvHouse(h, p, i, st)]); });
+  L.order.filter((_, j) => j % 11 === 5).forEach(id => { const p = L.pos[id]; items.push([p.y + 30, dvImg('p/w' + (dvHash(id) % 12), p.x + 52, p.y - 26, 26, 56, 'dv-walk')]); });
+  items.sort((a, b) => a[0] - b[0]);
+  // вози їдуть дорогами (SMIL animateMotion — працює без скриптів)
+  const long = L.roads.map((r, k) => [r, k]).filter(([r]) => r.P && r.len > 500).sort((a, b) => b[0].len - a[0].len).slice(0, 5);
+  const carts = long.map(([r, k], j) => { const dur = (r.len / 22).toFixed(0), back = j % 2; return `<path id="dvr${k}" d="${r.d}" fill="none" stroke="none"/><g class="dv-cart"><g transform="scale(${back ? -1 : 1},1)"><image href="${DVI('viz' + (j % 6))}" x="-50" y="-70" width="100" height="81"/></g><animateMotion dur="${dur}s" begin="-${(j * 37) % dur}s" repeatCount="indefinite" keyPoints="${back ? '0;1' : '1;0'}" keyTimes="0;1" calcMode="linear"><mpath href="#dvr${k}"/></animateMotion><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.05;.95;1" dur="${dur}s" begin="-${(j * 37) % dur}s" repeatCount="indefinite"/></g>`; }).join('');
+  const wolf = `<g class="dv-wolf" data-dvwolf transform="translate(${(L.W * .875).toFixed(0)},${(L.H * .47).toFixed(0)})"><title>Вовк виє, а шо йому ще робити</title><g class="dv-wolf-b">${dvImg('vovk', -38, -76, 76, 77)}</g><g class="dv-bub" transform="translate(-10,-92)"><rect x="-120" y="-30" width="240" height="34" rx="17"/><text y="-8">Вовк виє, а шо йому ще робити</text></g></g>`;
+  const W = L.W.toFixed(0), Hh = L.H.toFixed(0);
+  return { svg: `<svg class="dvsvg" viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}" role="img" aria-label="Схема дворів ${DV_VIL[st.vil]} ${st.y}"><defs><pattern id="dvtex" patternUnits="userSpaceOnUse" width="360" height="33"><image href="${DVI('road-tex')}" width="360" height="33"/></pattern><filter id="dvsoft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="3"/></filter></defs><image href="/img/dv-bg.jpg" x="0" y="0" width="${W}" height="${Hh}" preserveAspectRatio="none"/>${roads}${labels}${carts}<g class="dv-hs">${items.map(x => x[1]).join('')}</g>${wolf}</svg>`, L };
 }
 function dvState() { const u = S.ui; const d = u.dvD || {}; u.dvV ||= 'voronky'; const ys = Object.keys(d[u.dvV] || {}).sort(); if (!ys.includes(String(u.dvY))) u.dvY = ys[0] || '1767'; return { vil: u.dvV, y: String(u.dvY), ys, sel: u.dvSel, q: (u.dvQ || '').trim().toLowerCase() }; }
 const dvTxt = h => [h.head, h.owner_list, h.sur, ...(h.people || []).map(p => [p.n, p.pt, p.s].join(' '))].join(' ').toLowerCase();
@@ -3028,7 +3045,7 @@ async function dvMount() {
   addEventListener('resize', () => { if ($('#dvmap')) { dvClamp(); dvApply(); } });
   document.addEventListener('fullscreenchange', () => { const w = $('#dvwrap'); if (w) { w.classList.toggle('fs', document.fullscreenElement === w); setTimeout(dvFit, 60); } });
   const sel = id => { S.ui.dvSel = id || null; dvPaint(); if (id) dvFocus(id, .8); };
-  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus]'); if (!t) return;
+  root.addEventListener('click', e => { if (!$('#dvwrap')) return; const t = e.target.closest('[data-dv],[data-dvsel],[data-dvv],[data-dvz],[data-dvgo],[data-dvfs],[data-dvmus],[data-dvwolf]'); if (!t) return;
     const ds = t.dataset;
     if (ds.dv != null) { e.preventDefault(); sel(S.ui.dvSel === ds.dv ? null : ds.dv); ev('open', 'dvory', 'dv:' + ds.dv); }
     else if (ds.dvsel != null) sel(ds.dvsel);
@@ -3036,7 +3053,8 @@ async function dvMount() {
     else if (ds.dvgo) { const [v, y] = ds.dvgo.split('|'); S.ui.dvV = v; S.ui.dvY = y; S.ui.dvSel = null; dvPaint(); }
     else if (ds.dvz) ds.dvz === 'fit' ? dvFit() : dvZoom(ds.dvz === '1' ? 1.35 : 1 / 1.35);
     else if (t.hasAttribute('data-dvfs')) { const w = $('#dvwrap'); if (document.fullscreenElement) document.exitFullscreen?.(); else if (w.requestFullscreen) w.requestFullscreen().catch(() => w.classList.toggle('fs')); else { w.classList.toggle('fs'); setTimeout(dvFit, 60); } }
-    else if (t.hasAttribute('data-dvmus')) dvMusic(!S.ui.dvMus); });
+    else if (t.hasAttribute('data-dvmus')) dvMusic(!S.ui.dvMus);
+    else if (t.hasAttribute('data-dvwolf')) t.classList.toggle('on'); });
   root.addEventListener('keydown', e => { const g = e.target.closest?.('[data-dv]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); sel(g.dataset.dv); }
     if (e.target.id === 'dv-q' && e.key === 'Enter') { const st = dvState(), D = (S.ui.dvD[st.vil] || {})[st.y] || []; const h = st.q && D.find(x => dvTxt(x).includes(st.q)); if (h) sel(h.id); }
     if (e.key === 'Escape' && $('#dvwrap')?.classList.contains('fs') && !document.fullscreenElement) { $('#dvwrap').classList.remove('fs'); setTimeout(dvFit, 60); } });
