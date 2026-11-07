@@ -37,6 +37,8 @@ def village(*ss):
                 return v
     return ''
 
+import os
+RD = {r['id']: r for r in csv.DictReader(open(R + 'facts/obd/readings_shut.csv'), delimiter=';')} if os.path.exists(R + 'facts/obd/readings_shut.csv') else {}
 rows = []
 for id, v in I.items():
     if not v.get('Фамилия'):
@@ -59,6 +61,7 @@ for id, v in I.items():
                                ('ф. ' + v['Номер фонда источника информации']) if v.get('Номер фонда источника информации') else '',
                                ('оп. ' + v['Номер описи источника информации']) if v.get('Номер описи источника информации') else '',
                                ('спр. ' + v['Номер дела источника информации']) if v.get('Номер дела источника информации') else ''] if x)
+    if id in RD: note.append('У рядку скану: ' + RD[id]['прочитано в рядку (родичі, як у джерелі)'] + (' (читання непевне)' if RD[id]['певність'] == 'непевно' else ''))
     note.append(f'ОБД «Мемориал» №{id} ({typ}){"; " + src if src else ""}; https://obd-memorial.ru/html/info.htm?id={id}')
     rows.append({'село': vil or ('Чернігівщина' if 'Чернигов' in bp + pr + lr else ''), 'прізвище': v['Фамилия'], "ім'я": v.get('Имя', ''),
                  'по батькові': v.get('Отчество', ''), 'стать': 'ж' if re.search(r'(вна|чна|ая)$', v.get('Отчество', '') + ' ' + v['Фамилия']) and v.get('Отчество', '').endswith('на') else 'ч',
