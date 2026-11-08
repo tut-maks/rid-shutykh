@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081459';
+const BUILD = '202611081536';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -475,8 +475,6 @@ function layoutTD(center) {
   // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
   const KX = S.ui.kidx ||= {};
   const hasHidden = id => (KIDS[id] || []).some(k => !seen.has(k));
-  /* межа вставки нового блоку не має розрізати подружжя в тому самому ряду: інакше чужа картка стає між чоловіком і дружиною й виглядає як їхній чоловік/дружина (власник, 08.11: Михайло 1920 між Іваном і Ольгою) */
-  const noSplit = (others, x, rows) => { let s = x, ch = true; while (ch) { ch = false; for (const n of others) { if (n.x > s || !rows.includes(n.r)) continue; for (const sp of SPOUSES[n.id] || []) { const m = others.find(o => o.id === sp.id && o.r === n.r); if (m && m.x > s) { s = m.x; ch = true; } } } } return s; };
   const KL = f.allOpen ? null : Object.keys(KX);
   for (let i = 0; i < (KL ? KL.length : A.n.length); i++) {
     const id = KL ? KL[i] : A.n[i].id; if (!KL && id === center) continue;
@@ -486,8 +484,8 @@ function layoutTD(center) {
     let X = null; (KIDS[id] || []).filter(k => !seen.has(k)).sort(sortS).forEach(k => { seen.add(k); const K = down(k, o.r - 1); if (!X) X = K; else { shift(K, sep(X, K)); merge(X, K); } });
     if (X) { shift(X, -Math.min(...X.n.map(n => n.x))); merge(Sb, X); }
     Sb.n = Sb.n.filter(n => n.id !== id);
-    const rowsS = [...new Set(Sb.n.map(n => n.r))], others = A.n.filter(n => n.id !== id), cut = noSplit(others, o.x, rowsS);
-    const left = others.filter(n => n.x <= cut), right = others.filter(n => n.x > cut);
+    const rowsS = [...new Set(Sb.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
+    const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
     let off = o.x; for (const r of rowsS) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Sb.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
     shift(Sb, off);
     let d = 0; for (const r of rowsS) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Sb.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
@@ -501,8 +499,8 @@ function layoutTD(center) {
     const o = A.n.find(x => x.id === id); const keep = SIBX[id]; if (keep === undefined) SIBX[id] = 1; // з батьками подружжя одразу видно і його братів та сестер (праворуч від нього)
     const Ub = up(id, o.r, 'R'); if (keep === undefined) delete SIBX[id];
     Ub.n = Ub.n.filter(n => n.id !== id); if (!Ub.n.length) return; shift(Ub, o.x);
-    const rowsU = [...new Set(Ub.n.map(n => n.r))], others = A.n.filter(n => n.id !== id), cut = noSplit(others, o.x, rowsU);
-    const left = others.filter(n => n.x <= cut), right = others.filter(n => n.x > cut);
+    const rowsU = [...new Set(Ub.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
+    const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
     let off = 0; for (const r of rowsU) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Ub.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
     shift(Ub, off);
     let d = 0; for (const r of rowsU) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Ub.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
@@ -1066,15 +1064,17 @@ function vQuestions() {
   const fl = [['open', 'Відкриті'], ['new', 'Нові'], ['work', 'Шукаємо'], ['found', 'Знайдено'], ['closed', 'Закриті'], ['all', 'Усі']];
   // відмітка «переглянуто» — для бейджа відповідей
   try { localStorage.setItem('rs_qseen', new Date().toISOString()); } catch {}
-  return `<div class="qpage">
-    <div class="sec" style="gap:6px"><h1>Запитання й уточнення</h1>
-      <p class="muted" style="margin:0">Бачите помилку, знаєте щось інше або хочете, щоб ми пошукали когось у архівах — напишіть тут. ${edit ? '' : 'Відповідь з\'явиться на цій сторінці.'}</p></div>
-    <div class="sec qnew"><h3>Нове запитання</h3>${qForm(null)}</div>
+  return `<div class="qpage v4-qgrid">
+    <aside class="v4-qside"><div class="eyebrow">Бачите помилку чи знаєте щось</div><h1>Запитання<br><span class="v4-m">й уточнення</span></h1>
+      <p>Бачите помилку, знаєте щось інше або хочете, щоб ми пошукали когось у архівах — напишіть тут. ${edit ? '' : 'Відповідь з\'явиться на цій сторінці.'}</p>
+      <ol class="v4-steps"><li><b>01</b>Оберіть, що саме: запитати, виправити чи знайти в архівах</li><li><b>02</b>Напишіть, про кого — і все, що знаєте</li><li><b>03</b>Максим перевірить і відповість тут: нове → шукаємо → знайдено</li></ol></aside>
+    <div class="v4-qmain">
+    <div class="sec qnew hcard"><h3>Нове запитання</h3>${qForm(null)}</div>
     <div class="sec"><h3>${edit ? 'Усі запитання' : 'Мої запитання'} ${isOwner() && cnt('open') ? `<button class="btn line small" data-act="q-claude">Скопіювати відкриті для Claude</button>` : ''}</h3>
       ${edit ? `<div class="seg qfilter">${fl.map(([k, t]) => `<button type="button" class="${f === k ? 'on' : ''}" data-act="q-filter" data-v="${k}">${t} <span class="muted">${cnt(k)}</span></button>`).join('')}</div>` : ''}
       <div class="qlist">${list.map(qItem).join('') || `<p class="muted">${edit ? 'Тут порожньо.' : 'Ви ще нічого не питали.'}</p>`}</div>
     </div>
-  </div>`;
+  </div></div>`;
 }
 function qClaudeText() {
   const open = qList().filter(q => q.status === 'new' || q.status === 'work');
@@ -1715,15 +1715,25 @@ function vHistory() {
     const SH = {}; (S.data?.documents || []).forEach(d => { if (d.url && /^Знімок сторінки/.test(d.title || '')) SH[d.url] = d; }); // знімки сторінок — на випадок, якщо сайт зникне
     const shot = u => SH[u] ? ` <a href="#" class="doclink hshot" data-doc="${esc(SH[u].id)}" title="Знімок сторінки${SH[u].date ? ' від ' + esc(SH[u].date) : ''} — якщо сайт стане недоступним">📷 знімок</a>` : '';
     const src = l => (l || []).map(x => x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${shot(x.url)}` : esc(x.name)).join(' · ');
-    const O = S.ui.hsOpen || {}, all = v.sections.length && v.sections.every((_, i) => O[i]);
-    const det = (k, title, n, body) => `<details class="hsec" data-hs="${k}"${O[k] ? ' open' : ''}><summary><span class="hs-t">${title}</span><span class="hs-n">${n}</span></summary>${body}</details>`;
-    return `<div class="hist">${glossify(`<p>${esc(v.intro || '')}</p><p class="hs-all"><button type="button" class="btn line small" data-act="hs-all">${all ? 'Згорнути все' : 'Читати все'}</button></p>` + v.sections.map((sec, i) => det(i, esc(sec.title), `${sec.items.length} ${sec.items.length === 1 ? 'подія' : sec.items.length < 5 ? 'події' : 'подій'}`, `<div class="hl">${sec.items.map(it => `<div class="hr"><span class="mono">${esc(it.y || '')}</span><span>${mdLinks(esc(it.t))}${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</span></div>`).join('')}</div>`)).join(''))}
-      ${(() => { const G = (S.data?.documents || []).filter(d => /^Фото( природи)?:/.test(d.title || '') || ['kochvor', 'kochport', 'volkport'].includes(d.id)); if (!G.length) return '';
-        const grp = [['Старі фото сіл', d => /^Фото:/.test(d.title) && !/воєнн/.test(d.title)], ['Маєток Кочубеїв і Волконські', d => ['kochvor', 'kochport', 'volkport'].includes(d.id)], ['Воєнні роки', d => /воєнн/.test(d.title)], ['Природа', d => /^Фото природи:/.test(d.title)]];
-        S.ui.hphAll = grp.flatMap(([, f]) => G.filter(f)); // порядок як у галереї — для гортання свайпами
-        return det('ph', '📷 Фото: старі фото, природа, воєнні роки', G.length, grp.map(([t, f]) => { const L = G.filter(f); return L.length ? `<h4 class="hph-h">${t}</h4><div class="hph">${L.map(d => `<button class="hph-i" data-hph="${esc(d.id)}" title="${esc(d.title)}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(d.title.replace(/^Фото( природи)?:\s*/, ''))}${d.date ? ` <i>${esc(d.date)}</i>` : ''}</span></button>`).join('')}</div>` : ''; }).join('') + '<p class="small muted">Джерело й автор — у кожному фото (натисніть). Карти Боплана 1650 і Дзанноні 1772 — у розділі «Карти».</p>'); })()}
-      ${v.ask?.length ? det('ask', 'Що варто замовити в архівах', v.ask.length, `<ul class="small">${v.ask.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`) : ''}
-      ${v.sources?.length ? det('src', 'Усі джерела', v.sources.length, `<ol class="small hsrcs">${v.sources.map(x => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${shot(x.url)}` : esc(x.name)}</li>`).join('')}</ol>`) : ''}</div>`;
+    const RN = i => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'][i] || String(i + 1);
+    const ev = n => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'подія' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'події' : 'подій'}`;
+    const G = (S.data?.documents || []).filter(d => /^Фото( природи)?:/.test(d.title || '') || ['kochvor', 'kochport', 'volkport'].includes(d.id));
+    const grp = [['Старі фото сіл', d => /^Фото:/.test(d.title) && !/воєнн/.test(d.title)], ['Маєток Кочубеїв і Волконські', d => ['kochvor', 'kochport', 'volkport'].includes(d.id)], ['Воєнні роки', d => /воєнн/.test(d.title)], ['Природа', d => /^Фото природи:/.test(d.title)]];
+    S.ui.hphAll = grp.flatMap(([, f]) => G.filter(f)); // порядок як у галереї — для гортання свайпами
+    const extra = [...(G.length ? [['ph', 'Фото: старі фото, природа, воєнні роки', G.length]] : []), ...(v.ask?.length ? [['ask', 'Що варто замовити в архівах', v.ask.length]] : []), ...(v.sources?.length ? [['src', 'Усі джерела', v.sources.length]] : [])];
+    const secs = v.sections.map((sec, i) => [i, sec.title, sec.items.length]), allK = [...secs, ...extra];
+    const sel = S.ui.hsSel ?? 0, ix = allK.findIndex(([k]) => k === sel), cur = ix >= 0 ? ix : 0;
+    const body = k => {
+      if (typeof k === 'number') { const sec = v.sections[k]; return `<div class="v4-ch-m"><span>Розділ ${RN(k)}</span><i></i><span>${ev(sec.items.length)}</span></div><h2>${esc(sec.title)}</h2><div class="v4-tl">${sec.items.map(it => `<div class="v4-tr"><span>${esc(it.y || '')}</span><div><p>${mdLinks(esc(it.t))}</p>${it.src?.length ? `<span class="hsrc">Джерело: ${src(it.src)}</span>` : ''}</div></div>`).join('')}</div>`; }
+      if (k === 'ph') return `<h2>Фото</h2>${grp.map(([t, f]) => { const L = G.filter(f); return L.length ? `<h4 class="hph-h">${t}</h4><div class="hph">${L.map(d => `<button class="hph-i" data-hph="${esc(d.id)}" title="${esc(d.title)}">${d.pages ? `<img src="${img('doc=' + d.id + '&page=0', true)}" alt="" loading="lazy">` : ''}<span>${esc(d.title.replace(/^Фото( природи)?:\s*/, ''))}${d.date ? ` <i>${esc(d.date)}</i>` : ''}</span></button>`).join('')}</div>` : ''; }).join('')}<p class="small muted">Джерело й автор — у кожному фото (натисніть). Карти Боплана 1650 і Дзанноні 1772 — у розділі «Карти».</p>`;
+      if (k === 'ask') return `<h2>Що варто замовити в архівах</h2><ul class="v4-ul">${v.ask.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+      if (k === 'src') return `<h2>Усі джерела</h2><ol class="small hsrcs">${v.sources.map(x => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${shot(x.url)}` : esc(x.name)}</li>`).join('')}</ol>`;
+      return '';
+    };
+    const all = S.ui.hsSel === 'all';
+    const toc = `<nav class="v4-toc"><span class="v4-k0">Розділи</span>${allK.map(([k, t, n], i) => `<button type="button" class="${!all && i === cur ? 'on' : ''}" data-act="hs-sel" data-v="${k}"><span>${typeof k === 'number' ? RN(k) : k === 'ph' ? '◎' : k === 'ask' ? '?' : '§'}</span><b>${esc(t)}</b><i>${n}</i></button>`).join('')}<button type="button" class="v4-tocall${all ? ' on' : ''}" data-act="hs-sel" data-v="all"><span>≡</span><b>Читати все підряд</b></button></nav>`;
+    const nav = all ? '' : `<div class="v4-chnav">${cur > 0 ? `<button class="btn line" data-act="hs-sel" data-v="${allK[cur - 1][0]}">← Попередній</button>` : '<span></span>'}${cur < allK.length - 1 ? `<button class="btn" data-act="hs-sel" data-v="${allK[cur + 1][0]}">Наступний розділ →</button>` : ''}</div>`;
+    return `<div class="v4-read">${toc}<article class="v4-art hist">${glossify(all ? allK.map(([k]) => `<section class="v4-chs">${body(k)}</section>`).join('') : body(allK[cur][0]))}${nav}</article></div>`;
   }
   return vHistoryOld();
 }
@@ -1732,24 +1742,33 @@ function vHistoryOld() {
   <h3>Шутих у цих джерелах поки не знайдено</h3><p class="small">Найдавніший відомий запис — сповідна відомість 1834 р. Щоб піти глибше, варто замовити:</p><ul class="small">${VHIST_ASK.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
   <p class="small muted">Є припущення, що назва «Веприк» — від «вепр» (дикий кабан), як в інших селах з такою назвою; джерела для нашого Веприка не знайдено.</p></div>`;
 }
-function vVillages() { curTarget = 'villages'; return `<div class="pghead"><h1 title="Історія Вороньків, Веприка й сусідніх сіл — з посиланнями на джерела.">Історія сіл</h1><p class="tabnote">Вороньки, Веприк і сусідні села — від найдавніших згадок до наших днів, з джерелом біля кожного факту.</p></div>${vHistory()}`; }
+function vVillages() {
+  curTarget = 'villages';
+  const v = loadText('villages'), G = (S.data?.documents || []).filter(d => d.pages && /^Фото:/.test(d.title || '')), hero = G.find(d => /дзвон/i.test(d.title)) || G.find(d => /церк/i.test(d.title)) || G[0];
+  const nS = v?.sections?.length || 0;
+  return `<section class="v4-vh v4-bleed"><div class="v4-vh-t"><div class="eyebrow">Історія сіл${nS ? ` · ${nS} розділів` : ''}</div><h1>Вороньки<br><span class="v4-m">і Веприк</span></h1><p>${esc(v?.intro || 'Вороньки, Веприк і сусідні села — від найдавніших згадок до наших днів, з джерелом біля кожного факту.')}</p></div>${hero ? `<figure class="v4-vh-f" data-doc="${esc(hero.id)}"><img src="${img('doc=' + hero.id + '&page=0')}" alt=""><figcaption>${esc(hero.title.replace(/^Фото:\s*/, ''))}${hero.date ? ' · ' + esc(hero.date) : ''}</figcaption></figure>` : ''}</section>${vHistory()}`;
+}
 function vMaps() {
   curTarget = 'maps';
   const all = mapsList(), vs = [...new Set(all.flatMap(m => m.villages || []))].sort((a, b) => a.localeCompare(b, 'uk'));
   const f = S.ui.mapv || '', list = f ? all.filter(m => (m.villages || []).includes(f)) : all;
   if (S.ui.mtab === 'hist') { S.ui.mtab = ''; location.hash = href('villages'); }
-  return `<a class="rtlink" href="#/routes">${MI.routes}<span><b>Сімейні маршрути</b><i>Прогулянка місцями родини: дім, школа, робота, кладовище — з історіями біля кожної точки</i></span><em>→</em></a><div class="pghead"><h1 title="Старі карти наших сіл.">Старі карти</h1><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.</p></div>
+  const yr = m => String(m.year || (String(m.date || '').match(/\d{4}/) || [])[0] || '—');
+  const ys = all.map(yr).filter(y => /\d/.test(y)).sort();
+  const m = list.find(x => x.id === S.ui.mapSel) || list[0];
+  return `<div class="pghead v4-rh"><div class="v4-rh-l"><div class="eyebrow">${all.length} карт${ys.length ? ` · ${ys[0]} — ${ys[ys.length - 1]}` : ''}</div><h1>Карти<br><span class="v4-m">крізь час</span></h1></div><div class="v4-rh-r"><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок. Оберіть рік на шкалі.</p><a class="rtlink" href="#/routes">${MI.routes}<span><b>Сімейні маршрути</b><i>Прогулянка місцями родини: дім, школа, робота, кладовище — з історіями біля кожної точки</i></span><em>→</em></a></div></div>
   <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
     ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
   ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
-  <div class="maps">${list.map(m => `<article class="mapc">
-    <button class="mapim" data-doc="${m.id}" title="Відкрити карту">${m.pages ? `<img src="${img('doc=' + m.id + '&page=0', true)}" alt="" loading="lazy">` : '<span class="ph">зображення ще немає</span>'}</button>
-    <div class="mapt"><b>${esc(m.title)}</b><span class="mono small">${esc(m.date || m.year || '')}</span>
+  ${list.length ? `<div class="v4-mtl">${list.map(x => `<button type="button" class="${x === m ? 'on' : ''}" data-act="map-sel" data-id="${x.id}"><b>${esc(yr(x))}</b><span>${esc(x.title)}</span></button>`).join('')}</div>
+  <article class="v4-map">
+    <button class="v4-map-im" data-doc="${m.id}" title="Відкрити карту">${m.pages ? `<img src="${img('doc=' + m.id + '&page=0')}" alt="" loading="lazy">` : '<span class="ph">зображення ще немає</span>'}</button>
+    <div class="v4-map-t"><span class="v4-map-y">${esc(yr(m))}</span><h2>${esc(m.title)}</h2><span class="mono small muted">${esc(m.date || m.year || '')}</span>
       ${(m.villages || []).length ? `<span class="small muted">${m.villages.map(esc).join(' · ')}</span>` : ''}
-      ${m.text ? `<p class="small">${glossify(mdLinks(esc(m.text)))}</p>` : ''}
+      ${m.text ? `<p>${glossify(mdLinks(esc(m.text)))}</p>` : ''}
       ${m.src ? `<p class="small muted">${esc(m.src)}${m.url ? ` <a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">оригінал</a>` : ''}</p>` : ''}
-      <div class="btns"><button class="btn line small" data-doc="${m.id}">Відкрити</button>${m.pages && (m.geo || []).length >= 3 ? `<button class="btn small" data-act="map-over" data-id="${m.id}">Накласти на сучасну карту</button><span class="small muted">прив'язана</span>` : `<span class="small muted">ще не прив'язана до сучасної карти</span>`}</div></div>
-  </article>`).join('') || '<p class="muted">Карт поки немає.</p>'}</div>`;
+      <div class="btns"><button class="btn line" data-doc="${m.id}">Відкрити</button>${m.pages && (m.geo || []).length >= 3 ? `<button class="btn" data-act="map-over" data-id="${m.id}">Накласти на сучасну карту</button><span class="small muted">прив'язана</span>` : `<span class="small muted">ще не прив'язана до сучасної карти</span>`}</div></div>
+  </article>` : '<p class="muted">Карт поки немає.</p>'}`;
 }
 async function uploadMap(files) {
   const m = $('#mmsg'), v = id => ($('#' + id)?.value || '').trim();
@@ -3734,7 +3753,7 @@ function homePhotoAdmin() {
   const ph = S.data.photos.filter(x => !isVoice(x) && !x.pending && /^image\//.test(x.mime || 'image/jpeg')).map(x => ({ t: 'p', id: x.id, src: img('photo=' + x.id, true), c: P[x.person] ? short(P[x.person]) : (x.caption || '') }));
   const dc = S.data.documents.filter(d => d.pages && /^Фото:/.test(d.title || '')).map(d => ({ t: 'd', id: d.id, src: img('doc=' + d.id + '&page=0', true), c: String(d.title).replace(/^Фото:\s*/, '') }));
   const item = x => { const i = on.get(key(x)); return `<button type="button" class="v4-hpi${i != null ? ' on' : ''}" data-act="hp-tog" data-t="${x.t}" data-id="${esc(x.id)}" data-c="${esc(String(x.c).slice(0, 60))}"><img src="${x.src}" alt="" loading="lazy">${i != null ? `<b>${i + 1}</b>` : ''}<span>${esc(x.c)}</span></button>`; };
-  return `<p class="small muted">Оберіть до 14 фото для колажу на Головній — у тому порядку, як натискаєте (1 — найбільше). Підпис можна змінити нижче. Якщо нічого не обрано, сайт сам бере фото наших по прямій і старі фото сіл.</p>
+  return `<p class="small muted">Оберіть до 14 фото для колажу на Головній — у тому порядку, як натискаєте (1 — найбільше). Підпис можна змінити нижче. Решту місць (або все, якщо нічого не обрано) сайт заповнить сам: фото наших по прямій і старі фото сіл.</p>
     ${cur.length ? `<div class="v4-hpcap">${cur.map((x, i) => `<label class="f"><span class="mono small">${i + 1}</span><input class="in" data-hpc="${i}" value="${esc(x.c || '')}" maxlength="60" placeholder="Підпис"></label>`).join('')}</div>` : ''}
     <div class="btns"><button class="btn" data-act="hp-save">Зберегти (${cur.length} з 14)</button>${cur.length ? '<button class="btn line" data-act="hp-clear">Очистити — хай обирає сайт</button>' : ''}<span class="msg" id="hp-m"></span></div>
     <h3 class="v4-h3">Фото людей · ${ph.length}</h3><div class="v4-hpg">${ph.map(item).join('')}</div>
@@ -3752,14 +3771,16 @@ const pName = p => [String(p.n || '').replace(/\s*\(.*?\)/g, ''), p.pt].filter(B
 /* Фото на головній: власник обирає сам (Власнику → «Фото на головній»), інакше — автоматично: наші по прямій, найближчі, потім старі фото сіл */
 function homePhotos() {
   const U = (CFG_().homePhotos || []).map(x => x.t === 'd' ? (S.data.documents.find(d => d.id === x.id && d.pages) ? { src: img('doc=' + x.id + '&page=0', true), c: x.c || '', go: '', doc: x.id } : null) : (S.data.photos.find(y => y.id === x.id && !y.pending && !isVoice(y)) ? { src: img('photo=' + x.id, true), c: x.c || '', go: S.data.photos.find(y => y.id === x.id).person } : null)).filter(Boolean);
-  if (U.length) return U.slice(0, 14);
+  if (U.length >= 14) return U.slice(0, 14);
   const L = lineChain(), near = new Set([...L.up, ...L.kids, ...(SPOUSES[L.start] || []), ...(KIDS[P[L.start]?.f] || []), ...(KIDS[P[L.start]?.mo] || [])]);
   const anc = ancD(L.start), score = x => near.has(x.person) ? 0 : anc.has(x.person) ? 1 + anc.get(x.person) : 99;
   const one = new Set(); // по одному фото на людину — щоб колаж був про різних людей
   const ph = S.data.photos.filter(x => !isVoice(x) && !x.pending && P[x.person] && /^image\//.test(x.mime || 'image/jpeg')).sort((a, b) => score(a) - score(b)).filter(x => !one.has(x.person) && one.add(x.person)).slice(0, 10)
     .map(x => ({ src: img('photo=' + x.id, true), c: short(P[x.person]).replace(/\s*\(.*?\)/g, ''), go: x.person }));
   const vd = S.data.documents.filter(d => d.pages && /^Фото:/.test(d.title || '')).slice(0, 14 - ph.length).map(d => ({ src: img('doc=' + d.id + '&page=0', true), c: String(d.title).replace(/^Фото:\s*/, '').replace(/\s*\(.*$/, ''), doc: d.id }));
-  return [...ph, ...vd].slice(0, 14);
+  if (!U.length) return [...ph, ...vd].slice(0, 14);
+  const had = new Set(U.map(x => x.src)); // власник обрав менше 14 — решту місць добирає сайт
+  return [...U, ...[...ph, ...vd].filter(x => !had.has(x.src))].slice(0, 14);
 }
 const COLL = [[1, 4, 1, 4, -1.5], [4, 6, 1, 3, 2], [6, 7, 1, 3, -2.5], [4, 5, 3, 5, -3], [5, 7, 3, 5, 2.5], [1, 3, 4, 6, 2], [3, 4, 4, 7, -2], [4, 7, 5, 7, 1.5], [1, 3, 6, 8, -2], [3, 4, 7, 9, 3], [4, 6, 7, 9, -1.5], [6, 7, 7, 9, 2.5], [1, 2, 8, 9, -3], [2, 3, 8, 9, 2]];
 function homeCollage() {
@@ -4023,7 +4044,7 @@ function hypCard(x, all) {
   const A = hypAns(x.id), c = { yes: 0, no: 0, add: 0, ok: 0, ko: 0 }; A.forEach(s => c[verdOf(s)]++); const CH = all ? hypChg(x, all) : [];
   const ST = (all ? hypStates(all) : {})[x.id] || { s: '', p: x.p }; x = { ...x, p: ST.p }; const SB = HYPST[ST.s];
   return `<article class="hyp-c hc-${x.cat}${CH.length ? ' hyp-chg' : ''}${SB ? ' ' + SB[0] : ''}">${CH.length ? `<div class="hypchg">⚡ <b>Змінилось пов'язане припущення:</b> ${CH.slice(0, 3).map(r => `«<button class="lnk" data-act="hyp-open" data-id="${esc(r.h.id)}">${esc(r.h.title)}</button>» — ${r.v === 'yes' ? 'підтвердили' : 'спростували'}`).join('; ')}. Перегляньте — можливо, це відкриває щось і тут.${isOwner() ? ` <button class="btn line small" data-act="hyp-seen" data-id="${esc(x.id)}">✓ Переглянуто</button>` : ''}</div>` : ''}
-    ${SB ? `<div class="hyp-st ${SB[0]}"><b>${SB[1]}</b>${ST.why ? ' — ' + esc(ST.why) : ''}</div>` : ''}<div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
+    ${SB ? `<div class="hyp-st ${SB[0]}"><b>${SB[1]}</b>${ST.why ? ' — ' + esc(ST.why) : ''}</div>` : ''}<div class="v4-hpc pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}"><b>${x.p}<small>%</small></b><i style="--w:${x.p}%"></i></div><div class="hyp-h"><span class="hyp-tag">${esc((HYPCAT.find(k => k[0] === x.cat) || [])[1] || '')}</span><span class="hyp-pr pr-${x.p >= 75 ? 'hi' : x.p >= 50 ? 'mid' : 'lo'}" title="Наскільки ймовірно, за нашою оцінкою">${x.p >= 75 ? 'Дуже ймовірно' : x.p >= 50 ? 'Ймовірно' : 'Можливо'}<i style="--w:${x.p}%"></i></span>${A.length ? `<span class="hyp-v">${c.yes ? `<b class="vy">✓ ${c.yes}</b>` : ''}${c.no ? `<b class="vn">✗ ${c.no}</b>` : ''}${c.add ? `<b class="va">✎ ${c.add}</b>` : ''}</span>` : ''}</div>
     <h3>${esc(x.title)}</h3><p>${glossify(mdLinks(esc(x.text)))}</p>
     ${x.basis ? `<p class="hyp-b"><b>На чому базується:</b> ${esc(x.basis)}</p>` : ''}
     ${(x.people || []).length ? `<div class="hyp-p">${x.people.filter(id => P[id]).map(mini).join('')}</div>` : ''}
@@ -4238,6 +4259,8 @@ document.addEventListener('click', async e => {
       t.disabled = true; await api('/api/admin?a=delete', { body: { id: x.id } }); toast(`Акаунт «${x.name || x.email}» видалено`); S.admin.members = null; return loadAdmin(); }
     if (act === 'ridbook') { S.ui.ridPlain = false; render(); return; }
     if (act === 'fam-tab') { S.ui.ftab = d.v; render(); return; }
+    if (act === 'hs-sel') { const v_ = d.v; S.ui.hsSel = v_ === 'all' ? 'all' : /^\d+$/.test(v_) ? +v_ : v_; render(); const a_ = document.querySelector('.v4-art'); if (a_ && a_.getBoundingClientRect().top < 60) window.scrollTo(0, window.scrollY + a_.getBoundingClientRect().top - 80); return; }
+    if (act === 'map-sel') { S.ui.mapSel = d.id; S.ui.keepScroll = true; render(); return; }
     if (act === 'rl-side') { S.ui.rlSide = d.v; S.ui.keepScroll = true; render(); return; }
     if (act === 'map-tab') { S.ui.mtab = d.v; render(); return; }
     if (act === 'map-v') { S.ui.mapv = d.v; S.ui.keepScroll = true; render(); return; }
