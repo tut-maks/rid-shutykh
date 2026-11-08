@@ -475,6 +475,8 @@ function layoutTD(center) {
   // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
   const KX = S.ui.kidx ||= {};
   const hasHidden = id => (KIDS[id] || []).some(k => !seen.has(k));
+  /* межа вставки нового блоку не має розрізати подружжя в тому самому ряду: інакше чужа картка стає між чоловіком і дружиною й виглядає як їхній чоловік/дружина (власник, 08.11: Михайло 1920 між Іваном і Ольгою) */
+  const noSplit = (others, x, rows) => { let s = x, ch = true; while (ch) { ch = false; for (const n of others) { if (n.x > s || !rows.includes(n.r)) continue; for (const sp of SPOUSES[n.id] || []) { const m = others.find(o => o.id === sp.id && o.r === n.r); if (m && m.x > s) { s = m.x; ch = true; } } } } return s; };
   const KL = f.allOpen ? null : Object.keys(KX);
   for (let i = 0; i < (KL ? KL.length : A.n.length); i++) {
     const id = KL ? KL[i] : A.n[i].id; if (!KL && id === center) continue;
@@ -484,8 +486,8 @@ function layoutTD(center) {
     let X = null; (KIDS[id] || []).filter(k => !seen.has(k)).sort(sortS).forEach(k => { seen.add(k); const K = down(k, o.r - 1); if (!X) X = K; else { shift(K, sep(X, K)); merge(X, K); } });
     if (X) { shift(X, -Math.min(...X.n.map(n => n.x))); merge(Sb, X); }
     Sb.n = Sb.n.filter(n => n.id !== id);
-    const rowsS = [...new Set(Sb.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
-    const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
+    const rowsS = [...new Set(Sb.n.map(n => n.r))], others = A.n.filter(n => n.id !== id), cut = noSplit(others, o.x, rowsS);
+    const left = others.filter(n => n.x <= cut), right = others.filter(n => n.x > cut);
     let off = o.x; for (const r of rowsS) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Sb.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
     shift(Sb, off);
     let d = 0; for (const r of rowsS) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Sb.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
@@ -499,8 +501,8 @@ function layoutTD(center) {
     const o = A.n.find(x => x.id === id); const keep = SIBX[id]; if (keep === undefined) SIBX[id] = 1; // з батьками подружжя одразу видно і його братів та сестер (праворуч від нього)
     const Ub = up(id, o.r, 'R'); if (keep === undefined) delete SIBX[id];
     Ub.n = Ub.n.filter(n => n.id !== id); if (!Ub.n.length) return; shift(Ub, o.x);
-    const rowsU = [...new Set(Ub.n.map(n => n.r))], others = A.n.filter(n => n.id !== id);
-    const left = others.filter(n => n.x <= o.x), right = others.filter(n => n.x > o.x);
+    const rowsU = [...new Set(Ub.n.map(n => n.r))], others = A.n.filter(n => n.id !== id), cut = noSplit(others, o.x, rowsU);
+    const left = others.filter(n => n.x <= cut), right = others.filter(n => n.x > cut);
     let off = 0; for (const r of rowsU) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Ub.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
     shift(Ub, off);
     let d = 0; for (const r of rowsU) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Ub.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
