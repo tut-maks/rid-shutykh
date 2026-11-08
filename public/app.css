@@ -2416,3 +2416,10 @@ main{padding-top:16px}
 .v4-coll figure:nth-child(odd){z-index:2}
 .v4-coll figcaption{position:absolute!important;left:12px!important;top:12px!important;bottom:auto!important;margin:0!important;max-width:calc(100% - 24px)!important;padding:4px 8px!important;background:rgba(251,250,246,.92)!important;border-radius:3px;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;font:500 11px/1.2 var(--f-body)!important}
 .v4-coll figure{box-shadow:0 14px 28px -14px rgba(26,25,22,.65)!important}
+/* «Найдавніший предок» — з драмою */
+.tile.t-old{position:relative;overflow:hidden}
+.tile.t-old b{color:var(--accent)!important}
+.tile.t-old em{font-style:normal;color:var(--ink);font-weight:600}
+.tile.t-old::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(196,58,36,.16),transparent 70%);animation:oldGlow 3s ease-in-out infinite;pointer-events:none}
+@keyframes oldGlow{0%,100%{transform:scale(.85);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+@media (prefers-reduced-motion:reduce){.tile.t-old::after{animation:none}}

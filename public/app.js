@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081636';
+const BUILD = '202611081638';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2791,10 +2791,14 @@ function famStats() {
   const pages = S.data.documents.reduce((s, d) => s + (d.pages || 0), 0);
   return { n: ps.length, m: ps.filter(p => p.sex === 'm').length, f: ps.filter(p => p.sex === 'f').length, gens, first: born[0], docs: S.data.documents.filter(d => d.type !== 'map').length, pages, photos: S.data.photos.filter(x => !isVoice(x) && !x.pending).length, voices: voicesOf().filter(x => !x.pending).length, villages: villages.size, members: Object.keys(S.data.names || {}).length, living: ps.filter(isLiving).length };
 }
+const yrsW = n => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'рік' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'роки' : 'років'}`;
 function statTiles() {
   const s = famStats();
-  const T = [[s.n, 'людей у дереві'], [s.gens, 'поколінь'], [s.first ? s.first.y : '—', 'найдавніша дата народження'], [s.docs, 'архівних документів'], [s.photos, 'фото'], [s.voices, 'голосових спогадів'], [s.villages, 'сіл і міст'], [s.members, 'родичів на сайті']];
-  return `<div class="tiles">${T.map(([v, t]) => `<a class="tile" href="#/stats"><b>${v}</b><span>${t}</span></a>`).join('')}</div>`;
+  // найдавніша дата: хто це, ким доводиться і скільки років тому (дата — з картки, «≈» якщо пораховано з віку в описі)
+  const fp = s.first?.p, root = rootId(), isAnc = fp && root && ancD(root).has(fp.id), est = fp && /[~≈]/.test(fp.b || '');
+  const oldT = fp ? `<span>${isAnc ? (fp.sex === 'f' ? 'народилася найдавніша відома прамати' : 'народився найдавніший відомий предок') : 'найдавніша дата народження'} — <em>${esc(short(fp))}</em>${isAnc && kinShort(root, fp.id) ? `, ${esc(kinShort(root, fp.id))} Максима` : ''} · ${yrsW(new Date().getFullYear() - s.first.y)} тому${est ? ' (за віком у переписі)' : ''}</span>` : '<span>найдавніша дата народження</span>';
+  const T = [[s.n, 'людей у дереві'], [s.gens, 'поколінь'], [s.first ? (est ? '≈' : '') + s.first.y : '—', oldT, fp ? href('p', fp.id) : '', 'old'], [s.docs, 'архівних документів'], [s.photos, 'фото'], [s.voices, 'голосових спогадів'], [s.villages, 'сіл і міст'], [s.members, 'родичів на сайті']];
+  return `<div class="tiles">${T.map(([v, t, h, c]) => `<a class="tile${c ? ' t-' + c : ''}" href="${h || '#/stats'}"><b>${v}</b>${t.startsWith('<span') ? t : `<span>${t}</span>`}</a>`).join('')}</div>`;
 }
 /* Голодомор 1932–1933: поіменні списки з «Національної книги пам'яті жертв Голодомору», том «Чернігівська область» (2008), Бобровицький р-н,
    с. 65–70 (Веприк, Вороньки), 81 (х. Лідин), 84 (Олександрівка), 87 (Свидовець); джерело книги — ДАЧО ф. 9030, оп. 2, спр. 2. Переписано 14.10 і звірено 06.11.2026 зі сторінками PDF; повні списки цих сіл (і не наші прізвища) — facts/baza/src_holodomor_bobrovytskyi.csv. Тут лише ті, чиє прізвище є в нашому дереві;
