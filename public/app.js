@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081621';
+const BUILD = '202611081625';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3800,9 +3800,10 @@ function homePhotos() {
   return [...U, ...[...ph, ...vd].filter(x => !had.has(x.src))].slice(0, 14);
 }
 const COLL = [[1, 4, 1, 4, -1.5], [4, 6, 1, 3, 2], [6, 7, 1, 3, -2.5], [4, 5, 3, 5, -3], [5, 7, 3, 5, 2.5], [1, 3, 4, 6, 2], [3, 4, 4, 7, -2], [4, 7, 5, 7, 1.5], [1, 3, 6, 8, -2], [3, 4, 7, 9, 3], [4, 6, 7, 9, -1.5], [6, 7, 7, 9, 2.5], [1, 2, 8, 9, -3], [2, 3, 8, 9, 2]];
-function homeCollage() {
+const COLR = [-1.5, 2, -2.5, 1.5, -1, 2.5, -2, 1, -3, 2, -1.5, 3, -2, 1.5];
+function homeCollage() { // фото цілими й в оригінальній якості: колонки, кожне фото у своїх пропорціях, нічого не обрізається
   const L = homePhotos();
-  return `<div class="v4-coll">${L.map((x, i) => { const [c1, c2, r1, r2, rot] = COLL[i]; return `<figure style="grid-column:${c1}/${c2};grid-row:${r1}/${r2};transform:rotate(${rot}deg) scale(1.07);z-index:${2 + (i % 4)}"${x.go ? ` data-go="${esc(x.go)}"` : x.doc ? ` data-doc="${esc(x.doc)}"` : ''}><img src="${x.src}" alt="" loading="lazy">${x.c ? `<figcaption>${esc(x.c)}</figcaption>` : ''}</figure>`; }).join('')}${isOwner() ? `<button class="v4-collset" data-act="home-ph">Обрати фото</button>` : ''}</div>`;
+  return `<div class="v4-coll">${L.map((x, i) => `<figure style="--r:${COLR[i % COLR.length]}deg"${x.go ? ` data-go="${esc(x.go)}"` : x.doc ? ` data-doc="${esc(x.doc)}"` : ''}><img src="${x.src.replace('&thumb=1', '')}" alt="" ${i < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">${x.c ? `<figcaption>${esc(x.c)}</figcaption>` : ''}</figure>`).join('')}${isOwner() ? `<button class="v4-collset" data-act="home-ph">Обрати фото</button>` : ''}</div>`;
 }
 const hypPr = p => p >= 75 ? 'hi' : p >= 50 ? 'mid' : 'lo';
 function vHome() {
@@ -3848,7 +3849,7 @@ function vHome() {
     <div class="v4-hero-k">
       <div class="hcard h-kin"><h3>Ким ми доводимось <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
       ${tgCard()}
-      <div class="hcard h-hyp"><h3>Гарячі припущення <a class="small" href="#/hyp">усі ${hyps.all.length} →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${hyps.top.length ? `<ul class="v4-hot">${hyps.top.map(x => { const k = hypAns(x.id).length; return `<li><button data-act="hyp-open" data-id="${esc(x.id)}"><span class="v4-pc pr-${hypPr(x.p)}">${x.p}<small>%</small></span><span><b>${esc(x.title)}</b>${x.cat === 'kin' ? '<i class="hpv-k">можлива рідня</i>' : ''}<em>${k ? '💬 ' + k + ' відповід. · ' : ''}Щось знаю →</em></span></button></li>`; }).join('')}</ul>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : '')}</div>
+      <div class="hcard h-hyp"><h3><span class="v4-hot-t"><i class="v4-fire" aria-hidden="true"><svg viewBox="0 0 24 32"><path class="f1" d="M12 1C13 8 20 11 20 19a8 8 0 0 1-16 0c0-4 2-6 3-8 .5 3 2 4 3 4-1-5 0-10 2-14z"/><path class="f2" d="M12 13c.6 4 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 1.6-4 .3 1.5 1 2 1.6 2-.4-2.6.2-5 .8-7z"/></svg></i>Гарячі припущення</span> <a class="small" href="#/hyp">усі ${hyps.all.length} →</a></h3><p class="v4-help-c"><b>Допоможіть встановити зв'язок!</b> Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${hyps.top.length ? `<ul class="v4-hot">${hyps.top.map(x => { const k = hypAns(x.id).length; return `<li><button data-act="hyp-open" data-id="${esc(x.id)}"><span class="v4-pc pr-${hypPr(x.p)}">${x.p}<small>%</small></span><span><b>${esc(x.title)}</b>${x.cat === 'kin' ? '<i class="hpv-k">можлива рідня</i>' : ''}<em>${k ? '💬 ' + k + ' відповід. · ' : ''}Щось знаю →</em></span></button></li>`; }).join('')}</ul>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : '')}</div>
     </div>
   </section>
   <section class="v4-nums v4-bleed">${statTiles()}${homeKeyNums()}</section>
