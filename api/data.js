@@ -7,11 +7,11 @@ import { handler, send, fail, readJSON, can, revision, track, cleanPerson, clean
 
 const S = (v, n) => String(v ?? '').slice(0, n).trim();
 
-const QK = ['fix', 'ask', 'find'], QS = ['new', 'work', 'found', 'closed'];
+const QK = ['fix', 'ask', 'find', 'me'], QS = ['new', 'work', 'found', 'closed'];
 const qOut = q => ({ id: q.id, kind: q.kind, person: q.person_id || '', about: q.about || '', text: q.text, status: q.status, answer: q.answer || '', by: q.created_by, at: q.created_at, upd: q.updated_at, updBy: q.updated_by || null });
 
 /* Спільні налаштування родини (settings): група Telegram, «Хто на фото?», «Допоможіть знайти», ДНК-збіги, місця на карті */
-const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, photo_faces: {}, words: [], routes: [] };
+const CFG = { tg_group: {}, photo_ask: {}, wanted: [], dna_matches: [], places: {}, photo_people: {}, photo_faces: {}, words: [], routes: [], home_photos: [] };
 async function cfgAll() {
   const out = {}; for (const k in CFG) out[k] = structuredClone(CFG[k]);
   try { for (const r of await db.list('settings', { in: { key: Object.keys(CFG) } })) out[r.key] = r.value ?? out[r.key]; } catch {}
@@ -115,7 +115,7 @@ async function bootstrap(ctx) {
     names: Object.fromEntries(members.filter(m => isOwn || m.id === ctx.member.id || authors.has(m.id)).map(m => [m.id, m.name || 'Родич'])),
     accounts: isOwn ? [...new Set(members.filter(m => m.active && m.person_id).map(m => m.person_id))] : [], // у кого вже є доступ — лише власнику (запрошує тільки він)
     questions, qReady, joinPending,
-    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], routes: cfg.routes || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, photoFaces: cfg.photo_faces || {}, notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
+    cfg: { tg: cfg.tg_group?.url || '', photoAsk: cfg.photo_ask || {}, wanted: cfg.wanted || [], words: cfg.words || [], routes: cfg.routes || [], dna: cfg.dna_matches || [], places: cfg.places || {}, photoPeople: cfg.photo_people || {}, photoFaces: cfg.photo_faces || {}, homePhotos: cfg.home_photos || [], notDup: await notDup(), join: jc?.on && jc?.code ? jc.code : '' },
   };
 }
 
@@ -187,6 +187,12 @@ export default handler(async (req, res, ctx, url) => {
     if (u && !/^https:\/\/t\.me\/(\+[\w-]{6,}|joinchat\/[\w-]{6,}|[a-zA-Z][\w]{3,})$/.test(u)) return fail(res, 400, 'bad_url');
     const before = await cfgGet('tg_group'); await cfgSet('tg_group', { url: u }, me.id, before);
     return done({ tg: u }, 'cfg:tg');
+  }
+  if (op === 'cfg.home') { // фото для колажу на Головній — лише власник (до 14: фото людей або документи-фото)
+    if (!owner) return fail(res, 403, 'forbidden');
+    const L = (Array.isArray(body.list) ? body.list : []).slice(0, 14).map(x => ({ t: x?.t === 'd' ? 'd' : 'p', id: S(x?.id, 80), c: S(x?.c, 60) })).filter(x => x.id);
+    const before = await cfgGet('home_photos'); await cfgSet('home_photos', L, me.id, before);
+    return done({ homePhotos: L }, 'cfg:home');
   }
   if (op === 'photo.ask') { // «Хто на фото?» — редактор позначає фото, на якому треба впізнати людей
     const id = S(body.id, 60); const ph = await db.get('photos', { eq: { id, deleted: false } }); if (!ph) return fail(res, 404, 'not_found');
@@ -529,6 +535,11 @@ export default handler(async (req, res, ctx, url) => {
     if (!text) return fail(res, 400, 'empty');
     if (person && !(await db.get('persons', { eq: { id: person, deleted: false } }))) person = '';
     if (kind === 'find' && !about && !person) return fail(res, 400, 'about');
+    if (kind === 'me') { // «Це я» — запит власнику прив'язати акаунт до картки; один відкритий запит на людину
+      if (!person) return fail(res, 400, 'about');
+      const mine = await db.list('questions', { eq: { created_by: me.id, kind: 'me', status: 'new', deleted: false }, limit: 5 });
+      if (mine.length) return fail(res, 409, 'me_pending');
+    }
     const open = await db.list('questions', { eq: { created_by: me.id, status: 'new', deleted: false }, limit: 60 });
     if (open.length >= 50) return fail(res, 429, 'too_many_q');
     const now = new Date().toISOString();
