@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081654';
+const BUILD = '202611081658';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -949,11 +949,78 @@ function vFamilies() {
   const tabs = `<div class="seg mtabs">${[['line', 'Пряма лінія'], ['br', `Гілки · ${nb}`], ['rid', '📖 Читати книгу →']].map(([k, t]) => `<button type="button" class="${ft === k ? 'on' : ''}${k === 'rid' ? ' v4-readb' : ''}" data-act="fam-tab" data-v="${k}">${t}</button>`).join('')}</div>`;
   const note = { line: 'Що записано в документах — факт. Що відомо з розповідей старших — «за родинними переказами». Здогадки — «Є припущення». Натисніть на людину — відкриється її картка.', rid: 'Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.', br: 'Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.' }[ft] || '';
   const head = `<div class="pghead v4-rh v4-mh"><div class="v4-rh-l"><div class="eyebrow">Від найдавнішого до нас</div><h1>Історія роду</h1></div><div class="v4-rh-r"><p class="tabnote">${esc(note)}</p>${tabs}</div></div>`;
-  if (ft === 'rid') return head + vRid();
+  if (ft === 'rid') return head + (S.ui.oldBook ? `<p><button class="btn line small" data-act="nb-new">← Нова книга</button></p>` + vRid() : vBook());
   if (ft === 'line') return head + ridLine();
   return `${head}
   <div class="chips stk2 famchips">${S.data.families.map(f => `<a class="btn line small" href="#fam-${f.id}" data-act="fam-jump" data-id="${f.id}">${esc(f.title)}</a>`).join('')}</div>
   <div class="famlist">${S.data.families.map(famBlock).join('')}</div>`;
+}
+/* ═══ Нова «Книга роду» (08.11): друковані сторінки, дві колонки, роки на полях, фото й вирізки з наших сканів.
+   Усе збирається з даних сайту (картки, документи, «Історія роду», припущення, двори) — нічого не вигадується.
+   Частини: I — історія роду (текст), II — підтверджені предки по поколіннях, III — «Є припущення», IV — сусіди й однофамільці. ═══ */
+const nbYear = s => { const m = String(s || '').match(/(\d{4})/); return m ? +m[1] : null; };
+// технічні примітки («звірено зі сканом», «натисніть…», «рамкою») — не для книги
+const nbClean = t => String(t || '').split(/(?<=[.!?])\s+/).filter(x => x && !/рамк|натисн|звірено|покажчик|кадр|плівк|скан|FamilySearch|копі[яї]|роздільн|читали|читається/i.test(x)).join(' ').trim();
+const nbPlain = t => String(t || '').replace(/\[\[[pd]:[^|\]]+\|([^\]]+)\]\]/g, '$1');
+function nbCrop(d, k = 0) { // вирізка «наш запис» зі скану: рамка marks[k] — у пропорціях, без обрізання тексту
+  const m = (d.marks || [])[k]; if (!m || !d.pages) return '';
+  const pad = .01, x = Math.max(0, m.x - pad), y = Math.max(0, m.y - pad), w = Math.min(1 - x, m.w + 2 * pad), h = Math.min(1 - y, m.h + 2 * pad);
+  return `<figure class="nb-crop" data-doc="${esc(d.id)}"><div class="nb-cw" data-w="${w}" data-h="${h}" style="aspect-ratio:${(w * 3 / (h * 4)).toFixed(3)}"><img class="nb-ci" src="${img('doc=' + d.id + '&page=' + (m.p || 0))}" alt="" loading="lazy" decoding="async" style="width:${(100 / w).toFixed(2)}%;left:${(-x / w * 100).toFixed(2)}%;top:${(-y / h * 100).toFixed(2)}%"></div><figcaption>${esc(d.title)}${d.src ? ` · <span>${esc(d.src)}</span>` : ''}</figcaption></figure>`;
+}
+document.addEventListener('load', e => { const im = e.target; if (!im.classList?.contains('nb-ci')) return; const c = im.parentElement, w = +c.dataset.w, h = +c.dataset.h; if (im.naturalWidth && w && h) c.style.aspectRatio = (w * im.naturalWidth / (h * im.naturalHeight)).toFixed(4); }, true);
+function nbEntry(id, st, short_) {
+  const p = P[id]; if (!p) return '';
+  const docs = S.data.documents.filter(d => (d.people || []).includes(id) && d.type !== 'map').sort((a, b) => (nbYear(a.date) || 9999) - (nbYear(b.date) || 9999));
+  const kids = (KIDS[id] || []).filter(k => P[k]).sort(byBirth), sp = (SPOUSES[id] || []).filter(x => P[x.id]);
+  const T = []; // роки на полях
+  if (p.b || p.bp) T.push([nbYear(p.b) || '', `Народ${p.sex === 'f' ? 'илася' : 'ився'}${p.b ? ' ' + esc(p.b) : ''}${p.bp ? ' · ' + esc(p.bp) : ''}${P[p.f] || P[p.mo] ? '. Батьки — ' + [p.f, p.mo].filter(x => P[x]).map(pLink).join(' і ') : ''}.`]);
+  sp.forEach(x => { const t = String(x.date || ''); const real = t && !/підтвердж|не відом|невідом|родиною|за словами|припущ|не підтверджено/i.test(t); T.push([real ? nbYear(t) || '' : '', `Шлюб з ${pLink(x.id)}${real ? ' — ' + esc(t) : /не підтверджено/i.test(t) ? ' (шлюб не підтверджено документом)' : ''}.`]); });
+  kids.forEach(k => { const c = P[k]; if (docs.some(d => /^Народження/.test(d.title || '') && (d.people || []).includes(k))) return; T.push([nbYear(c.b) || '', `Народ${c.sex === 'f' ? 'илася донька' : c.sex === 'm' ? 'ився син' : 'илася дитина'} ${pLink(k)}${childAge(c) ? ' († ' + esc(childAge(c).txt) + ')' : ''}.`]); });
+  const kidDoc = new Set(); docs.forEach(d => { if (/^Народження/.test(d.title || '')) (d.people || []).forEach(x => kidDoc.add(x)); });
+  docs.forEach(d => { const tx = nbClean(d.text); T.push([nbYear(d.date) || '', `<a href="#" class="doclink" data-doc="${esc(d.id)}">${esc(d.title)}</a>${tx ? ' — ' + mdLinks(esc(tx)) : ''}`]); });
+  if (p.war) T.push(['', `${{ ww1: 'Перша світова', ww2: 'Друга світова', other: 'Війна' }[p.war.w] || 'Війна'}: ${{ ret: p.sex === 'f' ? 'повернулася' : 'повернувся', kil: p.sex === 'f' ? 'загинула' : 'загинув', mis: p.sex === 'f' ? 'пропала безвісти' : 'пропав безвісти', unk: 'доля невідома' }[p.war.f] || ''}${p.war.h ? ' (Є припущення, що це саме він)' : ''}.`]);
+  if (p.d || p.dp) T.push([nbYear(p.d) || '', `Помер${p.sex === 'f' ? 'ла' : ''}${p.d ? ' ' + esc(p.d) : ''}${p.dp ? ' · ' + esc(p.dp) : ''}.`]);
+  T.sort((a, b) => (a[0] || 9999) - (b[0] || 9999));
+  const crops = docs.filter(d => d.marks?.length && d.pages).slice(0, short_ ? 1 : 2);
+  const pu = portrait(p) ? img('photo=' + encodeURIComponent(p.portrait)) : '';
+  return `<article class="nb-p${p.hyp ? ' hyp' : ''}" id="nb-${esc(id)}">
+    <header><span class="nb-rel">${esc(relTo(st, id))}${p.hyp ? ' · Є припущення' : ''}</span><h4><a href="${href('p', id)}">${esc(full(p))}</a></h4>${life(p) ? `<span class="nb-life">${esc(life(p))}</span>` : ''}</header>
+    ${pu ? `<figure class="nb-ph" data-photo="${esc(p.portrait)}" data-pctx="${esc(id)}"><img src="${pu}" alt="" loading="lazy" decoding="async"><figcaption>${esc(full(p))}</figcaption></figure>` : ''}
+    ${T.length ? `<div class="nb-tl">${T.map(([y, t]) => `<div><b>${y || ''}</b><span>${t}</span></div>`).join('')}</div>` : ''}
+    ${p.note ? `<div class="nb-note">${(mdLinks(esc(short_ ? (p.note.length > 700 ? p.note.slice(0, 700).replace(/\s+\S*$/, '') + '…' : p.note) : p.note)))}</div>` : ''}
+    ${crops.map(d => nbCrop(d)).join('')}
+  </article>`;
+}
+function vBook() {
+  const st = startId(); if (!st || !P[st]) return '<p class="muted">Книга будується від вашої картки — прив\'яжіть акаунт до картки («Це я»).</p>';
+  const t = loadText('history'), A = ancD(st), gens = {};
+  A.forEach((g, id) => { if (P[id]) (gens[g] ||= []).push(id); });
+  const G = Object.keys(gens).map(Number).filter(g => g > 0).sort((a, b) => b - a);
+  const conf = g => gens[g].filter(id => !P[id].hyp).sort((a, b) => (P[a].sex === 'm' ? 0 : 1) - (P[b].sex === 'm' ? 0 : 1) || byBirth(a, b));
+  const hyp = [...A.keys()].filter(id => P[id]?.hyp).sort((a, b) => A.get(b) - A.get(a) || byBirth(a, b));
+  const us = [st, ...(SPOUSES[st] || []).map(x => x.id), ...(KIDS[st] || [])].filter((x, i, a) => P[x] && a.indexOf(x) === i);
+  const HI = (typeof hypItems === 'function' ? hypItems() : []).filter(x => x.cat === 'hyp' || x.cat === 'kin').sort((a, b) => b.p - a.p).slice(0, 24);
+  const gName = g => g === 1 ? 'Батьки' : g === 2 ? 'Бабусі й дідусі' : g === 3 ? 'Прабабусі й прадідусі' : `${g}-те покоління вгору`;
+  const sheets = [];
+  sheets.push(`<section class="nb-sheet nb-title"><div class="nb-tt"><span class="v4-k">Наш родовід</span><h2>Книга роду</h2><p class="nb-sur">${SURN.join(' · ')}</p><p>Вороньки · Веприк · Лідин</p><p class="nb-by">Склав і веде Максим Шутий · ${new Date().getFullYear()}</p></div>
+    <nav class="nb-toc"><b>Зміст</b>${t && (t.md || t) ? '<a href="#" data-nbgo="nb-p1">I. Історія роду</a>' : ''}<a href="#" data-nbgo="nb-p2">II. Наші предки — по поколіннях</a>${G.map(g => `<a href="#" data-nbgo="nb-g${g}" class="sub">${gName(g)} · ${conf(g).length}</a>`).join('')}<a href="#" data-nbgo="nb-us" class="sub">Ми</a><a href="#" data-nbgo="nb-p3">III. Є припущення</a><a href="#" data-nbgo="nb-p4">IV. Сусіди й однофамільці</a></nav></section>`);
+  if (t && (t.md || t)) sheets.push(`<section class="nb-sheet" id="nb-p1"><h3 class="nb-part">I. Історія роду</h3><div class="nb-cols nb-md">${glossify(md(t.md || t))}</div></section>`);
+  sheets.push(`<section class="nb-sheet nb-sep" id="nb-p2"><h3 class="nb-part">II. Наші предки — по поколіннях</h3><p class="nb-lead">Від найдавніших відомих до нас. Тут лише ті, чий зв'язок з родом підтверджено документами або родиною; роки на полях — з метрик, переписів і записів ЗАГС. Вирізки — саме наш запис зі скану.</p></section>`);
+  G.forEach(g => { const L = conf(g); if (L.length) sheets.push(`<section class="nb-sheet" id="nb-g${g}"><h3 class="nb-gen"><i>${g}</i>${gName(g)}</h3><div class="nb-cols">${L.map(id => nbEntry(id, st)).join('')}</div></section>`); });
+  sheets.push(`<section class="nb-sheet" id="nb-us"><h3 class="nb-gen"><i>0</i>Ми</h3><div class="nb-cols">${us.map(id => nbEntry(id, st)).join('')}</div></section>`);
+  sheets.push(`<section class="nb-sheet" id="nb-p3"><h3 class="nb-part">III. Є припущення</h3><p class="nb-lead">Те, що ще не доведено документом: на чому тримається кожне припущення — написано. Знаєте щось — <a href="#/hyp">допоможіть підтвердити чи спростувати</a>.</p>
+    <div class="nb-cols">${hyp.map(id => nbEntry(id, st, true)).join('')}
+    ${HI.length ? `<h4 class="nb-sub">Можлива рідня й відкриті питання</h4>${HI.map(x => `<div class="nb-hyp"><b>${x.p}%</b><div><h5>${esc(x.title)}</h5>${x.text ? `<p>${glossify(mdLinks(esc(nbPlain(x.text).slice(0, 600))))}</p>` : ''}${x.basis ? `<p class="nb-basis">На чому базується: ${esc(nbPlain(x.basis).slice(0, 400))}</p>` : ''}</div></div>`).join('')}` : ''}</div></section>`);
+  sheets.push(`<section class="nb-sheet" id="nb-p4"><h3 class="nb-part">IV. Сусіди й однофамільці</h3>${nbNeighbors()}</section>`);
+  return `<div class="nb-bar"><button class="btn line small" data-act="nb-print">⬇ Зберегти PDF / друк</button><button class="btn line small" data-act="ridbook-old">📖 Стара книга (3D)</button><span class="small muted">${A.size} предків у дереві · ${S.data.documents.filter(d => (d.people || []).some(x => A.has(x))).length} документів</span></div><div class="nbook">${sheets.join('')}</div>`;
+}
+function nbNeighbors() { // двори 1767/1782 з прізвищами нашого дерева, але без наших людей — однофамільці й сусіди
+  const D = S.ui.dvD; if (!D) { if (!S.ui.dvLoading) { S.ui.dvLoading = true; api('/api/data?dvory=1').then(r => { S.ui.dvD = r.dvory || {}; if (S.view === 'families') { S.ui.keepScroll = true; render(); } }).catch(() => {}).finally(() => { S.ui.dvLoading = false; }); } return '<p class="small muted">Завантажую двори…</p>'; }
+  const TS = treeSurn(), VIL = { voronky: 'Вороньки', veprik: 'Веприк' }, L = [];
+  Object.entries(D).forEach(([v, Y]) => Object.entries(Y || {}).forEach(([y, H]) => (H || []).forEach(h => { const sur = String(h.sur || '').replace(/\(\?\)/g, '').trim(); if (!sur || !TS.has(sur)) return; if ((h.people || []).some(x => dvTree(x, y))) return; /* хтось із двору вже в дереві — це наші, не однофамільці */ L.push({ v: VIL[v] || v, y, h }); })));
+  const liv = h => DV_LIVE.filter(([k]) => (h.live || {})[k]).map(([k, , t]) => t + ' ' + h.live[k]).join(', ');
+  return `<p class="nb-lead">У Рум'янцевському описі 1767 р. і переписі 1782 р. є двори з тими самими прізвищами, що й у нашому дереві, але зв'язку з нашими людьми поки не знайдено. Можливо, це рідня, можливо — лише однофамільці.</p>
+    <div class="nb-cols nb-nb">${L.slice(0, 60).map(({ v, y, h }) => `<div><b>${esc(y)}</b><span>${esc(v)}${h.no ? ', двір №' + esc(h.no) : ''}: <a href="#/dvory">${esc(h.head || '')}</a>${h.status ? ' · ' + esc(dvSt(h.status)) : ''} — ${(h.people || []).length} душ${liv(h) ? '; ' + esc(liv(h)) : ''}.</span></div>`).join('') || '<p class="small muted">Таких дворів не знайдено.</p>'}</div>`;
 }
 /* v4: «Пряма лінія» — червона смуга з роками, покоління чергуються ліворуч/праворуч; від найдавнішого вгорі до того, хто увійшов */
 function ridLine() {
@@ -4307,6 +4374,7 @@ function stickBars() {
   document.documentElement.style.setProperty('--stkh', top + 'px'); // для прокрутки до якорів
 }
 addEventListener('resize', () => { clearTimeout(window.__stkT); window.__stkT = setTimeout(stickBars, 150); });
+document.addEventListener('click', e => { const g = e.target.closest('[data-nbgo]'); if (!g) return; e.preventDefault(); document.getElementById(g.dataset.nbgo)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 document.addEventListener('click', e => { const a = e.target.closest('[data-act="fam-jump"]'); if (!a) return; e.preventDefault(); const el = document.getElementById('fam-' + a.dataset.id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--stkh')) || 120) - 8, behavior: 'smooth' }); });
 /* ───── Рендер ───── */
 function render() {
@@ -4474,6 +4542,9 @@ document.addEventListener('click', async e => {
     if (act === 'dq-more') { S.ui.dN = (S.ui.dN || 96) + 240; S.ui.keepScroll = true; render(); return; }
     if (act === 'dqm-more') { S.ui.dmN = 9999; S.ui.keepScroll = true; render(); return; }
     if (act === 'pl-more') { S.ui.plN = (S.ui.plN || 150) + 300; S.ui.keepScroll = true; render(); return; }
+    if (act === 'ridbook-old') { S.ui.oldBook = true; render(); return; }
+    if (act === 'nb-new') { S.ui.oldBook = false; render(); return; }
+    if (act === 'nb-print') { window.print(); return; }
     if (act === 'rl-side') { S.ui.rlSide = d.v; S.ui.keepScroll = true; render(); return; }
     if (act === 'map-tab') { S.ui.mtab = d.v; render(); return; }
     if (act === 'map-v') { S.ui.mapv = d.v; S.ui.keepScroll = true; render(); return; }

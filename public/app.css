@@ -2440,3 +2440,54 @@ abbr.dv-sd{text-decoration:underline dotted var(--muted);text-underline-offset:3
 @media (prefers-reduced-motion:reduce){.mtabs button.v4-readb,.mtabs button.v4-readb::after{animation:none}}
 /* Історія роду: шапка в один рядок */
 .v4-mh .v4-rh-r .mtabs{flex-wrap:nowrap!important;flex:none}
+
+/* ═══ Нова «Книга роду»: друковані сторінки ═══ */
+.nb-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 16px}
+.nbook{display:flex;flex-direction:column;gap:28px;align-items:center;counter-reset:nbpage;text-align:left}
+.nb-sheet{counter-increment:nbpage;position:relative;width:min(100%,1100px);background:#fff;color:#1d1c1a;padding:clamp(28px,5vw,72px) clamp(22px,5vw,80px) clamp(40px,5vw,72px);box-shadow:0 1px 0 #e7e2d7,0 30px 60px -40px rgba(26,25,22,.45);border:1px solid #ebe6dc;content-visibility:auto;contain-intrinsic-size:auto 1400px}
+.nb-sheet::after{content:counter(nbpage);position:absolute;bottom:22px;left:0;right:0;text-align:center;font:400 11px var(--f-mono);color:#a39b8e}
+.nb-cols{columns:2 340px;column-gap:48px;column-rule:1px solid #ebe6dc}
+.nb-title{min-height:70vh;display:grid;grid-template-columns:1fr minmax(240px,320px);gap:40px;align-items:end}
+.nb-tt h2{margin:14px 0 18px;font:400 clamp(56px,8vw,112px)/.9 var(--f-display);letter-spacing:-.05em}
+.nb-tt p{margin:4px 0;font:400 15px/1.5 var(--f-body);color:#57524a}.nb-sur{font-weight:500!important;color:#1d1c1a!important}
+.nb-by{margin-top:28px!important;font:400 12px var(--f-mono)!important}
+.nb-toc{display:flex;flex-direction:column;gap:2px;border-left:1px solid #e2ddd2;padding-left:18px}
+.nb-toc b{font:500 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:#8a8377;margin-bottom:8px}
+.nb-toc a{font:500 14px/1.4 var(--f-body);color:#1d1c1a;text-decoration:none;padding:5px 0}.nb-toc a.sub{padding-left:14px;font-weight:400;color:#57524a;font-size:13px}.nb-toc a:hover{color:var(--accent)}
+@media (max-width:760px){.nb-title{grid-template-columns:1fr;min-height:0}}
+.nb-part{margin:0 0 22px;font:400 clamp(26px,3vw,40px)/1.05 var(--f-display)!important;letter-spacing:-.04em!important;border-bottom:2px solid #1d1c1a;padding-bottom:12px}
+.nb-gen{display:flex;align-items:baseline;gap:14px;margin:0 0 22px;font:400 clamp(22px,2.4vw,30px)/1.1 var(--f-display)!important;letter-spacing:-.03em!important;border-bottom:1px solid #1d1c1a;padding-bottom:10px}
+.nb-gen i{font-style:normal;color:var(--accent);font-size:.8em}
+.nb-lead{max-width:62ch;font:400 16px/1.65 var(--f-body);color:#3a3732}
+.nb-sep{min-height:0}
+.nb-md{font:400 15px/1.7 var(--f-body)}.nb-md h3{break-after:avoid;font:600 16px/1.3 var(--f-body);margin:20px 0 8px}.nb-md p{margin:0 0 12px}
+.nb-p{break-inside:avoid-column;margin:0 0 30px;padding-bottom:22px;border-bottom:1px solid #ebe6dc;font:400 13.5px/1.6 var(--f-body)}
+.nb-p.hyp{border-left:2px dashed #a37f22;padding-left:12px}
+.nb-p header{margin-bottom:10px}
+.nb-rel{display:block;font:500 10.5px/1.3 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:#8a8377}
+.nb-p.hyp .nb-rel{color:#a37f22}
+.nb-p h4{margin:4px 0 2px;font:600 18px/1.2 var(--f-body)}.nb-p h4 a{color:#1d1c1a;text-decoration:none}.nb-p h4 a:hover{color:var(--accent)}
+.nb-life{font:400 12px var(--f-mono);color:var(--accent)}
+.nb-tl{margin:8px 0 10px}
+.nb-tl>div{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:3px 0;font-size:12.5px;line-height:1.5}
+.nb-tl b{font:500 11.5px/1.6 var(--f-mono);color:#8a8377}
+.nb-tl a,.nb-note a{color:#1d1c1a;text-decoration:underline;text-decoration-color:#cfc8ba;text-underline-offset:2px}
+.nb-note{color:#2e2b27;margin:6px 0 10px;white-space:pre-line}
+.nb-ph{margin:6px 0 12px;cursor:zoom-in}.nb-ph img{display:block;width:100%;max-height:340px;object-fit:contain;background:#f3f0e9}
+.nb-ph figcaption,.nb-crop figcaption{margin-top:6px;font:400 11px/1.4 var(--f-body);color:#57524a}
+.nb-crop{margin:10px 0 12px;cursor:zoom-in}
+.nb-cw{position:relative;overflow:hidden;background:#f3f0e9;border:1px solid #e2ddd2}
+.nb-ci{position:absolute;max-width:none!important;height:auto}
+.nb-crop figcaption span{color:#8a8377}
+.nb-sub{column-span:all;margin:26px 0 12px;font:400 20px/1.1 var(--f-display);letter-spacing:-.03em}
+.nb-hyp{break-inside:avoid-column;display:grid;grid-template-columns:52px 1fr;gap:12px;margin:0 0 16px;padding-bottom:14px;border-bottom:1px solid #ebe6dc}
+.nb-hyp>b{font:400 24px/1 var(--f-display);color:#a37f22;letter-spacing:-.04em}
+.nb-hyp h5{margin:0 0 4px;font:600 13.5px/1.35 var(--f-body)}.nb-hyp p{margin:0 0 4px;font-size:12.5px;line-height:1.5;color:#3a3732}.nb-basis{color:#8a8377!important}
+.nb-nb>div{break-inside:avoid-column;display:grid;grid-template-columns:44px 1fr;gap:10px;font-size:12.5px;line-height:1.5;padding:4px 0;border-bottom:1px dotted #e2ddd2}.nb-nb b{font:500 11.5px var(--f-mono);color:#8a8377}
+@media print{
+  header.top,.bnav,.credit,.pghead,.v4-rh,.nb-bar,.introlay,.updbar,.ivnudge,.chtip{display:none!important}
+  body,main.wrap{background:#fff!important;padding:0!important;margin:0!important}
+  .nbook{gap:0}.nb-sheet{box-shadow:none;border:0;width:100%;padding:14mm 12mm;break-after:page;content-visibility:visible}
+  .nb-cols{column-gap:10mm}
+  @page{size:A4;margin:10mm}
+}
