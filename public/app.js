@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081638';
+const BUILD = '202611081640';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3009,7 +3009,7 @@ function geoMount() {
    у Веприку — по вулицях і сторонах з вуличного списку 1767 р. Млини, пасіки, церква малюються лише там, де вони є в записі. ───── */
 const DV_VIL = { voronky: 'Вороньки', veprik: 'Веприк' };
 const DV_LIVE = [['koni', '🐎', 'коні'], ['voly', '🐂', 'воли'], ['korovy', '🐄', 'корови'], ['vivci', '🐑', 'вівці'], ['svyni', '🐖', 'свині'], ['kozy', '🐐', 'кози'], ['vulyky', '🐝', 'вулики']];
-const dvSt = s => String(s || '').replace(/посполитый/, 'посполитий').replace(/графский/, 'графський');
+const dvSt = s => String(s || '').replace(/посполитый/g, 'посполитий').replace(/графский/g, 'графський').replace(/священик/g, 'священник').replace(/значковый товарищ/g, 'значковий товариш'); // одне написання стану (у книгах — по-різному)
 const dvSur = h => String(h.sur || h.head || h.owner_list || '').replace(/\(\?\)|\[.*?\]/g, '').trim().split(/\s+/).filter(w => /^[А-ЯІЇЄҐ]/.test(w)).pop() || '';
 const dvLabel = h => (/^\d/.test(h.no || '') ? '№' + h.no + ' ' : '') + (dvSur(h) || (h.type ? h.type : ''));
 const dvLeft = h => /лев|слева|зліва/.test(h.side || '');
