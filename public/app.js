@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081626';
+const BUILD = '202611081630';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2913,6 +2913,7 @@ function vStats() {
     ${S.ui.stPer === 'own' ? `<input class="in yr" data-st="stY0" inputmode="numeric" value="${y0 || ''}" placeholder="з року"><input class="in yr" data-st="stY1" inputmode="numeric" value="${y1 || ''}" placeholder="по рік">` : ''}
     <span class="small muted">${F.length} з ${ps.length}</span></div>
   <div class="sec"><h3>Народження по десятиліттях</h3>${chart}</div>
+  ${stMore(F)}
   <div class="stgrid">
     <div class="sec"><h3>Прізвища</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Прізвище')}${sortTh(1, 'Людей', 1)}${sortTh(2, 'Найраніше', 1)}<th>Звідки</th></tr></thead><tbody>${Object.entries(sur).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v.n}</td><td class="mono">${v.y < 9999 ? v.y : '—'}</td><td class="small">${esc([...v.pl].join(', '))}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Найчастіші імена</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Чоловічі')}${sortTh(1, 'Скільки', 1)}</tr></thead><tbody>${cnt(F.filter(p => p.sex === 'm').map(nm)).slice(0, 15).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div>
@@ -3306,6 +3307,74 @@ function parseLL(t) {
   const [la, lo] = [v[0].x, v[1].x]; return Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? [la, lo] : null;
 }
 // «Цифри роду»: довгі таблиці згорнуті до ~8 рядків, кнопка «Показати всі (N)» / «Згорнути»; стан пам'ятаємо в S.ui.stOpen
+/* Цифри роду — ще діаграми (08.11): смерті по десятиліттях, вік смерті, місяць народження, вік батьків, скільки дітей, господарства 1767/1782.
+   Стовпчики — SVG з підказкою (data-tip показує chartTip при наведенні / дотику). */
+const SXK = [['m', 'bm', 'чол.'], ['f', 'bf', 'жін.'], ['u', 'bu', 'не вказано']];
+function vBars(items, o = {}) { // items: [{l, v:{m,f,u}|number, tip?, hi?}]
+  const H = o.h || 150, bw = o.bw || Math.max(24, Math.min(64, Math.round(640 / Math.max(1, items.length)))), W = Math.max(300, items.length * bw + 10), tot = it => typeof it.v === 'number' ? it.v : SXK.reduce((s, [k]) => s + (it.v[k] || 0), 0), mx = Math.max(1, ...items.map(tot));
+  return `<div class="chartbox"><svg viewBox="0 0 ${W} ${H + 34}" width="100%" height="${H + 34}" preserveAspectRatio="none" role="img" aria-label="${esc(o.aria || '')}">${items.map((it, i) => { const x = i * bw + 6, w = bw - 8; let y = H, r = '';
+    if (typeof it.v === 'number') { const h = it.v / mx * H; r = `<rect x="${x}" y="${H - h}" width="${w}" height="${h}" class="${it.hi ? 'bh' : 'bm'}"/>`; }
+    else SXK.forEach(([k, c]) => { const h = (it.v[k] || 0) / mx * H; y -= h; r += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${it.hi ? c + ' hi' : c}"/>`; });
+    return `<g data-tip="${esc(it.tip || `${it.l}: ${tot(it)}${typeof it.v === 'number' ? '' : ` (чол. ${it.v.m || 0}, жін. ${it.v.f || 0}${it.v.u ? ', не вказано ' + it.v.u : ''})`}`)}"><rect x="${x - 3}" y="0" width="${w + 6}" height="${H}" fill="transparent"/>${r}<text x="${x + w / 2}" y="${H + 14}" text-anchor="middle">${esc(it.s ?? it.l)}</text>${it.s2 ? `<text x="${x + w / 2}" y="${H + 27}" text-anchor="middle" class="yy">${esc(it.s2)}</text>` : ''}</g>`; }).join('')}</svg>${o.legend === false ? '' : `<p class="small muted">${typeof items[0]?.v === 'number' ? '' : '<span class="lg bm"></span> чоловіки <span class="lg bf"></span> жінки <span class="lg bu"></span> не вказано · '}наведіть на стовпчик — побачите число</p>`}</div>`;
+}
+function hBars(items, o = {}) { // items: [{l, v, tip?, href?}]
+  const mx = Math.max(1, ...items.map(x => x.v));
+  return `<div class="hbars">${items.map(x => `<div class="hb" data-tip="${esc(x.tip || x.l + ': ' + x.v)}"><span class="hb-l">${x.href ? `<a href="${x.href}">${esc(x.l)}</a>` : esc(x.l)}${x.sub ? `<i>${esc(x.sub)}</i>` : ''}</span><span class="hb-b"><i style="width:${(x.v / mx * 100).toFixed(1)}%"></i></span><b>${esc(String(x.vl ?? x.v))}</b></div>`).join('')}</div>`;
+}
+const sxOf = p => p.sex === 'm' ? 'm' : p.sex === 'f' ? 'f' : 'u';
+function stMore(F) {
+  const dOf = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? new Date(+m[3], m[2] - 1, +m[1]) : null; };
+  // смерті по десятиліттях
+  const dd = {}; F.forEach(p => { const y = yN(p.d); if (y) { const d = Math.floor(y / 10) * 10; (dd[d] ||= { m: 0, f: 0, u: 0 })[sxOf(p)]++; } });
+  const EV = { 1910: 'Перша світова', 1920: 'громадянська війна, голод 1921–23', 1930: 'Голодомор 1932–33', 1940: 'Друга світова' };
+  const dItems = Object.keys(dd).map(Number).sort((a, b) => a - b).map((d, i) => ({ l: d + '-ті', s: String(d).slice(2), s2: i % 2 ? '' : String(d), v: dd[d], hi: !!EV[d], tip: `${d}-ті: померло ${dd[d].m + dd[d].f + dd[d].u} (чол. ${dd[d].m}, жін. ${dd[d].f})${EV[d] ? ' — ' + EV[d] : ''}` }));
+  // вік на момент смерті
+  const AB = [[0, 1, 'до року'], [1, 5, '1–4'], [5, 15, '5–14'], [15, 30, '15–29'], [30, 50, '30–49'], [50, 70, '50–69'], [70, 90, '70–89'], [90, 200, '90+']];
+  const ab = AB.map(([a, b, l]) => ({ l, v: { m: 0, f: 0, u: 0 } }));
+  F.forEach(p => { const b = yN(p.b), d = yN(p.d); if (!b || !d || d < b) return; const B = dOf(p.b), D = dOf(p.d), age = B && D ? (D - B) / (365.25 * 864e5) : d - b; const i = AB.findIndex(([a, c]) => age >= a && age < c); if (i >= 0) ab[i].v[sxOf(p)]++; });
+  ab.forEach(x => { x.tip = `Померли у віці ${x.l}: ${x.v.m + x.v.f + x.v.u} (чол. ${x.v.m}, жін. ${x.v.f})`; });
+  // місяць народження
+  const MN = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'], mb = MN.map(l => ({ l, v: { m: 0, f: 0, u: 0 } }));
+  F.forEach(p => { const m = dmOf(p.b); if (m && m.m >= 1 && m.m <= 12) mb[m.m - 1].v[sxOf(p)]++; });
+  mb.forEach((x, i) => { x.tip = `${MONTHS_N[i]}: народилось ${x.v.m + x.v.f + x.v.u}`; });
+  // вік батьків при народженні дитини
+  const PB = [[12, 20, 'до 20'], [20, 25, '20–24'], [25, 30, '25–29'], [30, 35, '30–34'], [35, 40, '35–39'], [40, 45, '40–44'], [45, 100, '45+']];
+  const pa = PB.map(([, , l]) => ({ l, v: { m: 0, f: 0, u: 0 } })); let paN = 0;
+  F.forEach(c => { const cb = yN(c.b); if (!cb) return; [[c.f, 'm'], [c.mo, 'f']].forEach(([id, k]) => { const pb = P[id] && yN(P[id].b); if (!pb) return; const a = cb - pb, i = PB.findIndex(([x, y]) => a >= x && a < y); if (i >= 0) { pa[i].v[k]++; paN++; } }); });
+  pa.forEach(x => { x.tip = `Вік ${x.l}: батьків ${x.v.m}, матерів ${x.v.f}`; });
+  // скільки дітей у родині (за парою батьків)
+  const fams = {}; F.forEach(c => { if (!c.f && !c.mo) return; const k = (c.f || '?') + '|' + (c.mo || '?'); fams[k] = (fams[k] || 0) + 1; });
+  const kb = Array.from({ length: 10 }, (_, i) => ({ l: i === 9 ? '10+' : String(i + 1), v: 0 })); Object.values(fams).forEach(n => { kb[Math.min(n, 10) - 1].v++; });
+  kb.forEach(x => { x.tip = `${x.l} ${x.l === '1' ? 'дитина' : ['2', '3', '4'].includes(x.l) ? 'дитини' : 'дітей'} у дереві: ${x.v} родин`; });
+  const card = (t, sub, body) => `<div class="sec v4-ch"><h3>${t}</h3>${sub ? `<p class="small muted">${sub}</p>` : ''}${body}</div>`;
+  if (!S.ui.dvD && !S.ui.dvLoading) { S.ui.dvLoading = true; api('/api/data?dvory=1').then(r => { S.ui.dvD = r.dvory || {}; if (S.view === 'stats') { S.ui.keepScroll = true; render(); } }).catch(() => {}).finally(() => { S.ui.dvLoading = false; }); }
+  return `<div class="v4-charts">
+    ${dItems.length ? card('Смерті по десятиліттях', 'Червоним — десятиліття воєн і голоду. Скільки людей з дерева померло в кожне десятиліття.', vBars(dItems, { aria: 'Смерті по десятиліттях' })) : ''}
+    ${card('Вік на момент смерті', 'За картками, де відомі обидві дати.', vBars(ab, { aria: 'Вік смерті' }))}
+    ${card('Місяць народження', 'У які місяці народжувались — за повними датами.', vBars(mb, { aria: 'Місяць народження' }))}
+    ${paN ? card('Вік батьків при народженні дитини', '<span class="lg bm"></span> батько <span class="lg bf"></span> мати — за роками народження.', vBars(pa, { aria: 'Вік батьків', legend: false })) : ''}
+    ${card('Скільки дітей у родині', 'Скільки дітей однієї пари батьків уже внесено в дерево (справжніх могло бути більше).', vBars(kb, { aria: 'Дітей у родині', legend: false }))}
+  </div>${dvStats()}`;
+}
+/* Господарства з Рум'янцевського опису 1767 і перепису 1782 (ті самі дані, що в «Дворах») */
+function dvStats() {
+  const D = S.ui.dvD; if (!D) return `<div class="sec v4-ch"><h3>Господарства 1767 і 1782</h3><p class="small muted">Завантажую двори…</p></div>`;
+  const VIL = { voronky: 'Вороньки', veprik: 'Веприк' }, LIV = DV_LIVE.filter(([k]) => k !== 'vulyky'), all = [];
+  Object.entries(D).forEach(([v, Y]) => Object.entries(Y || {}).forEach(([y, L]) => (L || []).forEach(h => all.push({ ...h, v, y }))));
+  const H = all.filter(h => (h.people || []).length || Object.keys(h.live || {}).length);
+  const sumL = h => LIV.reduce((s, [k]) => s + (+(h.live || {})[k] || 0), 0);
+  const lab = h => `${h.head || dvLabel(h)}`, sub = h => `${VIL[h.v] || h.v} ${h.y}${h.no ? ', двір №' + h.no : ''}${h.status ? ' · ' + h.status : ''}${h.ours ? ' · наші' : ''}`;
+  const byP = H.slice().sort((a, b) => (b.people || []).length - (a.people || []).length).slice(0, 12).map(h => ({ l: lab(h), sub: sub(h), v: (h.people || []).length, tip: `${lab(h)} — ${(h.people || []).length} душ у дворі (${sub(h)})` }));
+  const byL = H.filter(h => sumL(h)).sort((a, b) => sumL(b) - sumL(a)).slice(0, 12).map(h => ({ l: lab(h), sub: sub(h), v: sumL(h), vl: sumL(h) + ' гол.', tip: `${lab(h)} — ${LIV.filter(([k]) => (h.live || {})[k]).map(([k, , t]) => t + ' ' + h.live[k]).join(', ')} (${sub(h)})` }));
+  const tot = {}; all.forEach(h => { const k = (VIL[h.v] || h.v) + ' ' + h.y; const t = (tot[k] ||= { d: 0, p: 0 }); t.d++; t.p += (h.people || []).length; LIV.forEach(([lk]) => { t[lk] = (t[lk] || 0) + (+(h.live || {})[lk] || 0); }); });
+  const st = {}; all.forEach(h => { const k = dvSt(h.status).toLowerCase().replace(/\s+/g, ' ').trim() || 'не вказано'; st[k] = (st[k] || 0) + 1; });
+  return `<div class="v4-charts v4-hh">
+    <div class="sec v4-ch"><h3>Найбільші двори — за кількістю душ</h3><p class="small muted">Рум'янцевський опис 1767 і перепис 1782, Вороньки й Веприк. <a href="#/dvory">Відкрити «Двори» →</a></p>${hBars(byP)}</div>
+    <div class="sec v4-ch"><h3>Найбільші господарства — за худобою</h3><p class="small muted">Коні, воли, корови, вівці, свині, кози — разом, як записано в книзі.</p>${hBars(byL)}</div>
+    <div class="sec v4-ch"><h3>Усього по селах</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Село, рік')}${sortTh(1, 'Дворів', 1)}${sortTh(2, 'Душ', 1)}${LIV.map(([, i, t], j) => sortTh(3 + j, i + ' ' + t, 1)).join('')}</tr></thead><tbody>${Object.entries(tot).map(([k, t]) => `<tr><td>${esc(k)}</td><td class="mono">${t.d}</td><td class="mono">${t.p}</td>${LIV.map(([lk]) => `<td class="mono">${t[lk] || 0}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
+    <div class="sec v4-ch"><h3>Хто господарював</h3><p class="small muted">Стан господарів дворів за записом у книгах.</p>${hBars(Object.entries(st).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => ({ l: k, v })))}</div>
+  </div>`;
+}
 /* Цифри роду: усі картки — висотою найменшої (власник, 08.11); решта вмісту гортається всередині картки */
 function stEq() {
   const C = [...document.querySelectorAll('.stgrid > .sec')]; if (!C.length) return;
@@ -3813,6 +3882,18 @@ function homeCollage() { // фото цілими й в оригінальній
   const L = homePhotos();
   return `<div class="v4-coll">${L.map((x, i) => `<figure style="--r:${COLR[i % COLR.length]}deg"${x.go ? ` data-go="${esc(x.go)}"` : x.doc ? ` data-doc="${esc(x.doc)}"` : ''}><img src="${x.src.replace('&thumb=1', '')}" alt="" ${i < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">${x.c ? `<figcaption>${esc(x.c)}</figcaption>` : ''}</figure>`).join('')}${isOwner() ? `<button class="v4-collset" data-act="home-ph">Обрати фото</button>` : ''}</div>`;
 }
+/* Колаж стискається (фото трохи накладаються), щоб бути не вищим за ліву колонку — без порожнього місця зліва */
+function homeFit() {
+  const c = document.querySelector('.v4-coll'), t = document.querySelector('.v4-hero-t'), k = document.querySelector('.v4-hero-k'); if (!c || !t || !k) return;
+  const F = [...c.querySelectorAll('figure')]; F.forEach(f => { f.style.marginBottom = ''; });
+  if (innerWidth <= 900 || !F.length) return;
+  const target = t.offsetHeight + k.offsetHeight, have = c.offsetHeight; if (have <= target) return;
+  const cols = new Set(F.map(f => Math.round(f.offsetLeft / 20))).size || 1, per = F.length / cols, avg = F.reduce((s, f) => s + f.offsetHeight, 0) / F.length;
+  const ov = Math.min(avg * .42, (have - target) / Math.max(1, per - 1) + 14); F.forEach(f => { f.style.marginBottom = -Math.round(ov - 14) + 'px'; });
+}
+let hfT = 0; const homeFitSoon = () => { clearTimeout(hfT); hfT = setTimeout(homeFit, 60); };
+document.addEventListener('load', e => { if (e.target.closest?.('.v4-coll')) homeFitSoon(); }, true);
+addEventListener('resize', () => { if (S.view === 'home') homeFitSoon(); });
 const hypPr = p => p >= 75 ? 'hi' : p >= 50 ? 'mid' : 'lo';
 function vHome() {
   const me = P[S.me?.person_id], nm = String(S.me?.name || '').split(/\s+/)[0];
@@ -4165,6 +4246,7 @@ function render() {
   if (S.view === 'dvory') { requestAnimationFrame(dvMount); setTimeout(dvMount, 250); } // setTimeout — якщо вкладка прихована (rAF не спрацьовує)
   if (S.view === 'routes' && S.arg) requestAnimationFrame(rtMount);
   if (S.view === 'stats') requestAnimationFrame(() => { stFold(); stEq(); });
+  if (S.view === 'home') requestAnimationFrame(homeFit);
   if (S.data && S.me && !ivNudge.done) { ivNudge.done = 1; ivNudge(); }
   stickBars();
   if (S.ui.pp) ppPaint(); else document.body.classList.remove('pp-on');
@@ -4189,7 +4271,7 @@ function v4Heads(root) {
 /* Діаграми: число одразу при наведенні (і при дотику на телефоні) — з <title> стовпчика */
 let chTip = null;
 function chartTip(e) {
-  const box = e.target.closest?.('.chartbox svg'); if (box && !box.dataset.tipd) { box.dataset.tipd = 1; box.querySelectorAll('title').forEach(ti => { ti.parentElement.dataset.tip = ti.textContent; ti.remove(); }); } // без повільної підказки браузера
+  const box = e.target.closest?.('.chartbox svg, .hbars'); if (box && !box.dataset.tipd) { box.dataset.tipd = 1; box.querySelectorAll('title').forEach(ti => { ti.parentElement.dataset.tip = ti.textContent; ti.remove(); }); } // без повільної підказки браузера
   const el = box && e.target.closest('[data-tip]'), t = el ? { textContent: el.dataset.tip, parentElement: el } : null;
   if (!t) { if (chTip) chTip.hidden = true; document.querySelectorAll('.ch-on').forEach(x => x.classList.remove('ch-on')); return; }
   if (!chTip) { chTip = document.createElement('div'); chTip.className = 'chtip'; document.body.appendChild(chTip); }

@@ -2393,3 +2393,26 @@ main{padding-top:16px}
 .stgrid>.sec{height:auto}
 .stgrid>.sec.st-eq{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .stgrid>.sec.st-eq>h3{position:sticky;top:calc(-1 * clamp(18px,2.4vw,26px));background:var(--sheet);z-index:1;padding:clamp(18px,2.4vw,26px) 0 8px;margin-top:calc(-1 * clamp(18px,2.4vw,26px))}
+/* Цифри роду — додаткові діаграми */
+.v4-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:8px;margin:8px 0}
+.v4-ch{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:clamp(16px,2.2vw,24px);display:flex;flex-direction:column;gap:10px;min-width:0}
+.v4-ch h3{font:400 19px/1.1 var(--f-display)!important;letter-spacing:-.03em!important;text-transform:none!important;color:var(--ink)!important;margin:0}
+.v4-ch .chartbox svg text{font-size:10px}
+.bh,.lg.bh{fill:#c43a24!important;background:#c43a24!important}
+.v4-charts .bm{fill:#57524a!important}
+.hbars{display:flex;flex-direction:column;gap:6px}
+.hb{display:grid;grid-template-columns:minmax(120px,40%) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.hb-l{min-width:0;overflow:hidden}.hb-l a{color:var(--ink)}
+.hb-l i{display:block;font:400 11px/1.3 var(--f-mono);font-style:normal;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-b{height:12px;background:var(--tint);border-radius:999px;overflow:hidden}.hb-b i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.hb>b{font:500 12px/1.2 var(--f-mono);white-space:nowrap}
+.hb:hover .hb-b i{background:var(--ink)}
+@media (max-width:560px){.hb{grid-template-columns:1fr auto}.hb-b{grid-column:1/-1;order:3}}
+.v4-charts .bm,.v4-charts .lg.bm{fill:#57524a!important;background:#57524a!important}
+.v4-charts .bf,.v4-charts .lg.bf{fill:#b9ae9f!important;background:#b9ae9f!important}
+.v4-charts .bu,.v4-charts .lg.bu{fill:#e2ddd2!important;background:#e2ddd2!important}
+.v4-charts .bm.hi{fill:#c43a24!important}.v4-charts .bf.hi{fill:#e8907c!important}.v4-charts .bu.hi{fill:#f2c9bd!important}
+.v4-coll figure{position:relative;z-index:1}
+.v4-coll figure:nth-child(odd){z-index:2}
+.v4-coll figcaption{position:absolute!important;left:12px!important;top:12px!important;bottom:auto!important;margin:0!important;max-width:calc(100% - 24px)!important;padding:4px 8px!important;background:rgba(251,250,246,.92)!important;border-radius:3px;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;font:500 11px/1.2 var(--f-body)!important}
+.v4-coll figure{box-shadow:0 14px 28px -14px rgba(26,25,22,.65)!important}
