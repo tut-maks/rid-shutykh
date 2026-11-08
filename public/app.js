@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081551';
+const BUILD = '202611081604';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3830,16 +3830,18 @@ function vHome() {
       <div class="v4-btns"><a class="btn v4-big" href="#/tree">Відкрити дерево <span>→</span></a><a class="btn line v4-big" href="#/families" data-act="ftab-rid">Читати книгу роду</a></div>
     </div>
     <div class="v4-hero-c">${homeCollage()}</div>
+    <div class="v4-hero-k">
+      <div class="hcard h-kin"><h3>Ким ми доводимось <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
+      ${tgCard()}
+      <div class="hcard h-hyp"><h3>Гарячі припущення <a class="small" href="#/hyp">усі ${hyps.all.length} →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${hyps.top.length ? `<ul class="v4-hot">${hyps.top.map(x => { const k = hypAns(x.id).length; return `<li><button data-act="hyp-open" data-id="${esc(x.id)}"><span class="v4-pc pr-${hypPr(x.p)}">${x.p}<small>%</small></span><span><b>${esc(x.title)}</b>${x.cat === 'kin' ? '<i class="hpv-k">можлива рідня</i>' : ''}<em>${k ? '💬 ' + k + ' відповід. · ' : ''}Щось знаю →</em></span></button></li>`; }).join('')}</ul>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : '')}</div>
+    </div>
   </section>
   <section class="v4-nums v4-bleed">${statTiles()}${homeKeyNums()}</section>
   <section class="v4-sec">
     <div class="v4-sech"><h2>Сьогодні<br><span class="v4-m">в роді</span></h2><span class="v4-meta">${n.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
     <div class="v4-grid">
       <div class="h-today">${todayCard()}</div>
-      <div class="hcard h-kin"><h3>Ким ми доводимось <a class="small" href="#/kin">усе →</a></h3>${kinBox(S.ui.kinA || (me ? me.id : rootId()), S.ui.kinB || null)}</div>
       <div class="hcard h-voice"><h3>Голоси роду <a class="small" href="#/voices">усі${VN > 3 ? ' ' + VN : ''} →</a></h3>${V.length ? `<div class="vlist">${V.map(voiceRow).join('')}</div>` : '<p class="small muted">Ще немає жодного запису. Попросіть бабусю чи дідуся розповісти, як жили, — і запишіть просто з телефона. Це найцінніше, що можна зберегти.</p>'}<div class="btns"><button class="btn line v4-rec" data-act="v-rec"><i></i>Записати історію</button></div></div>
-      ${tgCard()}
-      <div class="hcard h-hyp"><h3>Гарячі припущення <a class="small" href="#/hyp">усі ${hyps.all.length} →</a></h3><p class="small muted">Те, що ще не підтверджено документами. Знаєте щось — підтвердіть, спростуйте чи доповніть.</p>${hyps.top.length ? `<ul class="v4-hot">${hyps.top.map(x => { const k = hypAns(x.id).length; return `<li><button data-act="hyp-open" data-id="${esc(x.id)}"><span class="v4-pc pr-${hypPr(x.p)}">${x.p}<small>%</small></span><span><b>${esc(x.title)}</b>${x.cat === 'kin' ? '<i class="hpv-k">можлива рідня</i>' : ''}<em>${k ? '💬 ' + k + ' відповід. · ' : ''}Щось знаю →</em></span></button></li>`; }).join('')}</ul>` : (TXT.hyps === undefined ? '<p class="small muted">Завантажую…</p>' : '')}</div>
       <div class="hcard h-ask"><h3>Хто на фото? <a class="small" href="#/help">усе →</a></h3>${askGrid(6)}${askDone(false)}</div>
       <div class="hcard h-iv${ivOpen().length ? ' pulse' : ''}"><h3>Питання для розмови ${ivOpen().length ? `<i class="ivcnt">${ivOpen().length}</i>` : ''} <a class="small" href="#/iv">усі →</a></h3><p class="small muted" style="margin:0 0 8px">Сайт сам склав питання з того, чого бракує в дереві. Знаєте відповідь — напишіть; не знаєте — спитайте старших.</p>${ivOpen().slice(0, 3).map(q => `<p class="small v4-li">${esc(q.t)}</p>`).join('')}<a class="btn small" href="#/iv">Відповісти на питання</a></div>
       <div class="hcard h-help"><h3>Допоможіть знайти <a class="small" href="#/help">усе →</a></h3>${wantList(4)}</div>
