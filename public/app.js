@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081606';
+const BUILD = '202611081610';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1758,7 +1758,7 @@ function vMaps() {
   const yr = m => String(m.year || (String(m.date || '').match(/\d{4}/) || [])[0] || '—');
   const ys = all.map(yr).filter(y => /\d/.test(y)).sort();
   const m = list.find(x => x.id === S.ui.mapSel) || list[0];
-  return `<div class="pghead v4-rh"><div class="v4-rh-l"><div class="eyebrow">${all.length} карт${ys.length ? ` · ${ys[0]} — ${ys[ys.length - 1]}` : ''}</div><h1>Карти <span class="v4-m">крізь час</span></h1></div><div class="v4-rh-r"><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок. Оберіть рік на шкалі.</p><a class="rtlink" href="#/routes">${MI.routes}<span><b>Сімейні маршрути</b><i>Прогулянка місцями родини: дім, школа, робота, кладовище — з історіями біля кожної точки</i></span><em>→</em></a></div></div>
+  return `<div class="pghead v4-rh v4-mh"><div class="v4-rh-l"><div class="eyebrow">${all.length} карт${ys.length ? ` · ${ys[0]} — ${ys[ys.length - 1]}` : ''}</div><h1>Карти <span class="v4-m">крізь час</span></h1></div><div class="v4-rh-r"><p class="tabnote" title="Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок.">Як виглядали наші села 100–150 років тому. Карту з позначкою «прив'язана» можна накласти на сучасну карту чи супутниковий знімок. Оберіть рік на шкалі.</p><a class="rtlink" href="#/routes">${MI.routes}<span><b>Сімейні маршрути</b><i>Прогулянка місцями родини: дім, школа, робота, кладовище — з історіями біля кожної точки</i></span><em>→</em></a></div></div>
   <div class="tbar mapbar">${vs.length > 1 ? `<div class="seg"><button type="button" class="${!f ? 'on' : ''}" data-act="map-v" data-v="">Усі (${all.length})</button>${vs.map(v => `<button type="button" class="${f === v ? 'on' : ''}" data-act="map-v" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>` : ''}
     ${canEdit() ? `<button class="btn line small" data-act="map-form">+ Додати карту</button>` : ''}</div>
   ${canEdit() && S.ui.mapform ? `<div class="docform"><input class="in" id="mtitle" placeholder="Назва: напр. «Вороньки на карті РККА»"><input class="in" id="myear" inputmode="numeric" placeholder="Рік (напр. 1941)"><input class="in" id="mvil" placeholder="Села через кому: Вороньки, Веприк"><input class="in" id="msrc" placeholder="Джерело: звідки карта"><label class="btn line small" style="cursor:pointer">Вибрати зображення<input type="file" accept="image/*" multiple data-mapup="1" hidden></label><div class="msg" id="mmsg"></div></div>` : ''}
