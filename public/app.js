@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611072332';
+const BUILD = '202611080042';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2757,6 +2757,19 @@ function holodData() {
   const hy = (typeof hypItems === 'function' ? hypItems() : []).filter(x => /^holod/.test(x.id || ''));
   return { G, n: G.reduce((s, g) => s + g.n.length, 0), sur: new Set(G.map(g => g.k[0])).size, died, hy };
 }
+// Перша світова: записи «Память героев Великой войны» (gwar.mil.ru, РДВІА) по волостях Козелецького пов., де жили наші (вибірка 08.11.2026; src_gwar_ww1.csv у «Базі»).
+// людей — різних «прізвище + ім'я + по батькові» у списках і картотеці втрат; одна людина могла потрапити в кілька граф (поранений, потім пропав).
+const WW1V = { src: { t: '«Память героев Великой войны 1914–1918» (РДВІА: картотека бюро обліку втрат, іменні списки втрат)', u: 'https://gwar.mil.ru/heroes/' },
+  rows: [['Вороньківська (Вороньки, Веприк, Свидовець, Олександрівка, Пустотин…)', 824, 36, 168, 3, 407, 212], ['Бобровицька', 686, 30, 115, 4, 308, 226], ['Ново-Басанська', 542, 22, 106, 3, 261, 143]] };
+function ww1Block(F) {
+  const W = F.filter(p => p.war && p.war.w === 'ww1'), FN = { ret: 'повернувся', kil: 'загинув', mis: 'пропав безвісти', unk: 'невідомо' };
+  const t = WW1V.rows.reduce((a, r) => a.map((x, i) => i ? x + r[i] : x), ['', 0, 0, 0, 0, 0, 0]);
+  return `<div class="sec war-st"><h3>Перша світова війна (1914–1917)</h3>
+    <p class="small muted">У списках і картотеці втрат з наших волостей Козелецького повіту — <b>${t[1]}</b> людей: убиті й померлі — ${t[2]}, пропали безвісти чи залишені на полі бою — ${t[3]}, у полоні — ${t[4]}, поранені — ${t[5]}, хворі — ${t[6]}. Це лише ті, хто потрапив до списків втрат, а не всі мобілізовані; одна людина могла бути й пораненою, і згодом пропалою. Джерело: <a href="${WW1V.src.u}" target="_blank" rel="noopener">${esc(WW1V.src.t)}</a>; усі записи — у «Базі».</p>
+    <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Волость')}${sortTh(1, 'Людей', 1)}${sortTh(2, 'Убиті, померли', 1)}${sortTh(3, 'Пропали безвісти', 1)}${sortTh(4, 'Полон', 1)}${sortTh(5, 'Поранені', 1)}${sortTh(6, 'Хворі', 1)}</tr></thead><tbody>${WW1V.rows.map(r => `<tr><td>${esc(r[0])}</td>${r.slice(1).map(x => `<td class="mono">${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <p class="small"><b>${W.length}</b> з них уже знайдені й прив'язані до карток у дереві${W.some(p => p.war.h) ? ' (* — що це саме наш родич, поки «Є припущення»)' : ''}:</p>
+    <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life_(p))}</td><td class="small war-${p.war.f}">${FN[p.war.f]}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Ще нікого</td></tr>'}</tbody></table></div></div>`;
+}
 function holodBlock() {
   const h = holodData(); if (!h.G.length && !h.died.length) return '';
   const byV = {}; h.G.forEach(g => (byV[g.v] ||= []).push(g));
@@ -2842,6 +2855,7 @@ function vStats() {
         <div class="war-n"><span><b>${W.length}</b> воювали</span><span><b>${c('kil')}</b> загинули</span><span><b>${c('mis')}</b> пропали безвісти</span><span><b>${c('ret')}</b> повернулися</span>${c('unk') ? `<span><b>${c('unk')}</b> доля невідома</span>` : ''}</div>
         <p class="small muted">Не повернулися ${c('kil') + c('mis')} з ${W.length} (${Math.round((c('kil') + c('mis')) / W.length * 100)}%).${W.some(p => p.war.h) ? ' * — що це саме наш родич, поки «Є припущення».' : ''}</p>
         <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Війна')}${sortTh(3, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life_(p))}</td><td class="small">${WN[p.war.w]}</td><td class="small war-${p.war.f}">${fw(p, p.war.f)}</td></tr>`).join('')}</tbody></table></div></div>`; })()}
+    ${ww1Block(F)}
     ${holodBlock()}
     <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
