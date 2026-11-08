@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081630';
+const BUILD = '202611081636';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3847,7 +3847,7 @@ function homePhotoAdmin() {
   const ph = S.data.photos.filter(x => !isVoice(x) && !x.pending && /^image\//.test(x.mime || 'image/jpeg')).map(x => ({ t: 'p', id: x.id, src: img('photo=' + x.id, true), c: P[x.person] ? short(P[x.person]) : (x.caption || '') }));
   const dc = S.data.documents.filter(d => d.pages && /^Фото:/.test(d.title || '')).map(d => ({ t: 'd', id: d.id, src: img('doc=' + d.id + '&page=0', true), c: String(d.title).replace(/^Фото:\s*/, '') }));
   const item = x => { const i = on.get(key(x)); return `<button type="button" class="v4-hpi${i != null ? ' on' : ''}" data-act="hp-tog" data-t="${x.t}" data-id="${esc(x.id)}" data-c="${esc(String(x.c).slice(0, 60))}"><img src="${x.src}" alt="" loading="lazy">${i != null ? `<b>${i + 1}</b>` : ''}<span>${esc(x.c)}</span></button>`; };
-  return `<p class="small muted">Оберіть до 14 фото для колажу на Головній — у тому порядку, як натискаєте (1 — найбільше). Підпис можна змінити нижче. Решту місць (або все, якщо нічого не обрано) сайт заповнить сам: фото наших по прямій і старі фото сіл.</p>
+  return `<p class="small muted">Оберіть до 14 фото для колажу на Головній — у тому порядку, як натискаєте (1 — найбільше). Підпис можна змінити нижче. Показуються лише обрані фото. Якщо нічого не обрано — сайт сам бере фото наших по прямій і старі фото сіл.</p>
     ${cur.length ? `<div class="v4-hpcap">${cur.map((x, i) => `<label class="f"><span class="mono small">${i + 1}</span><input class="in" data-hpc="${i}" value="${esc(x.c || '')}" maxlength="60" placeholder="Підпис"></label>`).join('')}</div>` : ''}
     <div class="btns"><button class="btn" data-act="hp-save">Зберегти (${cur.length} з 14)</button>${cur.length ? '<button class="btn line" data-act="hp-clear">Очистити — хай обирає сайт</button>' : ''}<span class="msg" id="hp-m"></span></div>
     <h3 class="v4-h3">Фото людей · ${ph.length}</h3><div class="v4-hpg">${ph.map(item).join('')}</div>
@@ -3865,7 +3865,7 @@ const pName = p => [String(p.n || '').replace(/\s*\(.*?\)/g, ''), p.pt].filter(B
 /* Фото на головній: власник обирає сам (Власнику → «Фото на головній»), інакше — автоматично: наші по прямій, найближчі, потім старі фото сіл */
 function homePhotos() {
   const U = (CFG_().homePhotos || []).map(x => x.t === 'd' ? (S.data.documents.find(d => d.id === x.id && d.pages) ? { src: img('doc=' + x.id + '&page=0', true), c: x.c || '', go: '', doc: x.id } : null) : (S.data.photos.find(y => y.id === x.id && !y.pending && !isVoice(y)) ? { src: img('photo=' + x.id, true), c: x.c || '', go: S.data.photos.find(y => y.id === x.id).person } : null)).filter(Boolean);
-  if (U.length >= 14) return U.slice(0, 14);
+  if (U.length) return U.slice(0, 14); // власник обрав сам — лише його фото, без добору
   const L = lineChain(), near = new Set([...L.up, ...L.kids, ...(SPOUSES[L.start] || []), ...(KIDS[P[L.start]?.f] || []), ...(KIDS[P[L.start]?.mo] || [])]);
   const anc = ancD(L.start), score = x => near.has(x.person) ? 0 : anc.has(x.person) ? 1 + anc.get(x.person) : 99;
   const one = new Set(); // по одному фото на людину — щоб колаж був про різних людей
