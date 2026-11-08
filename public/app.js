@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081612';
+const BUILD = '202611081614';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -224,9 +224,12 @@ const RELK = {
   con: { t: 'Суперечливі версії', d: 'Джерела або спогади розходяться (дата, ім\'я, батьки…).', i: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7h11M12 4l3 3-3 3M16 13H5M8 10l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
 };
 const CON_RX = /([^.!?\n]*(?:розбіжн|суперечн|за іншими даними|в інш(?:ому|их) (?:запис|документ|джерел)[а-яіїє]*\s+(?:—\s*)?(?:інш|вона|він|рік|дата)|інакше записан)[^.!?\n]*[.!?]?)/i;
+// скільки документів у людини — один прохід по всіх документах на завантаження (раніше рахувалось для кожної людини окремо — «Люди» висіли)
+let DOCN = null, DOCN_SRC = null;
+const docN = id => { if (DOCN_SRC !== S.data.documents) { DOCN = Object.create(null); S.data.documents.forEach(d => { if (d.type === 'map' || d.maybe) return; (d.people || []).forEach(x => { DOCN[x] = (DOCN[x] || 0) + 1; }); }); DOCN_SRC = S.data.documents; } return DOCN[id] || 0; };
 function relOf(p) {
   if (!p) return null;
-  const docs = S.data.documents.filter(d => (d.people || []).includes(p.id) && d.type !== 'map' && !d.maybe).length;
+  const docs = docN(p.id);
   let k = p.rel?.k, auto = !k;
   if (!k) { const note = String(p.note || ''), y = yN(p.b) || 0;
     k = p.hyp ? 'chk' : docs ? 'doc' : /за словами|спогад|переказ|розповіда|пам['’]ята/i.test(note) || y >= 1925 ? 'mem' : 'chk'; }
@@ -1896,8 +1899,8 @@ function vPeople() {
     ${canEdit() ? `<button class="btn line" data-add="new">+ Нова<span class="hm"> людина</span></button>` : ''}</div>
   <p class="small muted" style="margin:0 0 8px">Показано ${list.length} з ${Object.keys(P).length}</p>
   <div class="tablebox"><table class="t plist"><thead><tr><th>Ім'я</th><th>Роки</th><th>Місце</th><th>Гілка</th></tr></thead><tbody>
-  ${list.map(p => `<tr class="click" data-go="${p.id}"><td>${relIc(p)} <b style="font-family:var(--f-display);font-size:15.5px">${esc(full(p))}</b>${p.hyp ? '<span class="badge">гіпотеза</span>' : ''}</td><td class="mono small">${esc(life(p))}</td><td class="small">${esc(p.bp || '')}</td><td class="small">${esc(famT(p))}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">Нікого не знайдено.</td></tr>`}
-  </tbody></table></div>`;
+  ${list.slice(0, S.ui.plN || 150).map(p => `<tr class="click" data-go="${p.id}"><td>${relIc(p)} <b style="font-family:var(--f-display);font-size:15.5px">${esc(full(p))}</b>${p.hyp ? '<span class="badge">гіпотеза</span>' : ''}</td><td class="mono small">${esc(life(p))}</td><td class="small">${esc(p.bp || '')}</td><td class="small">${esc(famT(p))}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">Нікого не знайдено.</td></tr>`}
+  </tbody></table></div>${list.length > (S.ui.plN || 150) ? `<p style="text-align:center;margin:14px 0"><button class="btn line" data-act="pl-more">Показати ще ${Math.min(300, list.length - (S.ui.plN || 150))} з ${list.length - (S.ui.plN || 150)}</button></p>` : ''}`;
 }
 
 /* v4: «Архів» — одна шапка з вкладками «Документи · Люди» (рядок вкладок не рухається, опис — під ним) */
@@ -4193,7 +4196,7 @@ document.addEventListener('submit', async e => {
   } catch (err) { const m = f.querySelector('.msg'); if (m) { m.textContent = errText(err); m.className = 'msg err'; } }
 });
 document.addEventListener('input', e => {
-  if (e.target.id === 'q') { S.ui.q = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); }
+  if (e.target.id === 'q') { S.ui.q = e.target.value; S.ui.plN = 150; clearTimeout(S.ui.qT); S.ui.qT = setTimeout(() => { const q0 = $('#q'), pos = q0 ? q0.selectionStart : 0; S.ui.keepScroll = true; render(); const q = $('#q'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 180); }
 });
 document.addEventListener('change', async e => {
   const t = e.target;
@@ -4279,6 +4282,7 @@ document.addEventListener('click', async e => {
     if (act === 'fam-tab') { S.ui.ftab = d.v; render(); return; }
     if (act === 'hs-sel') { const v_ = d.v; S.ui.hsSel = v_ === 'all' ? 'all' : /^\d+$/.test(v_) ? +v_ : v_; render(); const a_ = document.querySelector('.v4-art'); if (a_ && a_.getBoundingClientRect().top < 60) window.scrollTo(0, window.scrollY + a_.getBoundingClientRect().top - 80); return; }
     if (act === 'map-sel') { S.ui.mapSel = d.id; S.ui.keepScroll = true; render(); return; }
+    if (act === 'pl-more') { S.ui.plN = (S.ui.plN || 150) + 300; S.ui.keepScroll = true; render(); return; }
     if (act === 'rl-side') { S.ui.rlSide = d.v; S.ui.keepScroll = true; render(); return; }
     if (act === 'map-tab') { S.ui.mtab = d.v; render(); return; }
     if (act === 'map-v') { S.ui.mapv = d.v; S.ui.keepScroll = true; render(); return; }
