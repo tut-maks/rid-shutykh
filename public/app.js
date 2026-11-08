@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081614';
+const BUILD = '202611081621';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -227,13 +227,20 @@ const CON_RX = /([^.!?\n]*(?:розбіжн|суперечн|за іншими �
 // скільки документів у людини — один прохід по всіх документах на завантаження (раніше рахувалось для кожної людини окремо — «Люди» висіли)
 let DOCN = null, DOCN_SRC = null;
 const docN = id => { if (DOCN_SRC !== S.data.documents) { DOCN = Object.create(null); S.data.documents.forEach(d => { if (d.type === 'map' || d.maybe) return; (d.people || []).forEach(x => { DOCN[x] = (DOCN[x] || 0) + 1; }); }); DOCN_SRC = S.data.documents; } return DOCN[id] || 0; };
+// relOf рахується сотні разів за перебудову сторінки (списки, фільтри, дерево) — пам'ятаємо результат, доки не змінились опис, позначки чи документи
+const RELC = new Map();
 function relOf(p) {
   if (!p) return null;
+  const c_ = RELC.get(p.id); docN(p.id);
+  if (c_ && c_.p === p && c_.note === p.note && c_.hyp === p.hyp && c_.rel === p.rel && c_.b === p.b && c_.src === DOCN_SRC) return c_.r;
+  const r = relOf0(p); RELC.set(p.id, { p, note: p.note, hyp: p.hyp, rel: p.rel, b: p.b, src: DOCN_SRC, r }); return r;
+}
+function relOf0(p) {
   const docs = docN(p.id);
   let k = p.rel?.k, auto = !k;
   if (!k) { const note = String(p.note || ''), y = yN(p.b) || 0;
     k = p.hyp ? 'chk' : docs ? 'doc' : /за словами|спогад|переказ|розповіда|пам['’]ята/i.test(note) || y >= 1925 ? 'mem' : 'chk'; }
-  const c = p.rel?.c || (String(p.note || '').match(CON_RX)?.[1] || '').trim();
+  const nt = String(p.note || ''), c = p.rel?.c || (/розбіжн|суперечн|за іншими даними|в інш|інакше записан/i.test(nt) ? (nt.match(CON_RX)?.[1] || '').trim() : ''); // швидка перевірка перед важким виразом
   return { k, auto, docs, c };
 }
 // sm — лише іконка (дерево, списки); інакше іконка з підписом
@@ -1917,8 +1924,10 @@ function vDocs() {
   const s = S.data.documents.filter(d => d.type !== 'map').sort((a, b) => yearOf(a.date).localeCompare(yearOf(b.date)));
   return `${archHead('docs', 'Метричні книги Покровської церкви села Вороньки, записи ЗАГС і сімейні документи. Під кожним указано, яка саме строчка стосується нашої родини.')}
   ${canEdit() && s.some(d => !d.pages) ? `<div class="docform" style="max-width:none"><b>Документи без сканів: ${s.filter(d => !d.pages).length}</b><span class="small muted">Виберіть файли, назви яких починаються з коду документа (напр. «fs1834-dvir240.jpg»), — сайт сам розкладе їх по документах.</span><label class="btn line small" style="cursor:pointer;justify-self:start">Вибрати скани<input type="file" accept="image/*" multiple data-docbulk="1" hidden></label><div class="msg" id="dmsg"></div></div>` : ''}
-  <div class="docs">${s.filter(d => !d.maybe).map(docCard).join('')}</div>
-  ${s.some(d => d.maybe) ? `<h2 class="dbl" style="margin:40px 0 18px">Можлива рідня</h2><div class="docs">${s.filter(d => d.maybe).map(docCard).join('')}</div>` : ''}`;
+  ${(() => { const q = (S.ui.dq || '').toLowerCase().trim(), hit = d => !q || [d.title, d.date, d.place].join(' ').toLowerCase().includes(q), A = s.filter(d => !d.maybe && hit(d)), M = s.filter(d => d.maybe && hit(d)), N = S.ui.dN || 96;
+    return `<div class="btns v4-dq"><input class="in search" id="dq" type="search" value="${esc(S.ui.dq || '')}" placeholder="Пошук: назва, рік, село" aria-label="Пошук документів"><span class="small muted">${q ? `Знайдено ${A.length + M.length} з ${s.length}` : `${s.length} документів`}</span></div>
+  <div class="docs">${A.slice(0, N).map(docCard).join('')}</div>${A.length > N ? `<p style="text-align:center;margin:18px 0"><button class="btn line" data-act="dq-more">Показати ще ${Math.min(240, A.length - N)} з ${A.length - N}</button></p>` : ''}
+  ${M.length ? `<h2 class="dbl" style="margin:40px 0 18px">Можлива рідня</h2><div class="docs">${M.slice(0, S.ui.dmN || 48).map(docCard).join('')}</div>${M.length > (S.ui.dmN || 48) ? `<p style="text-align:center;margin:18px 0"><button class="btn line" data-act="dqm-more">Показати ще ${M.length - (S.ui.dmN || 48)}</button></p>` : ''}` : ''}`; })()}`;
 }
 /* ───── Перегляд фото й сканів ─────
    Клік по мініатюрі — відкрито; клік по фото чи темному тлу — закрито (✕ і Esc теж).
@@ -2332,7 +2341,10 @@ const isLiving = p => !p.d && !p.dp && !p.dead && (yN(p.b) || 0) >= 1925;
 const isVoice = x => /^audio\//.test(x?.mime || '');
 const MONTHS_G = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
 const pLink = id => P[id] ? `<a href="${href('p', id)}">${esc(short(P[id]))}</a>` : '';
-const pick = (id, sel) => `${id ? `<datalist id="dl-${id}">${Object.values(P).sort((a, b) => full(a).localeCompare(full(b), 'uk')).map(p => `<option value="${esc(plabel(p))}"></option>`).join('')}</datalist>` : ''}<input class="in" id="${id}" list="dl-${id}" value="${sel && P[sel] ? esc(plabel(P[sel])) : ''}" placeholder="Почніть вводити ім'я…" autocomplete="off">`;
+const UKC = new Intl.Collator('uk');
+let PICKO = '', PICKK = null; // перелік людей для підказок — складається раз на завантаження, а не на кожну перебудову сторінки
+const pickOpts = () => { if (PICKK !== S.data) { PICKO = Object.values(P).map(p => [full(p), plabel(p)]).sort((a, b) => UKC.compare(a[0], b[0])).map(x => `<option value="${esc(x[1])}"></option>`).join(''); PICKK = S.data; } return PICKO; };
+const pick = (id, sel) => `${id ? `<datalist id="dl-${id}">${pickOpts()}</datalist>` : ''}<input class="in" id="${id}" list="dl-${id}" value="${sel && P[sel] ? esc(plabel(P[sel])) : ''}" placeholder="Почніть вводити ім'я…" autocomplete="off">`;
 const pickVal = id => { const v = ($('#' + id)?.value || '').trim(); if (!v) return null; return (Object.values(P).find(p => plabel(p) === v) || Object.values(P).find(p => full(p) === v) || Object.values(P).find(p => short(p) === v))?.id || null; };
 
 /* ── Telegram-група ── */
@@ -3162,7 +3174,7 @@ function dvPaint() {
   } else { const { svg, L } = dvSvg(D, st); S.ui.dvL = L; w.innerHTML = svg; w.classList.toggle('enter', fresh); }
   S.ui.dvPq = st.q; S.ui.dvPs = st.sel; w.classList.toggle('only-ours', !!S.ui.dvOurs); w.dataset.key = key;
   pan.innerHTML = dvPanel(st); $('#dvwrap').classList.toggle('open', !!(st.sel && D.some(h => h.id === st.sel)));
-  if (fresh) { dvFit(); const zmin = innerWidth <= 820 ? .42 : .36; if (DVV.z < zmin && !st.sel) { DVV.z = zmin; const o = D.find(h => h.ours) || D[0]; if (o) { const m = $('#dvmap'), p = L.pos[o.id]; DVV.x = m.clientWidth / 2 - p.x * DVV.z; DVV.y = m.clientHeight / 2 - p.y * DVV.z; dvClamp(); dvApply(); } } }
+  if (fresh) { dvFit(); const zmin = innerWidth <= 820 ? .42 : .36; if (DVV.z < zmin && !st.sel) { DVV.z = zmin; const o = D.find(h => h.ours) || D[0]; if (o) { const m = $('#dvmap'), p = S.ui.dvL?.pos?.[o.id]; if (!p) return; DVV.x = m.clientWidth / 2 - p.x * DVV.z; DVV.y = m.clientHeight / 2 - p.y * DVV.z; dvClamp(); dvApply(); } } }
 }
 // музика: власна мелодія в народному дусі (public/audio/dvory.mp3), вмикається лише кнопкою; вибір пам'ятає localStorage rs_dvmus
 let dvAudio = null;
@@ -4041,7 +4053,10 @@ function hypStates(all) {
 }
 const HYPST = { ok: ['st-ok', '✔ Підтверджено'], 'ok-a': ['st-ok', '✔ Випливає з підтвердженого'], ko: ['st-ko', '✘ Спростовано'], 'ko-a': ['st-ko', '✘ Мало ймовірно'], weak: ['st-weak', '⚠ Під сумнівом'] };
 // Автоматичний «ланцюжок»: щойно пов'язане припущення хтось підтвердив або спростував — це позначається «⚡ Перегляньте»
+let HV_ = null, HV_k = null; // які припущення взагалі мають відповідь «так/ні» — без них «⚡ Перегляньте» не буває, і важкий пошук пов'язаних не потрібен
 function hypChg(x, all) {
+  if (HV_k !== S.data.stories) { HV_ = new Set(S.data.stories.filter(s => /^hyp:/.test(s.target || '') && verdOf(s) !== 'add').map(s => s.target.slice(4))); HV_k = S.data.stories; }
+  if (!HV_.size) return [];
   let seen = 0; try { seen = +localStorage.getItem('rs_hrev:' + x.id) || 0; } catch {}
   const own = Math.max(seen, ...hypAns(x.id).map(s => +new Date(s.at) || 0));
   const out = []; for (const r of hypRel(x, all)) { const V = hypAns(r.h.id).filter(s => verdOf(s) !== 'add' && +new Date(s.at) > own); if (V.length) out.push({ h: r.h, v: verdOf(V[V.length - 1]), at: V[V.length - 1].at, a: r.a }); }
@@ -4196,6 +4211,7 @@ document.addEventListener('submit', async e => {
   } catch (err) { const m = f.querySelector('.msg'); if (m) { m.textContent = errText(err); m.className = 'msg err'; } }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'dq') { S.ui.dq = e.target.value; S.ui.dN = 96; clearTimeout(S.ui.qT); S.ui.qT = setTimeout(() => { const q0 = $('#dq'), pos = q0 ? q0.selectionStart : 0; S.ui.keepScroll = true; render(); const q = $('#dq'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 200); }
   if (e.target.id === 'q') { S.ui.q = e.target.value; S.ui.plN = 150; clearTimeout(S.ui.qT); S.ui.qT = setTimeout(() => { const q0 = $('#q'), pos = q0 ? q0.selectionStart : 0; S.ui.keepScroll = true; render(); const q = $('#q'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 180); }
 });
 document.addEventListener('change', async e => {
@@ -4282,6 +4298,8 @@ document.addEventListener('click', async e => {
     if (act === 'fam-tab') { S.ui.ftab = d.v; render(); return; }
     if (act === 'hs-sel') { const v_ = d.v; S.ui.hsSel = v_ === 'all' ? 'all' : /^\d+$/.test(v_) ? +v_ : v_; render(); const a_ = document.querySelector('.v4-art'); if (a_ && a_.getBoundingClientRect().top < 60) window.scrollTo(0, window.scrollY + a_.getBoundingClientRect().top - 80); return; }
     if (act === 'map-sel') { S.ui.mapSel = d.id; S.ui.keepScroll = true; render(); return; }
+    if (act === 'dq-more') { S.ui.dN = (S.ui.dN || 96) + 240; S.ui.keepScroll = true; render(); return; }
+    if (act === 'dqm-more') { S.ui.dmN = 9999; S.ui.keepScroll = true; render(); return; }
     if (act === 'pl-more') { S.ui.plN = (S.ui.plN || 150) + 300; S.ui.keepScroll = true; render(); return; }
     if (act === 'rl-side') { S.ui.rlSide = d.v; S.ui.keepScroll = true; render(); return; }
     if (act === 'map-tab') { S.ui.mtab = d.v; render(); return; }
