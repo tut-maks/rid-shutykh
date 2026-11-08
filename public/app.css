@@ -2429,3 +2429,14 @@ abbr.dv-sd{text-decoration:underline dotted var(--muted);text-underline-offset:3
 /* Дерево: фото в картці — рівний квадрат без «кружечка в квадратику» */
 .nd.t2 .av{border-radius:4px!important;overflow:hidden!important;position:relative}
 .nd.t2 .av img,.nd.t2 .av img.pcrop{border-radius:0!important}
+.mb-prev img{display:block;width:100%;margin-top:12px;border:1px solid var(--rule);border-radius:6px}
+/* «Читати книгу» — підсвічена й анімована, щоб читали */
+.mtabs button.v4-readb{position:relative;overflow:hidden;background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important;font-weight:600!important;animation:readPulse 2s ease-out infinite}
+.mtabs button.v4-readb.on{background:var(--ink)!important;border-color:var(--ink)!important;animation:none}
+.mtabs button.v4-readb::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:readShine 2.6s ease-in-out infinite}
+.mtabs button.v4-readb.on::after{display:none}
+@keyframes readPulse{0%{box-shadow:0 0 0 0 rgba(196,58,36,.55)}70%,100%{box-shadow:0 0 0 12px rgba(196,58,36,0)}}
+@keyframes readShine{0%,55%{left:-60%}100%{left:130%}}
+@media (prefers-reduced-motion:reduce){.mtabs button.v4-readb,.mtabs button.v4-readb::after{animation:none}}
+/* Історія роду: шапка в один рядок */
+.v4-mh .v4-rh-r .mtabs{flex-wrap:nowrap!important;flex:none}

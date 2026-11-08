@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081646';
+const BUILD = '202611081654';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -528,7 +528,7 @@ function treeBar(tabs, extra = '') {
   const f = S.ui.tf || {}, center = treeCenter();
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   return `<div class="tbar tbar1 tbar2"><h1 class="th1" title="Кожен із нас — продовження когось.">Родинне дерево</h1><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
-      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button>
+      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button><button class="btn line tme" data-act="mb-open" title="Коротке родове дерево (лише пряма лінія) — картинка для школи">⬇ <span>Основна гілка</span></button>
       <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
         <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
         <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>
@@ -946,9 +946,9 @@ function famMembersHtml(f) {
 }
 function vFamilies() {
   const ft = S.ui.ftab || 'line', nb = S.data.families.length;
-  const tabs = `<div class="seg mtabs">${[['line', 'Пряма лінія'], ['br', `Гілки · ${nb}`], ['rid', 'Читати книгу →']].map(([k, t]) => `<button type="button" class="${ft === k ? 'on' : ''}" data-act="fam-tab" data-v="${k}">${t}</button>`).join('')}</div>`;
+  const tabs = `<div class="seg mtabs">${[['line', 'Пряма лінія'], ['br', `Гілки · ${nb}`], ['rid', '📖 Читати книгу →']].map(([k, t]) => `<button type="button" class="${ft === k ? 'on' : ''}${k === 'rid' ? ' v4-readb' : ''}" data-act="fam-tab" data-v="${k}">${t}</button>`).join('')}</div>`;
   const note = { line: 'Що записано в документах — факт. Що відомо з розповідей старших — «за родинними переказами». Здогадки — «Є припущення». Натисніть на людину — відкриється її картка.', rid: 'Що відомо лише з переказів, так і позначено; здогадки — «Є припущення». Імена — посилання на картки.', br: 'Кожна гілка має своє село та свою історію. Внизу кожної можна дописати спогади — їх побачать усі родичі з доступом.' }[ft] || '';
-  const head = `<div class="pghead v4-rh"><div class="v4-rh-l"><div class="eyebrow">Від найдавнішого до нас</div><h1>Історія роду</h1></div><div class="v4-rh-r"><p class="tabnote">${esc(note)}</p>${tabs}</div></div>`;
+  const head = `<div class="pghead v4-rh v4-mh"><div class="v4-rh-l"><div class="eyebrow">Від найдавнішого до нас</div><h1>Історія роду</h1></div><div class="v4-rh-r"><p class="tabnote">${esc(note)}</p>${tabs}</div></div>`;
   if (ft === 'rid') return head + vRid();
   if (ft === 'line') return head + ridLine();
   return `${head}
@@ -3831,13 +3831,76 @@ function openDnaEdit(id) {
 /* ── Дерево-плакат ── */
 function openPoster() {
   modal(`<h2>Дерево-плакат для друку</h2>
-    <p class="small muted">Збирає дерево з усіма гілками, які зараз відкриті на сторінці «Дерево», у велику картинку з рамкою й заголовком. Відкрийте потрібні гілки (кнопки ▲ ▾ ▸), а потім натисніть «Зробити плакат».</p>
+    <p class="small"><button class="btn line small" data-act="mb-open">⬇ Лише основна гілка — для школи</button></p><p class="small muted">Збирає дерево з усіма гілками, які зараз відкриті на сторінці «Дерево», у велику картинку з рамкою й заголовком. Відкрийте потрібні гілки (кнопки ▲ ▾ ▸), а потім натисніть «Зробити плакат».</p>
     <label class="f">Заголовок<input class="in" id="po-t" value="Наш родовід"></label>
     <label class="f">Підзаголовок<input class="in" id="po-s" value="Родинне дерево · Вороньки — Веприк — Лідин"></label>
     <label class="f">Формат<select class="in" id="po-f"><option value="A2">A2 (42×59 см)</option><option value="A1" selected>A1 (59×84 см)</option><option value="A0">A0 (84×119 см)</option><option value="fit">Як є, без полів</option></select></label>
     <label class="f">Орієнтація<select class="in" id="po-o"><option value="auto">Сама підбере</option><option value="land">Альбомна</option><option value="port">Книжкова</option></select></label>
     <div class="btns"><button class="btn" data-act="po-go">Зробити плакат</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="pomsg"></span></div>
     <p class="small muted">Друкувати — у копіцентрі «широкоформатний друк», файл PNG 300 dpi. Скажіть, що це плакат на папері 180 г/м² або на полотні.</p>`);
+}
+/* «Основна гілка» — коротке родове дерево для школи: лише пряма лінія (дитина → батьки → діди → прадіди…), без бічних гілок; картинка PNG на A4/A3 */
+function openMainBranch() {
+  const st = startId(), kids = (KIDS[st] || []).filter(k => P[k]).sort(byBirth), def = kids.length ? kids[kids.length - 1] : st;
+  modal(`<h2>Основна гілка — для школи</h2>
+    <p class="small muted">Лише пряма лінія: дитина, батьки, бабусі й дідусі, прабабусі й прадідусі… Без братів, сестер і бічних гілок — щоб уміщалось на один аркуш.</p>
+    <label class="f">Чиє дерево${pick('mb-p', def)}</label>
+    <label class="f">Скільки поколінь<select class="in" id="mb-g"><option value="2">3 — до бабусь і дідусів</option><option value="3" selected>4 — до прабабусь і прадідусів</option><option value="4">5 — до прапрабабусь і прапрадідусів</option><option value="5">6 — ще на покоління глибше (А3)</option></select></label>
+    <label class="f">Аркуш<select class="in" id="mb-f"><option value="A4">A4 (альбомний)</option><option value="A3">A3 (альбомний)</option></select></label>
+    <label class="f" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="mb-ph" checked> З фото, де вони є</label>
+    <div class="btns"><button class="btn" data-act="mb-go">⬇ Завантажити картинку</button><button class="btn line" data-act="close">Скасувати</button><span class="msg" id="mbmsg"></span></div>
+    <div id="mb-prev" class="mb-prev"></div>`);
+}
+async function mainBranchPng(id, G, fmt, withPh) {
+  const p0 = P[id]; if (!p0) throw new Error('Людину не знайдено');
+  if (document.fonts?.ready) await document.fonts.ready;
+  const [W, H] = fmt === 'A3' ? [4961, 3508] : [3508, 2480]; // 300 dpi
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const css = getComputedStyle(document.documentElement), cv = (n, d) => (css.getPropertyValue(n) || '').trim() || d;
+  const PAPER = '#fbfaf6', INK = cv('--ink', '#1a1916'), MUT = cv('--muted', '#8a8377'), ACC = cv('--accent', '#c43a24'), RULE = '#cfc8ba';
+  const fD = cv('--f-display', 'sans-serif'), fB = cv('--f-body', 'sans-serif');
+  g.fillStyle = PAPER; g.fillRect(0, 0, W, H);
+  const M = W * .04, top = H * .14, bot = H * .07, rows = G + 1, rowH = (H - top - bot) / rows;
+  g.fillStyle = ACC; g.fillRect(M, M * .9, W * .006, W * .006);
+  g.fillStyle = INK; g.font = `400 ${Math.round(W * .026)}px ${fD}`; g.textBaseline = 'alphabetic'; g.fillText('Родове дерево', M + W * .014, M * .9 + W * .02);
+  g.fillStyle = MUT; g.font = `400 ${Math.round(W * .014)}px ${fB}`; g.fillText(full(p0) + (life(p0) ? '  ·  ' + life(p0) : ''), M + W * .014, M * .9 + W * .045);
+  g.textAlign = 'right'; g.font = `400 ${Math.round(W * .009)}px ${fB}`; g.fillText('Наш родовід · Вороньки — Веприк — Лідин · shutyi.com.ua', W - M, H - M * .55); g.textAlign = 'left';
+  // хто де: рівень g (0 — дитина внизу), місце i з 2^g
+  const slot = (gl, i) => { const n = 2 ** gl, sw = (W - 2 * M) / n; return { x: M + sw * (i + .5), y: H - bot - rowH * (gl + .5), sw }; };
+  const lv = [[id]]; for (let gl = 1; gl <= G; gl++) lv.push(lv[gl - 1].flatMap(x => { const p = x && P[x]; return [p && P[p.f] ? p.f : null, p && P[p.mo] ? p.mo : null]; }));
+  const ph = {}; if (withPh) await Promise.all(lv.flat().filter(x => x && portrait(P[x])).map(x => new Promise(res => { const im = new Image(); im.onload = () => { ph[x] = im; res(); }; im.onerror = res; im.src = portrait(P[x]); setTimeout(res, 6000); })));
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  const wrap = (t, mw, font) => { g.font = font; const w = String(t).split(/\s+/), L = []; let cur = ''; w.forEach(x => { const tr = cur ? cur + ' ' + x : x; if (g.measureText(tr).width > mw && cur) { L.push(cur); cur = x; } else cur = tr; }); if (cur) L.push(cur); return L; };
+  const boxSize = gl => { const sw = (W - 2 * M) / 2 ** gl; return { bw: Math.min(sw * .88, W * .16), bh: Math.min(rowH * .78, H * .2) }; };
+  // лінії
+  g.strokeStyle = '#8e877b'; g.lineWidth = Math.max(2, W * .0009);
+  for (let gl = 0; gl < G; gl++) lv[gl].forEach((x, i) => { if (!x) return; const a = slot(gl, i), { bh } = boxSize(gl), pf = lv[gl + 1][2 * i], pm = lv[gl + 1][2 * i + 1]; if (!pf && !pm) return; const b1 = slot(gl + 1, 2 * i), b2 = slot(gl + 1, 2 * i + 1), { bh: ph2 } = boxSize(gl + 1), ym = (a.y - bh / 2 + b1.y + ph2 / 2) / 2;
+    g.beginPath(); g.moveTo(a.x, a.y - bh / 2); g.lineTo(a.x, ym); g.moveTo(pf ? b1.x : a.x, ym); g.lineTo(pm ? b2.x : a.x, ym); if (pf) { g.moveTo(b1.x, ym); g.lineTo(b1.x, b1.y + ph2 / 2); } if (pm) { g.moveTo(b2.x, ym); g.lineTo(b2.x, b2.y + ph2 / 2); } g.stroke(); });
+  // картки
+  lv.forEach((L, gl) => L.forEach((x, i) => { if (!x) return; const p = P[x], { x: cx, y: cy } = slot(gl, i), { bw, bh } = boxSize(gl), x0 = cx - bw / 2, y0 = cy - bh / 2, pad = bw * .07;
+    g.fillStyle = '#fff'; rr(x0, y0, bw, bh, bw * .04); g.fill(); g.lineWidth = gl === 0 ? Math.max(4, W * .0016) : Math.max(2, W * .0008); g.strokeStyle = gl === 0 ? ACC : p.hyp ? '#a37f22' : RULE; if (p.hyp) g.setLineDash([10, 8]); g.stroke(); g.setLineDash([]);
+    const im = ph[x], nm = [String(p.n || '').replace(/\s*\(.*?\)/g, ''), p.pt].filter(Boolean).join(' '), sn = (p.s || '') + (maidenOf(p) && maidenOf(p) !== p.s ? ` (${maidenOf(p)})` : '');
+    // підбираємо розмір фото й тексту, щоб усе вмістилось у картку
+    let fs = Math.max(16, Math.min(bw * .095, bh * .13)), phS = im ? Math.min(bh * .44, bw * .48) : 0, L1, L2;
+    for (let k = 0; k < 30; k++) { L1 = wrap(nm, bw - pad * 2, `600 ${fs}px ${fB}`).slice(0, 2); L2 = wrap(sn, bw - pad * 2, `400 ${fs * .9}px ${fB}`).slice(0, 2);
+      const need = pad * 2 + (im ? phS + pad * .5 : 0) + L1.length * fs * 1.08 + L2.length * fs * 1.0 + (life(p) ? fs * 1.15 : 0); if (need <= bh) break; if (im && phS > bh * .26) phS *= .9; else fs *= .93; }
+    let ty = y0 + pad;
+    if (im) { g.save(); g.beginPath(); g.arc(cx, ty + phS / 2, phS / 2, 0, Math.PI * 2); g.clip(); const r = Math.max(phS / im.width, phS / im.height); g.drawImage(im, cx - im.width * r / 2, ty + phS / 2 - im.height * r * .42, im.width * r, im.height * r); g.restore(); ty += phS + pad * .5; }
+    g.textAlign = 'center'; g.fillStyle = INK; g.font = `600 ${fs}px ${fB}`; L1.forEach(l => { ty += fs * 1.08; g.fillText(l, cx, ty); });
+    g.font = `400 ${fs * .9}px ${fB}`; L2.forEach(l => { ty += fs * 1.0; g.fillText(l, cx, ty); });
+    if (life(p)) { g.fillStyle = gl === 0 ? ACC : MUT; g.font = `400 ${fs * .82}px ${fB}`; ty += fs * 1.15; g.fillText(life(p), cx, ty); }
+    g.textAlign = 'left'; }));
+  // покоління — підписи ліворуч
+  const GN = ['', 'батьки', 'бабусі й дідусі', 'прабабусі й прадідусі', 'прапрабабусі й прапрадідусі', 'прапрапрабабусі й прапрапрадідусі'];
+  g.fillStyle = ACC; g.font = `400 ${Math.round(W * .0085)}px ${fB}`; for (let gl = 1; gl <= G; gl++) { const y = H - bot - rowH * (gl + .5); g.save(); g.translate(M * .45, y); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText(GN[gl] || '', 0, 0); g.restore(); }
+  return await new Promise(r => c.toBlob(r, 'image/png'));
+}
+async function mainBranchGo(t) {
+  const m = $('#mbmsg'), id = pickVal('mb-p'); if (!id) { m.className = 'msg err'; m.textContent = 'Оберіть людину зі списку.'; return; }
+  t.disabled = true; m.className = 'msg'; m.textContent = 'Малюю…';
+  try { const G = +$('#mb-g').value, fmt = G >= 5 ? 'A3' : $('#mb-f').value, blob = await mainBranchPng(id, G, fmt, $('#mb-ph').checked), u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = `Родове дерево — ${short(P[id])}.png`; document.body.appendChild(a); a.click(); a.remove();
+    $('#mb-prev').innerHTML = `<img src="${u}" alt="Основна гілка">`; m.textContent = 'Готово — картинка завантажилась. Її можна роздрукувати на ' + fmt + '.'; ev('open', 'tree', 'mainbranch:' + id); }
+  catch (e) { m.className = 'msg err'; m.textContent = 'Не вдалося: ' + (e.message || e); } finally { t.disabled = false; }
 }
 async function posterMake() {
   const o = { t: $('#po-t').value.trim(), s: $('#po-s').value.trim(), f: $('#po-f').value, or: $('#po-o').value }, m = $('#pomsg');
@@ -4105,6 +4168,8 @@ document.addEventListener('click', async e => {
     if (a === 'dna-del') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Точно видалити?'; return; } const r = await api('/api/data', { body: { op: 'dna.del', id } }); S.data.cfg.dna = r.dna; closeLayer(); S.ui.keepScroll = true; render(); return; }
     if (a === 'poster') return openPoster();
     if (a === 'po-go') return posterMake();
+    if (a === 'mb-open') return openMainBranch();
+    if (a === 'mb-go') return mainBranchGo(t);
   } catch (err) { toast(errText(err)); }
 });
 
