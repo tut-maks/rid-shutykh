@@ -2292,3 +2292,39 @@ table.t td{border-color:var(--rule)!important}
   .v4-hero-k{padding-top:16px}
   .v4-hero-k .h-kin .kin-row{grid-template-columns:1fr!important}
 }
+/* Шапки сторінок — у 2,5 раза нижчі (власник, 08.11): заголовок в один рядок, менші відступи; основний блок починається раніше */
+.lede,.pghead{gap:8px!important;margin:4px 0 18px!important}
+.lede h1,.pghead h1,.qpage h1,.sec>h1:first-child,.v4-qside h1,.v4-vh-t h1{font:400 clamp(26px,2.6vw,38px)/1.08 var(--f-display)!important;letter-spacing:-.04em!important}
+.lede .eyebrow,.pghead .eyebrow,.v4-qside .eyebrow,.v4-vh-t .eyebrow{font-size:10px!important;gap:8px!important}
+.lede>p,.pghead>p,.tabnote,.lede .small.muted{font-size:14px!important;line-height:1.5!important}
+.v4-rh{gap:10px 32px!important;padding-bottom:14px!important;align-items:end}
+.v4-rh-l{gap:8px!important}.v4-rh-r{gap:10px!important}
+.v4-rh .seg button,.v4-rh .mtabs button,.lede .seg a{min-height:36px!important;padding:8px 15px!important;font-size:13px!important}
+.v4-rlbar{padding:10px 0!important}
+.v4-qside{gap:12px!important}
+main{padding-top:16px}
+/* Історія сіл: шапка компактна, фото — ціле й у своїх кольорах */
+.v4-vh{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)!important}
+.v4-vh-t{gap:10px!important;padding:20px var(--px) 18px!important}
+.v4-vh-t p{font-size:14px!important;line-height:1.55!important}
+.v4-vh-f{min-height:0!important;padding:12px 12px 12px 0!important;max-height:300px}
+.v4-vh-f img{min-height:0!important;height:276px!important;object-fit:contain!important;background:#e7e1d5;filter:none!important}
+.v4-vh-f figcaption{left:24px!important;bottom:24px!important}
+@media (max-width:820px){.v4-vh{grid-template-columns:1fr!important}.v4-vh-f{padding:0 16px 12px!important}.v4-vh-f img{height:220px!important}.v4-vh-f figcaption{left:28px!important}}
+/* усі фото — у своїх кольорах, без «старіння» */
+.ph img,.portrait img,.doc img,.av img,.nd.t2 .av img,.hph-i img,.askc img{filter:none!important}
+.hph-i img{object-fit:contain!important;background:#e7e1d5}
+/* Карти: усе над картою — компактно, щоб карту було видно одразу */
+.v4-rh .rtlink{padding:8px 14px!important;min-height:0!important;gap:10px}
+.v4-rh .rtlink i{display:none}
+.v4-rh .rtlink b{font-size:13.5px}
+.mapbar{margin:0 0 6px!important;gap:8px!important;flex-wrap:nowrap!important;align-items:center}
+.mapbar .seg{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;min-width:0}
+.mapbar .seg button{min-height:32px!important;padding:6px 12px!important;font-size:12.5px!important}
+.mapbar>.btn{flex:none;min-height:32px;padding:6px 12px}
+.v4-mtl{margin:4px 0 14px!important}
+.v4-mtl button{padding-top:8px!important;gap:3px!important;flex:1 0 110px!important}
+.v4-mtl button b{font-size:clamp(18px,1.7vw,24px)!important}
+.v4-mtl button span{font-size:11px!important;-webkit-line-clamp:1!important}
+.v4-map-y{font-size:clamp(36px,3.4vw,52px)!important}
+.v4-map-im img{max-height:calc(100vh - 150px);object-fit:contain}
