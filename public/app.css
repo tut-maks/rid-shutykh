@@ -2426,3 +2426,6 @@ main{padding-top:16px}
 .chtip{white-space:pre-line!important;max-width:min(360px,calc(100vw - 24px));line-height:1.45!important}
 .hbars .hb{cursor:help}
 abbr.dv-sd{text-decoration:underline dotted var(--muted);text-underline-offset:3px;cursor:help}
+/* Дерево: фото в картці — рівний квадрат без «кружечка в квадратику» */
+.nd.t2 .av{border-radius:4px!important;overflow:hidden!important;position:relative}
+.nd.t2 .av img,.nd.t2 .av img.pcrop{border-radius:0!important}
