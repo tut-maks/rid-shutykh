@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081610';
+const BUILD = '202611081612';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -2905,15 +2905,15 @@ function vStats() {
     <div class="sec"><h3>Найдовше прожили</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки життя')}${sortTh(2, 'Вік', 1)}</tr></thead><tbody>${life.sort((a, b) => b.a - a.a).slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)}</td><td class="mono">${x.b}–${x.d}</td><td class="mono">${x.a}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Немає</td></tr>'}</tbody></table></div>
       ${Object.keys(cent).length ? `<p class="small muted">Середній вік (за відомими датами, без дітей, що померли до 5 років): ${Object.entries(cent).map(([c, g]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${g.a.length ? Math.round(g.a.reduce((x, y) => x + y, 0) / g.a.length) + ' р. (' + g.a.length + ' люд.)' : '—'}`).join('; ')}.</p>
       ${kidsAll ? `<p class="small muted">Померли до 5 років: ${Object.entries(cent).filter(([, g]) => g.k).map(([c, g]) => `${c === '18' ? 'XVIII' : c === '19' ? 'XIX' : c === '20' ? 'XX' : c === '21' ? 'XXI' : c} ст. — ${g.k} ${g.k % 10 === 1 && g.k % 100 !== 11 ? 'дитина' : g.k % 10 >= 2 && g.k % 10 <= 4 && (g.k % 100 < 12 || g.k % 100 > 14) ? 'дитини' : 'дітей'}, це ${Math.round(g.k / (g.k + g.a.length) * 100)}% усіх, чиї роки життя відомі`).join('; ')}.</p>` : ''}` : ''}</div>
+    ${ww1Block(F)}
     ${(() => { const WN = { ww1: 'Перша світова', ww2: 'Друга світова', other: 'Інша' }, FN = { ret: 'повернувся', kil: 'загинув', mis: 'пропав безвісти', unk: 'невідомо' };
       const W = F.filter(p => p.war); if (!W.length) return '';
       const c = k => W.filter(p => p.war.f === k).length, fw = (p, k) => p.sex === 'f' ? FN[k].replace(/вся$/, 'лася').replace(/ув$/, 'ула').replace(/ав /, 'ала ') : FN[k];
       const ws = [...new Set(W.map(p => p.war.w))];
-      return `<div class="sec war-st"><h3>Війни</h3><p class="small muted">Хто з роду воював (за базами «Пам'ять народу», ОБД, списками військкоматів).${ws.length > 1 ? ' ' + ws.map(w => `${WN[w]}: ${W.filter(p => p.war.w === w).length}`).join(', ') + '.' : ''}</p><p class="small war-note"><b>Важливо:</b> тут лише ті, кого ми вже знайшли в базах <i>і</i> прив'язали до картки в дереві. Насправді з наших сіл воювали сотні людей: з Вороньків — близько 600 (загинуло 345), з Веприка — близько 600 (загинуло 248); лише в ОБД «Мемориал» записів про загиблих і зниклих Шутих з Вороньків — кілька десятків. Більшість із них, найімовірніше, теж наша рідня, але ще не пов'язана з деревом, тож справжні цифри роду значно більші. Усі знайдені записи — у «Базі» (рядки «згадка в джерелі»).</p>
+      return `<div class="sec war-st"><h3>Друга світова війна (1939–1945)</h3><p class="small muted">Хто з роду воював (за базами «Пам'ять народу», ОБД, списками військкоматів).${ws.length > 1 ? ' ' + ws.map(w => `${WN[w]}: ${W.filter(p => p.war.w === w).length}`).join(', ') + '.' : ''}</p><p class="small war-note"><b>Важливо:</b> тут лише ті, кого ми вже знайшли в базах <i>і</i> прив'язали до картки в дереві. Насправді з наших сіл воювали сотні людей: з Вороньків — близько 600 (загинуло 345), з Веприка — близько 600 (загинуло 248); лише в ОБД «Мемориал» записів про загиблих і зниклих Шутих з Вороньків — кілька десятків. Більшість із них, найімовірніше, теж наша рідня, але ще не пов'язана з деревом, тож справжні цифри роду значно більші. Усі знайдені записи — у «Базі» (рядки «згадка в джерелі»).</p>
         <div class="war-n"><span><b>${W.length}</b> воювали</span><span><b>${c('kil')}</b> загинули</span><span><b>${c('mis')}</b> пропали безвісти</span><span><b>${c('ret')}</b> повернулися</span>${c('unk') ? `<span><b>${c('unk')}</b> доля невідома</span>` : ''}</div>
         <p class="small muted">Не повернулися ${c('kil') + c('mis')} з ${W.length} (${Math.round((c('kil') + c('mis')) / W.length * 100)}%).${W.some(p => p.war.h) ? ' * — що це саме наш родич, поки «Є припущення».' : ''}</p>
         <div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Хто')}${sortTh(1, 'Роки')}${sortTh(2, 'Війна')}${sortTh(3, 'Доля')}</tr></thead><tbody>${W.sort((a, b) => 'kilmisretunk'.indexOf(a.war.f) - 'kilmisretunk'.indexOf(b.war.f) || short(a).localeCompare(short(b), 'uk')).map(p => `<tr><td>${pLink(p.id)}${p.war.h ? ' *' : ''}</td><td class="mono">${esc(life_(p))}</td><td class="small">${WN[p.war.w]}</td><td class="small war-${p.war.f}">${fw(p, p.war.f)}</td></tr>`).join('')}</tbody></table></div></div>`; })()}
-    ${ww1Block(F)}
     ${holodBlock()}
     <div class="sec"><h3>Найбільші родини</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Батько / мати')}${sortTh(1, 'Дітей', 1)}</tr></thead><tbody>${kids.slice(0, 15).map(x => `<tr><td>${pLink(x.p.id)} <span class="small muted">${esc(life_(x.p))}</span></td><td class="mono">${x.k}</td></tr>`).join('')}</tbody></table></div></div>
     <div class="sec"><h3>Де народжувались</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Місце')}${sortTh(1, 'Людей', 1)}</tr></thead><tbody>${places.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table></div><a class="small" href="#/geo">Показати на карті роду →</a></div>
@@ -4159,6 +4159,20 @@ function v4Heads(root) {
     if (!h.querySelector('.eyebrow') && V4K[S.view] && (h.classList.contains('lede') || h.classList.contains('pghead'))) h.insertAdjacentHTML('afterbegin', `<div class="eyebrow">${esc(V4K[S.view])}</div>`);
   });
 }
+/* Діаграми: число одразу при наведенні (і при дотику на телефоні) — з <title> стовпчика */
+let chTip = null;
+function chartTip(e) {
+  const box = e.target.closest?.('.chartbox svg'); if (box && !box.dataset.tipd) { box.dataset.tipd = 1; box.querySelectorAll('title').forEach(ti => { ti.parentElement.dataset.tip = ti.textContent; ti.remove(); }); } // без повільної підказки браузера
+  const el = box && e.target.closest('[data-tip]'), t = el ? { textContent: el.dataset.tip, parentElement: el } : null;
+  if (!t) { if (chTip) chTip.hidden = true; document.querySelectorAll('.ch-on').forEach(x => x.classList.remove('ch-on')); return; }
+  if (!chTip) { chTip = document.createElement('div'); chTip.className = 'chtip'; document.body.appendChild(chTip); }
+  chTip.textContent = t.textContent; chTip.hidden = false;
+  document.querySelectorAll('.ch-on').forEach(x => x.classList.remove('ch-on')); (t.parentElement).classList.add('ch-on');
+  const x = Math.min(e.clientX + 14, innerWidth - chTip.offsetWidth - 8), y = Math.max(8, e.clientY - chTip.offsetHeight - 12);
+  chTip.style.left = x + 'px'; chTip.style.top = y + 'px';
+}
+document.addEventListener('pointermove', chartTip, { passive: true });
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') chartTip(e); }, { passive: true });
 /* ───── Події ───── */
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target;
