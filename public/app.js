@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081643';
+const BUILD = '202611081644';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -3143,7 +3143,7 @@ function dvPanel(st) {
   return `<button class="dv-x" data-dvsel="" aria-label="Закрити">×</button>
     <p class="dv-k small muted">${/^\d/.test(h.no || '') ? 'Двір №' + esc(h.no) : esc(h.type || 'Двір')}${h.street ? ' · ' + esc(h.side || '') + (h.sno ? ', №' + esc(h.sno) + ' у вуличному списку' : '') : ''}</p>
     <h3 class="dv-h">${esc(h.head || h.owner_list || '—')}</h3>
-    <p class="small">${[dvSt(h.status), h.type && h.no ? h.type : '', h.khaty ? 'хат: ' + h.khaty : ''].filter(Boolean).map(esc).join(' · ')}${h.ours ? ' <span class="dv-ours">★ прізвище з нашого дерева</span>' : ''}</p>${(() => { const l = dvLineIds(h, st.y); return l.length ? `<p class="dv-lnbox"><b>◆ Ваша пряма лінія.</b> Тут жили: ${l.map(id => `<a href="${href('p', id)}">${esc(short(P[id]))}</a> — ${esc(dvKin(id))}`).join('; ')}. <span class="muted">(за деревом; хто це в книзі — Є припущення на підставі імені, віку й прізвища)</span></p>` : ''; })()}
+    <p class="small">${[dvSt(h.status) ? `<abbr class="dv-sd" title="${esc(statusDesc(dvSt(h.status)))}">${esc(dvSt(h.status))}</abbr>` : '', ...[h.type && h.no ? h.type : '', h.khaty ? 'хат: ' + h.khaty : ''].filter(Boolean).map(esc)].filter(Boolean).join(' · ')}${h.ours ? ' <span class="dv-ours">★ прізвище з нашого дерева</span>' : ''}</p>${(() => { const l = dvLineIds(h, st.y); return l.length ? `<p class="dv-lnbox"><b>◆ Ваша пряма лінія.</b> Тут жили: ${l.map(id => `<a href="${href('p', id)}">${esc(short(P[id]))}</a> — ${esc(dvKin(id))}`).join('; ')}. <span class="muted">(за деревом; хто це в книзі — Є припущення на підставі імені, віку й прізвища)</span></p>` : ''; })()}
     ${h.street ? `<p class="small muted">Вулиця: ${esc(h.street)}</p>` : ''}
     ${h.note ? `<p class="small dv-note">Примітка: ${esc(h.note)}${docs.length ? ` Запис: ${docs.map(x => `<a href="#" data-doc="${esc(x.id)}">${esc(x.title)}</a>`).join('; ')}.` : ''}</p>` : ''}
     ${(h.people || []).length ? `<div class="dv-fam">${h.people.slice(0, 9).map(p => dvFig(p)).join('')}</div>` : ''}
@@ -3362,6 +3362,17 @@ function stMore(F) {
     ${card('Скільки дітей у родині', 'Скільки дітей однієї пари батьків уже внесено в дерево (справжніх могло бути більше).', vBars(kb, { aria: 'Дітей у родині', legend: false }))}
   </div>${dvStats()}`;
 }
+/* Хто такі — пояснення станів з книг (коротко; повніше й з джерелами — у «Словнику», #/terms) */
+const STATUS_D = [
+  [/посполит/, 'Посполиті — селяни (не козаки) Лівобережжя XVII–XVIII ст.: платили податки й відробляли повинності на власника або на державу. Указ 3 травня 1783 р. остаточно закріпачив посполитих.'],
+  [/підсусід/, 'Підсусідки — бідні селяни без власного господарства: жили в чужому дворі «у сусідах» і за житло працювали на господаря. Після 1783 р. більшість стали кріпаками.'],
+  [/козак/, 'Козаки — вільний військовий стан Гетьманщини: несли службу у полку й сотні (виборні — йшли в похід за свій кошт, підпомічники — допомагали їм). 1783 р. козацькі привілеї скасували.'],
+  [/значков/, 'Значковий товариш — нижча неурядова старшина Гетьманщини XVIII ст.: козацька старшина без уряду (посади), приписана до полку («під полковим значком»).'],
+  [/графськ/, 'Графський — підданий графа: селянин на землі графа-власника. У Вороньках 1780-х власником був граф Кирило Розумовський (за «Описом Київського намісництва» 1787 р.).'],
+  [/священ/, 'Священник — парафіяльний священник; у переписах його двір записували окремо, разом із родиною.'],
+  [/не вказано/, 'У книзі стан господаря не записано.'],
+];
+const statusDesc = k => (STATUS_D.find(([rx]) => rx.test(String(k).toLowerCase())) || [])[1] || '';
 /* Господарства з Рум'янцевського опису 1767 і перепису 1782 (ті самі дані, що в «Дворах») */
 function dvStats() {
   const D = S.ui.dvD; if (!D) return `<div class="sec v4-ch"><h3>Господарства 1767 і 1782</h3><p class="small muted">Завантажую двори…</p></div>`;
@@ -3378,7 +3389,7 @@ function dvStats() {
     <div class="sec v4-ch"><h3>Найбільші двори — за кількістю душ</h3><p class="small muted">Рум'янцевський опис 1767 і перепис 1782, Вороньки й Веприк. <a href="#/dvory">Відкрити «Двори» →</a></p>${hBars(byP)}</div>
     <div class="sec v4-ch"><h3>Найбільші господарства — за худобою</h3><p class="small muted">Коні, воли, корови, вівці, свині, кози — разом, як записано в книзі.</p>${hBars(byL)}</div>
     <div class="sec v4-ch"><h3>Усього по селах</h3><div class="tablebox"><table class="t sortable"><thead><tr>${sortTh(0, 'Село, рік')}${sortTh(1, 'Дворів', 1)}${sortTh(2, 'Душ', 1)}${LIV.map(([, i, t], j) => sortTh(3 + j, i + ' ' + t, 1)).join('')}</tr></thead><tbody>${Object.entries(tot).map(([k, t]) => `<tr><td>${esc(k)}</td><td class="mono">${t.d}</td><td class="mono">${t.p}</td>${LIV.map(([lk]) => `<td class="mono">${t[lk] || 0}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
-    <div class="sec v4-ch"><h3>Хто господарював</h3><p class="small muted">Стан господарів дворів за записом у книгах.</p>${hBars(Object.entries(st).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => ({ l: k, v })))}</div>
+    <div class="sec v4-ch"><h3>Хто господарював</h3><p class="small muted">Стан господарів дворів за записом у книгах. Наведіть на рядок — пояснення, хто це; докладніше — у <a href="#/terms">Словнику</a>.</p>${hBars(Object.entries(st).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => ({ l: k, v, tip: `${k} — ${v} дв.${statusDesc(k) ? '\n' + statusDesc(k) : ''}` })))}</div>
   </div>`;
 }
 /* Цифри роду: усі картки — висотою найменшої (власник, 08.11); решта вмісту гортається всередині картки */

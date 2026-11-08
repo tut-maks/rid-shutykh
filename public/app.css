@@ -2423,3 +2423,6 @@ main{padding-top:16px}
 .tile.t-old::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(196,58,36,.16),transparent 70%);animation:oldGlow 3s ease-in-out infinite;pointer-events:none}
 @keyframes oldGlow{0%,100%{transform:scale(.85);opacity:.6}50%{transform:scale(1.15);opacity:1}}
 @media (prefers-reduced-motion:reduce){.tile.t-old::after{animation:none}}
+.chtip{white-space:pre-line!important;max-width:min(360px,calc(100vw - 24px));line-height:1.45!important}
+.hbars .hb{cursor:help}
+abbr.dv-sd{text-decoration:underline dotted var(--muted);text-underline-offset:3px;cursor:help}
