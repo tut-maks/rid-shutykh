@@ -2389,3 +2389,7 @@ main{padding-top:16px}
 .v4-help-c b{display:inline-block;margin:0 0 2px;color:var(--accent);font-weight:600;animation:helpGlow 2.2s ease-in-out infinite}
 @keyframes helpGlow{0%,100%{opacity:1}50%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){.v4-fire,.v4-fire path,.v4-help-c b{animation:none}}
+.stgrid{align-items:start!important}
+.stgrid>.sec{height:auto}
+.stgrid>.sec.st-eq{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.stgrid>.sec.st-eq>h3{position:sticky;top:calc(-1 * clamp(18px,2.4vw,26px));background:var(--sheet);z-index:1;padding:clamp(18px,2.4vw,26px) 0 8px;margin-top:calc(-1 * clamp(18px,2.4vw,26px))}
