@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121002';
+const BUILD = '202611121003';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -561,9 +561,9 @@ function vAll(tabs) {
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
   /* «Ваша гілка» (14.11): коли відкрито всіх, своїх — центр, предки, нащадки, брати й сестри та подружжя цих людей — лишаємо яскравими, решту й їхні лінії притемнюємо */
   const mine = new Set([center]); (function u(id) { if (!id || !P[id]) return; [P[id].f, P[id].mo].forEach(x => { if (x && P[x] && !mine.has(x)) { mine.add(x); u(x); } }); })(center);
-  (function d(id) { (KIDS[id] || []).forEach(k => { if (!mine.has(k)) { mine.add(k); d(k); } }); })(center);
+  const dn0 = id => (KIDS[id] || []).forEach(k => { if (!mine.has(k)) { mine.add(k); dn0(k); } }); dn0(center);
+  { const c0 = P[center]; [c0.f, c0.mo].forEach(x => x && P[x] && (KIDS[x] || []).forEach(k => { mine.add(k); dn0(k); })); } /* брати й сестри (і зведені) з усіма нащадками — племінники, їхні діти */
   [...mine].forEach(id => (SPOUSES[id] || []).forEach(x => P[x.id] && mine.add(x.id)));
-  { const c0 = P[center]; [c0.f, c0.mo].forEach(x => x && P[x] && (KIDS[x] || []).forEach(k => mine.add(k))); }
   const hl = !f.fam && f.allOpen && [...V].some(id => !mine.has(id));
   let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
