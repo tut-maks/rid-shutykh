@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611120958';
+const BUILD = '202611121002';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -420,8 +420,8 @@ function branchHtml(id, d, seen) {
 }
 function vTree() {
   const mode = S.ui.tmode || 'all';
-  /* Кожен має бачити весь рід (14.11): якщо від картки людини дерево виходить крихітним (її гілка малa), а людей на сайті багато — одразу розгортаємо все; «Згорнути» повертає як було */
-  if (!S.ui.tfAuto && S.me) { S.ui.tfAuto = 1; const f0 = S.ui.tf ||= {}; if (!f0.allOpen && !f0.fam && mode !== 'ped' && Object.keys(P).length > 150) { try { if (Object.keys(layoutTD(treeCenter()).N).length < 60) f0.allOpen = true; } catch (e) { } } }
+  /* Кожен родич (глядач, редактор) бачить весь рід (12.11): дерево відкривається розгорнутим, власна гілка яскрава, решта притемнена; «Згорнути» повертає як було */
+  if (!S.ui.tfAuto && S.me) { S.ui.tfAuto = 1; const f0 = S.ui.tf ||= {}; if (!f0.allOpen && !f0.fam && mode !== 'ped' && !isOwner()) f0.allOpen = true; }
   const tabs = `<div class="tmodes seg3">${[['all', 'Родина', 'Предки, брати й сестри, діти'], ['ped', 'Предки', 'Лише предки, зліва направо'], ['desc', 'Нащадки', 'Діти, онуки й правнуки']].map(([k, t, h]) => `<button data-tmode="${k}" class="${mode === k ? 'on' : ''}" title="${h}">${t}</button>`).join('')}</div>`;
   return mode === 'ped' ? vPedigree(tabs) : vAll(tabs);
 }
