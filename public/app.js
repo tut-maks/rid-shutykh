@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121100';
+const BUILD = '202611121130';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -44,6 +44,7 @@ function index() {
   d.persons.forEach(p => { P[p.id] = p; });
   d.persons.forEach(p => [p.f, p.mo].forEach(x => { if (x && P[x]) (KIDS[x] ||= []).push(p.id); }));
   d.unions.forEach(u => { if (P[u.a] && P[u.b]) { (SPOUSES[u.a] ||= []).push({ id: u.b, date: u.date, u: u.id }); (SPOUSES[u.b] ||= []).push({ id: u.a, date: u.date, u: u.id }); } });
+  const exSp = x => /розлуч|колишн/i.test(x.date || ''); Object.values(SPOUSES).forEach(L => L.sort((x, y) => exSp(x) - exSp(y))); // чинний чоловік/дружина — першим (поруч на дереві й у списках), розлучені — після (власник, 12.11: баба Яна — Семенов, а не Дергачов)
   Object.values(KIDS).forEach(l => l.sort(byBirth));
   d.families.forEach(f => { FAM[f.id] = f; });
   PVER = {}; d.photos.forEach(x => { if (x.ver?.orig && x.ver.at) PVER[x.id] = Date.parse(x.ver.at).toString(36); });
@@ -481,10 +482,11 @@ function layoutTD(center) {
   D.n.forEach(o => add(A, o.id, o.x, o.r));
   // інші шлюби, розгорнуті кнопкою «⚭ +N» (до дітей бічних — щоб «▾N» у другої дружини/чоловіка теж працювала): ставимо поруч із людиною в тому самому ряду, решту дерева розсуваємо
   const SPX = S.ui.spx ||= {};
-  Object.keys(SPX).forEach(id => { if (!SPX[id]) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id)); if (!extra.length) return;
+  const spxPass = () => Object.keys(SPX).forEach(id => { if (!SPX[id]) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id)); if (!extra.length) return;
     const k = extra.length, rightTaken = A.n.some(x => x.r === o.r && Math.abs(x.x - (o.x + P2)) < 1 && (SPOUSES[id] || []).some(y => y.id === x.id));
-    if (!rightTaken) { A.n.forEach(x => { if (x.x > o.x) x.x += k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
-    else { A.n.forEach(x => { if (x.x < o.x) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
+    if (!rightTaken) { A.n.forEach(x => { if (x.r === o.r ? x.x > o.x : x.x > o.x + P2 / 2 + 1) x.x += k * P2; }); /* інші ряди: батьки й дитина цієї пари лишаються на місці */ extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
+    else { A.n.forEach(x => { if (x.r === o.r ? x.x < o.x : x.x < o.x - P2 / 2 - 1) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
+  spxPass();
   // діти бічних родичів (брати й сестри предків тощо): кнопка «▾N» під карткою; розгорнуті — ставимо під людиною, решту дерева праворуч розсуваємо
   const KX = S.ui.kidx ||= {};
   const hasHidden = id => (KIDS[id] || []).some(k => !seen.has(k));
@@ -527,7 +529,7 @@ function layoutTD(center) {
     if (d > 0) right.forEach(n => n.x += d);
     Ub.n.forEach(n => add(A, n.id, n.x, n.r)); });
   /* діти людей, що з'явились лише як рідня подружжя (брати й сестри невістки/зятя тощо), теж треба розкласти — тому кілька проходів: діти → рідня подружжя → діти … */
-  kidsPass(); upPass(); kidsPass(); upPass(); kidsPass();
+  kidsPass(); upPass(); kidsPass(); upPass(); kidsPass(); spxPass(); /* «⚭ +N» і для рідні подружжя, яку розставляють проходи вище (баба Яна в дереві Максима) */ kidsPass();
   if (!f.allOpen) A.n.forEach(o => { if (o.id !== center && !KX[o.id] && hasHidden(o.id) && !(KIDS[o.id] || []).some(k => seen.has(k))) /* хтось із дітей уже в дереві — решту відкриває «+N» біля нього */ (hid[o.id] ||= {}).kids = (KIDS[o.id] || []).filter(k => !seen.has(k)).length; });
   const rows = [...new Set(A.n.map(o => o.r))].sort((a, b) => b - a); const ri = Object.fromEntries(rows.map((r, i) => [r, i]));
   const minX = Math.min(...A.n.map(o => o.x)), maxX = Math.max(...A.n.map(o => o.x));
