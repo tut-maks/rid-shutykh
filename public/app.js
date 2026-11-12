@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121011';
+const BUILD = '202611121030';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -490,7 +490,7 @@ function layoutTD(center) {
   /* межа вставки нового блоку не має розрізати подружжя в тому самому ряду: інакше чужа картка стає між чоловіком і дружиною й виглядає як їхній чоловік/дружина (власник, 08.11: Михайло 1920 між Іваном і Ольгою) */
   const noSplit = (others, x, rows) => { let s = x, ch = true; while (ch) { ch = false; for (const n of others) { if (n.x > s || !rows.includes(n.r)) continue; for (const sp of SPOUSES[n.id] || []) { const m = others.find(o => o.id === sp.id && o.r === n.r); if (m && m.x > s) { s = m.x; ch = true; } } } } return s; };
   const KL = f.allOpen ? null : Object.keys(KX);
-  for (let i = 0; i < (KL ? KL.length : A.n.length); i++) {
+  const kidsPass = () => { for (let i = 0; i < (KL ? KL.length : A.n.length); i++) {
     const id = KL ? KL[i] : A.n[i].id; if (!KL && id === center) continue;
     const o = A.n.find(x => x.id === id); if (!o || !hasHidden(id)) continue;
     const Sb = mk(); add(Sb, id, 0, o.r);
@@ -505,10 +505,10 @@ function layoutTD(center) {
     let d = 0; for (const r of rowsS) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Sb.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
     if (d > 0) right.forEach(n => n.x += d);
     Sb.n.forEach(n => add(A, n.id, n.x, n.r));
-  }
+  } };
   // батьки й рідня подружжя (невістки, зяті, свати): кнопка «▲» над карткою; розгорнуті — ставимо над людиною, решту дерева розсуваємо
   const upHidden = id => { const p = P[id]; return !!p && [p.f, p.mo].some(x => x && P[x] && !seen.has(x)); };
-  A.n.slice().forEach(o0 => { const id = o0.id; if (id === center || !upHidden(id)) return;
+  const upPass = () => A.n.slice().forEach(o0 => { const id = o0.id; if (id === center || !upHidden(id)) return;
     if (!EXP[id] && !f.allOpen) { (hid[id] ||= {}).up = true; return; }
     const o = A.n.find(x => x.id === id); const keep = SIBX[id]; if (keep === undefined) SIBX[id] = 1; // з батьками подружжя одразу видно і його братів та сестер (праворуч від нього)
     const Ub = up(id, o.r, 'R'); if (keep === undefined) delete SIBX[id];
@@ -520,6 +520,8 @@ function layoutTD(center) {
     let d = 0; for (const r of rowsU) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Ub.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
     if (d > 0) right.forEach(n => n.x += d);
     Ub.n.forEach(n => add(A, n.id, n.x, n.r)); });
+  /* діти людей, що з'явились лише як рідня подружжя (брати й сестри невістки/зятя тощо), теж треба розкласти — тому кілька проходів: діти → рідня подружжя → діти … */
+  kidsPass(); upPass(); kidsPass(); upPass(); kidsPass();
   if (!f.allOpen) A.n.forEach(o => { if (o.id !== center && !KX[o.id] && hasHidden(o.id) && !(KIDS[o.id] || []).some(k => seen.has(k))) /* хтось із дітей уже в дереві — решту відкриває «+N» біля нього */ (hid[o.id] ||= {}).kids = (KIDS[o.id] || []).filter(k => !seen.has(k)).length; });
   const rows = [...new Set(A.n.map(o => o.r))].sort((a, b) => b - a); const ri = Object.fromEntries(rows.map((r, i) => [r, i]));
   const minX = Math.min(...A.n.map(o => o.x)), maxX = Math.max(...A.n.map(o => o.x));
