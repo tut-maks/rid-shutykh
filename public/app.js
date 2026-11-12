@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611081658';
+const BUILD = '202611120947';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -420,6 +420,8 @@ function branchHtml(id, d, seen) {
 }
 function vTree() {
   const mode = S.ui.tmode || 'all';
+  /* Кожен має бачити весь рід (14.11): якщо від картки людини дерево виходить крихітним (її гілка малa), а людей на сайті багато — одразу розгортаємо все; «Згорнути» повертає як було */
+  if (!S.ui.tfAuto && S.me) { S.ui.tfAuto = 1; const f0 = S.ui.tf ||= {}; if (!f0.allOpen && !f0.fam && mode !== 'ped' && Object.keys(P).length > 150) { try { if (Object.keys(layoutTD(treeCenter()).N).length < 60) f0.allOpen = true; } catch (e) { } } }
   const tabs = `<div class="tmodes seg3">${[['all', 'Родина', 'Предки, брати й сестри, діти'], ['ped', 'Предки', 'Лише предки, зліва направо'], ['desc', 'Нащадки', 'Діти, онуки й правнуки']].map(([k, t, h]) => `<button data-tmode="${k}" class="${mode === k ? 'on' : ''}" title="${h}">${t}</button>`).join('')}</div>`;
   return mode === 'ped' ? vPedigree(tabs) : vAll(tabs);
 }
@@ -528,7 +530,7 @@ function treeBar(tabs, extra = '') {
   const f = S.ui.tf || {}, center = treeCenter();
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   return `<div class="tbar tbar1 tbar2"><h1 class="th1" title="Кожен із нас — продовження когось.">Родинне дерево</h1><label class="tsearch">${IC.search}<input class="in" id="tq" type="search" placeholder="Знайти людину…" value="${esc(f.q || '')}" aria-label="Пошук у дереві"></label>
-      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button><button class="btn line tme" data-act="mb-open" title="Коротке родове дерево (лише пряма лінія) — картинка для школи">⬇ <span>Основна гілка</span></button>
+      ${famSelect(f)}${tabs}<button class="btn line tme" data-act="t-me" title="Побудувати дерево від мене">${IC.target}<span>До мене</span></button><button class="btn line tall${f.allOpen ? ' on' : ''}" data-act="t-open" title="${f.allOpen ? 'Повернути звичайний вигляд' : 'Показати всіх людей роду: предків, братів і сестер, дітей, рідню подружжя'}"><span>${f.allOpen ? 'Згорнути' : 'Усі люди'}</span></button><button class="btn line tme" data-act="mb-open" title="Коротке родове дерево (лише пряма лінія) — картинка для школи">⬇ <span>Основна гілка</span></button>
       <details class="tmore"><summary class="btn line" title="Ще налаштування">⋯</summary><div class="tmore-b">
         <label class="f">Від кого будувати<select class="in" id="tcenter">${opts}</select></label>
         <label class="f">Брати й сестри<select class="in" id="tsort"><option value="birth"${f.sort !== 'name' ? ' selected' : ''}>за роком</option><option value="name"${f.sort === 'name' ? ' selected' : ''}>за ім'ям</option></select></label>

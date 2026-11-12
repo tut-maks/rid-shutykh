@@ -2491,3 +2491,7 @@ abbr.dv-sd{text-decoration:underline dotted var(--muted);text-underline-offset:3
   .nb-cols{column-gap:10mm}
   @page{size:A4;margin:10mm}
 }
+
+/* кнопка «Усі люди» в панелі дерева — завжди з підписом */
+.tbar .tall{white-space:nowrap;border-radius:999px!important;padding:10px 18px!important;font-weight:600}
+.tbar .tall.on{background:var(--ink,#1a1a1a)!important;color:#fff!important;border-color:transparent!important}
