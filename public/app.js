@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121041';
+const BUILD = '202611121100';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -68,10 +68,11 @@ const ucLabel = (pid, s) => { const kids = (KIDS[pid] || []).filter(k => P[k] &&
 const srcSite = u => /familysearch\.org/.test(u) ? 'FamilySearch' : /pamyat-naroda\.ru/.test(u) ? '«Память народа» (документи Другої світової)' : /obd-memorial/.test(u) ? 'ОБД «Мемориал»' : (String(u).match(/^https?:\/\/(?:www\.)?([^/]+)/) || [])[1] || '';
 const img = (q, thumb) => { const m = /^photo=([^&]+)/.exec(q), r = m && PVER[decodeURIComponent(m[1])]; return `/api/file?${q}${thumb ? '&thumb=1' : ''}${r ? '&r=' + r : ''}`; }; // r — фото замінили обробленою версією: нова адреса, щоб браузер не показував старе з кешу
 let PVER = {};
-const portrait = p => p.portrait ? img('photo=' + encodeURIComponent(p.portrait), true) : null;
+const portrait = (p, big) => p.portrait ? img('photo=' + encodeURIComponent(p.portrait), !big) : null; // big — оригінал (велике фото на картці, експорт, плакат); інакше мініатюра 420 px
 const pcOf = p => p.pc && p.pc.id === p.portrait && p.pc.s > 0 ? p.pc : null; // кадр обличчя для головного фото
 const pcStyle = c => c ? ` class="pcrop" style="width:${(100 / c.s).toFixed(3)}%!important;height:auto!important;left:${(-c.x / c.s * 100).toFixed(3)}%;top:${(-c.y * c.r / c.s * 100).toFixed(3)}%"` : '';
-const pimg = (p, extra = '') => { const u = portrait(p); return u ? `<img src="${u}" alt="" loading="lazy"${pcStyle(pcOf(p))}${extra}>` : ''; };
+// тісний кадр обличчя з мініатюри виходить розмитим — тоді беремо оригінал
+const pimg = (p, extra = '', big) => { const c0 = pcOf(p), u = portrait(p, big || (c0 && c0.s < 0.35)); return u ? `<img src="${u}" alt="" loading="lazy"${pcStyle(pcOf(p))}${extra}>` : ''; };
 const ph = p => { const u = portrait(p); return `<span class="ph">${u ? pimg(p) : esc((p.n || '?')[0])}</span>`; };
 const canEdit = () => S.me && (S.me.role === 'editor' || S.me.role === 'owner');
 const isOwner = () => S.me && S.me.role === 'owner';
@@ -643,7 +644,7 @@ async function treePng(PO) {
     g.beginPath(); g.arc(x, y, 12, 0, 7); g.fillStyle = '#fff'; g.fill(); g.strokeStyle = '#B7AC9E'; g.lineWidth = 1.3; g.stroke();
     g.strokeStyle = '#8E8275'; g.lineWidth = 1.4; [-3, 3].forEach(dx => { g.beginPath(); g.arc(x + dx, y, 4.2, 0, 7); g.stroke(); }); });
   // портрети (з тих самих адрес, що й на сторінці — вже в кеші)
-  const ims = {}; await Promise.all(Object.keys(L.N).map(id => { const u = portrait(P[id]); if (!u) return null; return new Promise(res => { const im = new Image(); im.onload = () => { ims[id] = im; res(); }; im.onerror = () => res(); im.src = u; }); }));
+  const ims = {}; await Promise.all(Object.keys(L.N).map(id => { const u = portrait(P[id], true); if (!u) return null; return new Promise(res => { const im = new Image(); im.onload = () => { ims[id] = im; res(); }; im.onerror = () => res(); im.src = u; }); }));
   const rr = (x, y, ww, hh, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + ww, y, x + ww, y + hh, r); g.arcTo(x + ww, y + hh, x, y + hh, r); g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + ww, y, r); g.closePath(); };
   const wrap = (txt, maxW, lines) => { const words = txt.split(/\s+/), out = []; let cur = ''; for (const wd of words) { const t2 = cur ? cur + ' ' + wd : wd; if (g.measureText(t2).width <= maxW || !cur) cur = t2; else { out.push(cur); cur = wd; } } if (cur) out.push(cur);
     if (out.length > lines) { out.length = lines; let l = out[lines - 1]; while (l && g.measureText(l + '…').width > maxW) l = l.slice(0, -1); out[lines - 1] = l + '…'; } return out; };
@@ -746,7 +747,7 @@ function vPerson() {
   const near = [...par.map(x => [x, P[x].sex === 'f' ? 'мати' : 'батько']), ...sp.map(x => [x.id, P[x.id]?.sex === 'f' ? 'дружина' : 'чоловік']), ...ch.map(x => [x, P[x].sex === 'f' ? 'донька' : 'син'])].filter(([x]) => P[x]);
   const dTxt = p.d ? esc(p.d) : (p.dead || p.dp) ? (p.sex === 'f' ? 'померла' : 'помер') + ', дата невідома' : '—';
   const hero = `<a class="btn line small v4-back" href="${href('tree', p.id)}">← Дерево</a>
-  <section class="v4-ph"><div class="v4-ph-im">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? pimg(p, ` data-photo="${esc(p.portrait)}" data-pctx="${p.id}" title="Відкрити фото"`) : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? pimg(p) : esc((p.n || '?')[0])}</div>`}${life(p) ? `<span class="v4-life">${esc(life(p))}</span>` : ''}</div>
+  <section class="v4-ph"><div class="v4-ph-im">${S.me ? `<label class="portrait addp" title="${pu ? 'Додати ще фото' : 'Додати фото'}${canAdd(p.id) ? '' : ' (з\'явиться після підтвердження Максимом)'}">${pu ? pimg(p, ` data-photo="${esc(p.portrait)}" data-pctx="${p.id}" title="Відкрити фото"`, true) : esc((p.n || '?')[0])}<span class="addp-l">${pu ? '+ фото' : '+ Додати фото'}</span><input type="file" accept="image/*,application/pdf" multiple data-upload="${p.id}" hidden></label>` : `<div class="portrait">${pu ? pimg(p, '', true) : esc((p.n || '?')[0])}</div>`}${life(p) ? `<span class="v4-life">${esc(life(p))}</span>` : ''}</div>
     <div class="v4-ph-t"><div class="eyebrow">${fams.map(f => esc(FAM[f].title)).join(' · ') || 'Картка'}</div><h1>${esc(full(p))}</h1><div class="relrow">${relBadge(p)}</div>${fixBtn(p.id)}
       <div class="v4-f3"><div><span>Народження</span><b>${p.b ? esc(p.b) : '—'}</b></div><div><span>Місце</span><b class="v4-pl">${esc(p.bp || '—')}</b></div><div><span>Смерть</span><b>${dTxt}</b>${p.dp ? `<i>${esc(p.dp)}</i>` : ''}</div></div>
       ${p.hyp ? `<div class="hypnote">Гіпотеза: зв'язок поки не підтверджено документами.</div>` : ''}
@@ -3950,7 +3951,7 @@ async function mainBranchPng(id, G, fmt, withPh) {
   // хто де: рівень g (0 — дитина внизу), місце i з 2^g
   const slot = (gl, i) => { const n = 2 ** gl, sw = (W - 2 * M) / n; return { x: M + sw * (i + .5), y: H - bot - rowH * (gl + .5), sw }; };
   const lv = [[id]]; for (let gl = 1; gl <= G; gl++) lv.push(lv[gl - 1].flatMap(x => { const p = x && P[x]; return [p && P[p.f] ? p.f : null, p && P[p.mo] ? p.mo : null]; }));
-  const ph = {}; if (withPh) await Promise.all(lv.flat().filter(x => x && portrait(P[x])).map(x => new Promise(res => { const im = new Image(); im.onload = () => { ph[x] = im; res(); }; im.onerror = res; im.src = portrait(P[x]); setTimeout(res, 6000); })));
+  const ph = {}; if (withPh) await Promise.all(lv.flat().filter(x => x && portrait(P[x])).map(x => new Promise(res => { const im = new Image(); im.onload = () => { ph[x] = im; res(); }; im.onerror = res; im.src = portrait(P[x], true); setTimeout(res, 6000); })));
   const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
   const wrap = (t, mw, font) => { g.font = font; const w = String(t).split(/\s+/), L = []; let cur = ''; w.forEach(x => { const tr = cur ? cur + ' ' + x : x; if (g.measureText(tr).width > mw && cur) { L.push(cur); cur = x; } else cur = tr; }); if (cur) L.push(cur); return L; };
   const boxSize = gl => { const sw = (W - 2 * M) / 2 ** gl; return { bw: Math.min(sw * .88, W * .16), bh: Math.min(rowH * .78, H * .2) }; };
