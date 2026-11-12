@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121130';
+const BUILD = '202611121147';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -482,7 +482,10 @@ function layoutTD(center) {
   D.n.forEach(o => add(A, o.id, o.x, o.r));
   // інші шлюби, розгорнуті кнопкою «⚭ +N» (до дітей бічних — щоб «▾N» у другої дружини/чоловіка теж працювала): ставимо поруч із людиною в тому самому ряду, решту дерева розсуваємо
   const SPX = S.ui.spx ||= {};
-  const spxPass = () => Object.keys(SPX).forEach(id => { if (!SPX[id]) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id)); if (!extra.length) return;
+  const isEx = x => /розлуч|колишн/i.test(x.date || '');
+  /* розлучені на дереві поруч (бо спільна дитина), а чинний чоловік/дружина — одразу поруч, без кнопки (власник, 12.11: баба Яна — Микола Семенов); «⚭ −» прибирає */
+  const autoCur = id => SPX[id] !== false && (SPOUSES[id] || []).some(x => isEx(x) && seen.has(x.id)) && (SPOUSES[id] || []).some(x => !isEx(x) && P[x.id] && !seen.has(x.id));
+  const spxPass = () => [...new Set([...Object.keys(SPX), ...A.n.map(x => x.id)])].forEach(id => { const all = !!SPX[id], cur = !all && autoCur(id); if (!all && !cur) return; const o = A.n.find(x => x.id === id); if (!o) return; const extra = (SPOUSES[id] || []).filter(x => P[x.id] && !seen.has(x.id) && (all || !isEx(x))); if (!extra.length) return;
     const k = extra.length, rightTaken = A.n.some(x => x.r === o.r && Math.abs(x.x - (o.x + P2)) < 1 && (SPOUSES[id] || []).some(y => y.id === x.id));
     if (!rightTaken) { A.n.forEach(x => { if (x.r === o.r ? x.x > o.x : x.x > o.x + P2 / 2 + 1) x.x += k * P2; }); /* інші ряди: батьки й дитина цієї пари лишаються на місці */ extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x + (i + 1) * P2, o.r); }); }
     else { A.n.forEach(x => { if (x.r === o.r ? x.x < o.x : x.x < o.x - P2 / 2 - 1) x.x -= k * P2; }); extra.forEach((x, i) => { seen.add(x.id); add(A, x.id, o.x - (i + 1) * P2, o.r); }); } });
@@ -577,7 +580,7 @@ function vAll(tabs) {
   const hl = !f.fam && f.allOpen && [...V].some(id => !mine.has(id));
   let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
-    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp${ucU(s) ? ' unc' : ''}${mine.has(id) && mine.has(s.id) ? ' mine' : ''}"/>`; const gap = L.N[b].x - (L.N[a].x + T2.W), rx = gap > T2.GX + 30 ? L.N[b].x - 13 : (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); /* далекий шлюб — кільце біля самої людини, не на сусідній картці */ rings += `<g class="ring${mine.has(id) && mine.has(s.id) ? ' mine' : ''}" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
+    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp${ucU(s) || /розлуч|колишн/i.test(s.date || '') ? ' unc' : ''}${mine.has(id) && mine.has(s.id) ? ' mine' : ''}"/>`; const gap = L.N[b].x - (L.N[a].x + T2.W), rx = gap > T2.GX + 30 ? L.N[b].x - 13 : (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); /* далекий шлюб — кільце біля самої людини, не на сусідній картці */ rings += `<g class="ring${mine.has(id) && mine.has(s.id) ? ' mine' : ''}${/розлуч|колишн/i.test(s.date || '') ? ' ex' : ''}" transform="translate(${rx} ${ry})">${/розлуч|колишн/i.test(s.date || '') ? '<title>розлучені</title>' : ''}<circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
   const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
   // батьки → діти: товстіша лінія; сусідні родини в одному ряду — кожна на своїй висоті, щоб лінії не зливалися в одну
   const FL = Object.entries(fam).map(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
