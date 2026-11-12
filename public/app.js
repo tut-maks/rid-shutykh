@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611120954';
+const BUILD = '202611120958';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -455,8 +455,8 @@ function layoutTD(center) {
   function up(c, r, side, lim) { // блок предків людини c (c у x=0, ряд r); lim — з якого ряду ховати предків (коли відкрита рідня дружини/чоловіка)
     const B = mk(); const all = sibs(c).filter(x => x === c || (P[x] && !seen.has(x)));
     const dflt = !SIBX[c] && !f.allOpen && SIBX[c] !== 0 && r === 0; const g = (SIBX[c] || f.allOpen || dflt) ? all : [c]; if (dflt && all.length > 1) DS[c] = 1; /* відкриті одразу лише брати й сестри центральної людини; решта — кнопкою ▸N */ if (all.length > g.length) (hid[c] ||= {}).sib = all.length - 1;
-    const outer = x => x !== c && (SPOUSES[x] || []).some(s => EXP[s.id] && P[s.id]); // у кого розгорнута рідня чоловіка/дружини — ставимо скраю ряду, щоб чужа гілка не перетинала лінію братів і сестер
-    let order = g.filter(x => x !== c && !outer(x)); const ou = g.filter(outer); order = side === 'L' ? [...ou, ...order, c] : side === 'R' ? [c, ...order, ...ou] : [...g.filter(x => !outer(x)), ...ou];
+    const outer = x => x !== c && ((SPOUSES[x] || []).some(s => EXP[s.id] && P[s.id]) || (f.allOpen && (KIDS[x] || []).some(k => P[k]))); /* при «Усі люди» брат чи сестра з нащадками стоїть скраю ряду: їхні діти й рідня подружжя дітей розростаються вбік, а не розсувають брата й сестру від центральної людини */ // у кого розгорнута рідня чоловіка/дружини — ставимо скраю ряду, щоб чужа гілка не перетинала лінію братів і сестер
+    let order = g.filter(x => x !== c && !outer(x)); const ou = g.filter(outer); order = side === 'L' ? [...ou, ...order, c] : side === 'R' ? [c, ...order, ...ou] : ou.length ? [...g.filter(x => x !== c && !outer(x)), c, ...ou] : [...g.filter(x => !outer(x)), ...ou];
     const ci = order.indexOf(c); order.forEach((id, i) => { seen.add(id); add(B, id, (i - ci) * P2, r); });
     const p = P[c]; let fa = p.f && P[p.f] && !seen.has(p.f) ? p.f : null, mo = p.mo && P[p.mo] && !seen.has(p.mo) ? p.mo : null;
     if ((fa || mo) && ((r >= DEF && !f.deep) || (lim && r >= lim)) && !EXP[c] && !f.allOpen) { (hid[c] ||= {}).up = true; fa = mo = null; }
