@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611120947';
+const BUILD = '202611120954';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -559,29 +559,35 @@ const isAncOf = (a, b, seen = new Set()) => { /* a — предок b? */ if (!b
 function vAll(tabs) {
   let center = treeCenter(); const f = S.ui.tf || {}; const L = f.fam ? famLayout(center, f.fam) : layoutTD(center); if (L.c) center = L.c; S.ui.tl = L; const V = new Set(Object.keys(L.N));
   const cx = id => L.N[id].x + T2.W / 2, top = id => L.N[id].y, bot = id => L.N[id].y + T2.H, midY = id => L.N[id].y + T2.H / 2;
+  /* «Ваша гілка» (14.11): коли відкрито всіх, своїх — центр, предки, нащадки, брати й сестри та подружжя цих людей — лишаємо яскравими, решту й їхні лінії притемнюємо */
+  const mine = new Set([center]); (function u(id) { if (!id || !P[id]) return; [P[id].f, P[id].mo].forEach(x => { if (x && P[x] && !mine.has(x)) { mine.add(x); u(x); } }); })(center);
+  (function d(id) { (KIDS[id] || []).forEach(k => { if (!mine.has(k)) { mine.add(k); d(k); } }); })(center);
+  [...mine].forEach(id => (SPOUSES[id] || []).forEach(x => P[x.id] && mine.add(x.id)));
+  { const c0 = P[center]; [c0.f, c0.mo].forEach(x => x && P[x] && (KIDS[x] || []).forEach(k => mine.add(k))); }
+  const hl = !f.fam && f.allOpen && [...V].some(id => !mine.has(id));
   let lines = '', rings = ''; const done = new Set();
   V.forEach(id => (SPOUSES[id] || []).forEach(s => { const k = [id, s.id].sort().join('|'); if (done.has(k) || !V.has(s.id) || L.N[s.id].r !== L.N[id].r) return; done.add(k);
-    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp${ucU(s) ? ' unc' : ''}"/>`; const gap = L.N[b].x - (L.N[a].x + T2.W), rx = gap > T2.GX + 30 ? L.N[b].x - 13 : (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); /* далекий шлюб — кільце біля самої людини, не на сусідній картці */ rings += `<g class="ring" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
+    const [a, b] = cx(id) < cx(s.id) ? [id, s.id] : [s.id, id]; lines += `<path d="M${L.N[a].x + T2.W} ${midY(a)}H${L.N[b].x}" class="ln sp${ucU(s) ? ' unc' : ''}${mine.has(id) && mine.has(s.id) ? ' mine' : ''}"/>`; const gap = L.N[b].x - (L.N[a].x + T2.W), rx = gap > T2.GX + 30 ? L.N[b].x - 13 : (L.N[a].x + T2.W + L.N[b].x) / 2, ry = midY(a); /* далекий шлюб — кільце біля самої людини, не на сусідній картці */ rings += `<g class="ring${mine.has(id) && mine.has(s.id) ? ' mine' : ''}" transform="translate(${rx} ${ry})"><circle r="12"/><circle cx="-3" r="4.2" class="r2"/><circle cx="3" r="4.2" class="r2"/></g>`; }));
   const fam = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && V.has(x)); if (ps.length) (fam[ps.sort().join('|')] ||= []).push(id); });
   // батьки → діти: товстіша лінія; сусідні родини в одному ряду — кожна на своїй висоті, щоб лінії не зливалися в одну
   const FL = Object.entries(fam).map(([k, kids]) => { const ps = k.split('|'); const two = ps.length === 2 && L.N[ps[0]].r === L.N[ps[1]].r;
     /* батьки стоять далеко (між ними чужі картки) — лінія до дітей іде від кільця біля правого з батьків, а не з середини, яка може припасти на чужу картку */
     const [pa, pb] = two && cx(ps[0]) > cx(ps[1]) ? [ps[1], ps[0]] : ps, far = two && L.N[pb].x - (L.N[pa].x + T2.W) > T2.GX + 30;
     const px = two ? (far ? L.N[pb].x - 13 : (cx(pa) + cx(pb)) / 2) : cx(ps[0]), py = two ? midY(ps[0]) : bot(ps[0]); const xs = kids.map(cx);
-    return { kids, px, py, xs, x1: Math.min(px, ...xs), x2: Math.max(px, ...xs), row: L.N[kids[0]].r }; });
+    return { mn: kids.some(k => mine.has(k)) && ps.some(x => mine.has(x)), kids, px, py, xs, x1: Math.min(px, ...xs), x2: Math.max(px, ...xs), row: L.N[kids[0]].r }; });
   const LANE = 14, rowsF = {}; FL.forEach(o => (rowsF[o.row] ||= []).push(o));
   Object.values(rowsF).forEach(list => { const ends = []; list.sort((a, b) => a.x1 - b.x1).forEach(o => { let i = ends.findIndex(e => e < o.x1 - 10); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = o.x2; o.lane = i; }); list.forEach(o => { o.n = ends.length; }); });
   FL.forEach(o => { const ty = top(o.kids[0]), by = ty - T2.GY / 2 + (o.lane - (o.n - 1) / 2) * Math.min(LANE, 64 / Math.max(1, o.n - 1));
-    lines += `<path d="M${o.px} ${o.py}V${by}M${o.x1} ${by}H${o.x2}${o.xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc"/>`; });
+    lines += `<path d="M${o.px} ${o.py}V${by}M${o.x1} ${by}H${o.x2}${o.xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc${o.mn ? ' mine' : ''}"/>`; });
   // брати й сестри, чиїх батьків у дереві не показано (відкриті кнопкою ▸N): з'єднуємо їх «дужкою» над карткою, щоб було видно, що це одна родина
   const SG = {}; V.forEach(id => { const ps = [P[id].f, P[id].mo].filter(x => x && P[x]); if (!ps.length || ps.some(x => V.has(x))) return; (SG[ps.sort().join('|') + '@' + L.N[id].r] ||= []).push(id); });
   Object.values(SG).forEach(ks => { if (ks.length < 2) return; const xs = ks.map(cx), ty = top(ks[0]), by = ty - T2.GY / 2 + 6;
-    lines += `<path d="M${Math.min(...xs)} ${by}H${Math.max(...xs)}${xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc sibl"/>`; });
+    lines += `<path d="M${Math.min(...xs)} ${by}H${Math.max(...xs)}${xs.map(x => `M${x} ${by}V${ty}`).join('')}" class="ln pc sibl${ks.some(k => mine.has(k)) ? ' mine' : ''}"/>`; });
   const q = (f.q || '').trim().toLowerCase();
   const anc = new Set(); (function up(id) { if (!id || anc.has(id) || !P[id]) return; anc.add(id); up(P[id].f); up(P[id].mo); })(center);
   const desc = new Set(); (function dn(id) { (KIDS[id] || []).forEach(k => { if (!desc.has(k)) { desc.add(k); dn(k); } }); })(center);
   const cards = [...V].map(id => { const p = P[id], n = L.N[id]; const hit = q && full(p).toLowerCase().includes(q); const br = !anc.has(id) && !desc.has(id) && (KIDS[id] || []).some(k => !anc.has(k) && !desc.has(k)); /* бічна гілка, що має продовження */
-    const dim = f.fam && !(p.fam || []).includes(f.fam);
+    const dim = (f.fam && !(p.fam || []).includes(f.fam)) || (hl && !mine.has(id));
     return `<a class="nd t2${sxCls(p)}${deadCls(p)}${p.hyp ? ' hyp' : ''}${id === center ? ' root' : ''}${hit ? ' hit' : ''}${S.ui.pp === id ? ' sel' : ''}${dim ? ' dim' : ''}${br ? ' brc' : ''}" href="${href('p', id)}" style="left:${n.x}px;top:${n.y}px" data-id="${id}" data-pp="${id}" title="${esc(full(p) + (life(p) ? ', ' + life(p) : '') + (isDead(p) ? (p.d ? ' · помер(ла)' : ' · помер(ла), дати смерті не знаємо') : '') + (childAge(p) ? ' · ' + childAge(p).txt : '') + (br ? ' — є нащадки в дереві' : ''))}">${avatar(p)}<span><b>${esc(tname(p))}</b><span class="y">${esc(years(p))}</span></span>${kdBadge(p)}${(r => `<i class="ndrel rel-${r.k}${r.c ? ' con' : ''}" title="${esc(RELK[r.k].t + (r.c ? ' · ' + RELK.con.t : ''))}">${RELK[r.k].i}</i>`)(relOf(p))}</a>`; }).join('');
   const tog = Object.entries(S.ui.hid || {}).filter(([id]) => L.N[id]).map(([id, h]) => { const n = L.N[id]; let s = '';
     if (h.up) s += `<button class="tg up" data-exp="${id}" style="left:${n.x + T2.W / 2 - 15}px;top:${n.y - 26}px" title="Показати батьків">▲</button>`;
@@ -600,8 +606,8 @@ function vAll(tabs) {
   const opts = Object.values(P).sort((x, y) => short(x).localeCompare(short(y), 'uk')).map(x => `<option value="${x.id}"${x.id === center ? ' selected' : ''}>${esc(full(x))}${yearOf(x.b) ? ' (' + yearOf(x.b) + ')' : ''}</option>`).join('');
   const glabels = L.rows.map((r, i) => `<div class="glab" style="top:${Math.max(0, i * (T2.H + T2.GY) + T2.PAD - 62)}px">${r === 0 ? 'Від кого будуємо' : r > 0 ? (['', 'Батьки', 'Діди', 'Прадіди', 'Прапрадіди'][r] || (r - 2) + '-ті прадіди') : r === -1 ? 'Діти' : r === -2 ? 'Онуки' : 'Нащадки'}</div>`).join('');
   return `${treeHead()}
-    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span><span class="small muted"><i class="sw brc" style="display:inline-block;width:18px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px"></i>товста рамка — у брата чи сестри є нащадки в дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}<button class="btn line small" data-act="poster" title="Велика картинка з рамкою й заголовком — для друку на стіну">🖼 Плакат для друку</button>`)}
-    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}${spx}</div>${vpCtl(true)}</div>
+    ${treeBar(tabs, `<span class="small muted">${V.size} осіб у дереві</span>${hl ? '<span class="small muted">притемнені — не з вашої гілки</span>' : ''}<span class="small muted"><i class="sw brc" style="display:inline-block;width:18px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px"></i>товста рамка — у брата чи сестри є нащадки в дереві</span>${isOwner() ? `<button class="btn line small" data-act="t-png" title="Велика картинка PNG — саме ті родичі, що зараз відкриті в дереві">⤓ Завантажити картинкою (PNG)</button>` : ''}<button class="btn line small" data-act="poster" title="Велика картинка з рамкою й заголовком — для друку на стіну">🖼 Плакат для друку</button>`)}
+    <div class="vp all" id="vp" data-mode="all" data-center="${center}"><div class="stage${hl ? ' hl' : ''}" id="stage" style="width:${L.w}px;height:${L.h}px">${glabels}<svg class="lines" width="${L.w}" height="${L.h}">${lines}${rings}</svg>${cards}${tog}${spx}</div>${vpCtl(true)}</div>
     `;
 }
 
