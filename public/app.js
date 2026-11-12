@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121030';
+const BUILD = '202611121041';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -498,13 +498,18 @@ function layoutTD(center) {
     let X = null; (KIDS[id] || []).filter(k => !seen.has(k)).sort(sortS).forEach(k => { seen.add(k); const K = down(k, o.r - 1); if (!X) X = K; else { shift(K, sep(X, K)); merge(X, K); } });
     if (X) { shift(X, -Math.min(...X.n.map(n => n.x))); merge(Sb, X); }
     Sb.n = Sb.n.filter(n => n.id !== id);
-    const rowsS = [...new Set(Sb.n.map(n => n.r))], others = A.n.filter(n => n.id !== id), cut = noSplit(others, o.x, rowsS);
-    const left = others.filter(n => n.x <= cut), right = others.filter(n => n.x > cut);
-    let off = o.x; for (const r of rowsS) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Sb.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
+    let rowsS = [...new Set(Sb.n.map(n => n.r))]; const others = A.n.filter(n => n.id !== id); let cut = noSplit(others, o.x, rowsS), before = 0, sps = [];
+    /* подружжя в ряду дітей стоїть по обидва боки від місця вставки (чоловік лівіше, дружина правіше — напр. Руслан і Оксана, а діти сестри його матері — між ними): діти ставляться ПЕРЕД подружжям, і воно разом зсувається вправо, а не після нього (власник, 12.11); чоловік/дружина самої людини лишаються поруч із нею */
+    if (cut > o.x) { const rowsK = rowsS.filter(r => r !== o.r); let lc = Infinity; if (rowsK.length) for (const n of others) { if (n.x > o.x || !rowsK.includes(n.r)) continue; for (const sp of SPOUSES[n.id] || []) { const m = others.find(q => q.id === sp.id && q.r === n.r); if (m && m.x > o.x) lc = Math.min(lc, n.x); } }
+      if (lc < Infinity) { cut = lc - 1; before = lc; sps = Sb.n.filter(n => n.r === o.r); Sb.n = Sb.n.filter(n => n.r !== o.r); rowsS = rowsK; } }
+    const left = others.filter(n => n.x <= cut), right = others.filter(n => n.x > cut && (!before || n.r <= Math.max(...rowsS)));
+    let off = before ? -Infinity : o.x; for (const r of rowsS) { const lx = left.filter(n => n.r === r).map(n => n.x); if (!lx.length) continue; const smin = Math.min(...Sb.n.filter(n => n.r === r).map(n => n.x)); off = Math.max(off, Math.max(...lx) + P2 - smin); }
+    if (off === -Infinity) off = before - (Math.max(...Sb.n.map(n => n.x)) - Math.min(...Sb.n.map(n => n.x))) - P2 - Math.min(...Sb.n.map(n => n.x));
     shift(Sb, off);
     let d = 0; for (const r of rowsS) { const rx = right.filter(n => n.r === r).map(n => n.x); if (!rx.length) continue; const smax = Math.max(...Sb.n.filter(n => n.r === r).map(n => n.x)); d = Math.max(d, smax + P2 - Math.min(...rx)); }
     if (d > 0) right.forEach(n => n.x += d);
     Sb.n.forEach(n => add(A, n.id, n.x, n.r));
+    if (sps.length) { const k = sps.length; A.n.forEach(x => { if (x.r === o.r && x.x > o.x) x.x += k * P2; }); sps.forEach((sp, i2) => add(A, sp.id, o.x + (i2 + 1) * P2, o.r)); }
   } };
   // батьки й рідня подружжя (невістки, зяті, свати): кнопка «▲» над карткою; розгорнуті — ставимо над людиною, решту дерева розсуваємо
   const upHidden = id => { const p = P[id]; return !!p && [p.f, p.mo].some(x => x && P[x] && !seen.has(x)); };
