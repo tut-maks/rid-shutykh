@@ -21,8 +21,8 @@ async function cfgGet(k) { try { const r = await db.get('settings', { eq: { key:
 async function cfgSet(k, v, by, before) { await db.upsert('settings', { key: k, value: v, updated_by: by, updated_at: new Date().toISOString() }); await revision('setting', k, 'update', before ?? null, v, by); }
 /* Правки від родичів: питання kind 'fix' + запропоновані зміни полів картки в settings 'fix_pending' = {qid: {person, ch:{k:[було, стане]}, st?:'ok'|'no', keys?}}.
    Вносить у картку лише власник (fix.apply), після перегляду. */
-const FIXK = { n: "Ім'я", pt: 'По батькові', s: 'Прізвище', m: 'Дівоче прізвище', sex: 'Стать', b: 'Народження', bp: 'Місце народження', d: 'Смерть', dp: 'Місце смерті', lp: 'Де жив(-ла) / живе', note: 'Опис' };
-const FIXN = { n: 80, pt: 80, s: 80, m: 80, sex: 2, b: 40, bp: 160, d: 40, dp: 160, lp: 160, note: 8000 };
+const FIXK = { n: "Ім'я", pt: 'По батькові', s: 'Прізвище', m: 'Дівоче прізвище', sex: 'Стать', b: 'Народження', bp: 'Місце народження', d: 'Смерть', dp: 'Місце смерті', lp: 'Де жив(-ла) / живе', note: 'Опис', dead: 'Помер(ла), дата невідома' };
+const FIXN = { n: 80, pt: 80, s: 80, m: 80, sex: 2, b: 40, bp: 160, d: 40, dp: 160, lp: 160, note: 8000, dead: 1 };
 async function fixGet() { try { const r = await db.get('settings', { eq: { key: 'fix_pending' } }); return r?.value || {}; } catch { return {}; } }
 async function fixSet(v, by) { await db.upsert('settings', { key: 'fix_pending', value: v, updated_by: by, updated_at: new Date().toISOString() }); }
 const FIXREL = { spouse: 'чоловік / дружина', son: 'син', daughter: 'донька', father: 'батько', mother: 'мати', brother: 'брат', sister: 'сестра' };
@@ -42,7 +42,7 @@ async function applyFix(it, keys, keep, me) {
   const upd = async (id, set) => { const p = await get(id); if (!p) return; const data = { ...p.data, ...set }; await db.update('persons', { eq: { id } }, { data, version: (p.version || 1) + 1, updated_by: me.id, updated_at: now() }); await revision('person', id, 'update', p.data, data, me.id); };
   const unite = async (a, b, date = '') => { if (!a || !b || a === b) return; const us = await db.list('unions', { eq: { deleted: false } }); if (us.some(u => (u.a === a && u.b === b) || (u.a === b && u.b === a))) return; const u = { id: 'u_' + slugId().replace(/^p_/, ''), a, b, date, created_by: me.id }; await db.insert('unions', u); await revision('union', u.id, 'create', null, u, me.id); };
   const fk = keys.filter(k => it.ch?.[k]);
-  if (fk.length) { const cur = await get(it.person); if (!cur) return { error: 'not_found' }; const set = {}; for (const k of fk) set[k] = it.ch[k][1]; await upd(cur.id, set); }
+  if (fk.length) { const cur = await get(it.person); if (!cur) return { error: 'not_found' }; const set = {}; for (const k of fk) set[k] = k === 'dead' ? !!it.ch[k][1] : it.ch[k][1]; if (set.dead && (set.d ?? cur.data.d)) set.dead = false; await upd(cur.id, set); }
   const note = 'Додано ' + (it.author ? 'за словами ' + it.author + ' ' : '') + '(пропозиція на сайті, підтвердив власник).';
   const SEX = { son: 'm', brother: 'm', father: 'm', daughter: 'f', sister: 'f', mother: 'f' };
   const order = ['spouse', 'father', 'mother', 'son', 'daughter', 'brother', 'sister'];
@@ -569,7 +569,7 @@ export default handler(async (req, res, ctx, url) => {
   if (op === 'fix.add') { // родич пропонує правку картки (поля, нові рідні, дублікат) — вносить власник одним кліком
     const cur = await db.get('persons', { eq: { id: S(body.person, 60), deleted: false } }); if (!cur) return fail(res, 404, 'not_found');
     const pt = body.patch && typeof body.patch === 'object' ? body.patch : {}, ch = {};
-    for (const k of Object.keys(FIXK)) { if (!(k in pt)) continue; let v = S(pt[k], FIXN[k]); if (k === 'sex' && !['m', 'f', ''].includes(v)) continue; const old = String(cur.data[k] ?? ''); if (v !== old) ch[k] = [old, v]; }
+    for (const k of Object.keys(FIXK)) { if (!(k in pt)) continue; let v = S(pt[k], FIXN[k]); if (k === 'sex' && !['m', 'f', ''].includes(v)) continue; if (k === 'dead') v = v ? '1' : ''; const old = k === 'dead' ? (cur.data.dead ? '1' : '') : String(cur.data[k] ?? ''); if (v !== old) ch[k] = [old, v]; }
     const add = (Array.isArray(body.add) ? body.add : []).slice(0, 12).map(x => ({ rel: S(x?.rel, 10), s: S(x?.s, 80), n: S(x?.n, 80), pt: S(x?.pt, 80), m: S(x?.m, 80), b: S(x?.b, 40) })).filter(x => FIXREL[x.rel] && x.n);
     let dup = S(body.dup, 60); if (dup && (dup === cur.id || !(await db.get('persons', { eq: { id: dup, deleted: false } })))) dup = '';
     const why = S(body.text, 5000), any = Object.keys(ch).length || add.length || dup;

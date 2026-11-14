@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, data: null, view: 'tree', arg: null, ui: {}, admin: {} };
 /* Нова версія сайту: раз на 5 хв і при поверненні на вкладку звіряємо /version.json; якщо змінилась — смужка «Оновити» */
-const BUILD = '202611121147';
+const BUILD = '202611140751';
 async function checkUpdate() {
   if (BUILD === 'dev' || document.querySelector('.updbar')) return;
   try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json();
@@ -1088,7 +1088,7 @@ function qAboutHtml(pid) {
   return `<p class="small" style="margin:8px 0 0"><a href="${href('q')}">${canEdit() ? 'Запитань про цю людину' : 'Ваших запитань про цю людину'}: ${list.length}${open ? ` (відкритих: ${open})` : ''}</a></p>`;
 }
 const fixBtn = (id, cls = '') => S.me ? (isOwner() && fixPend(id).length ? `<a class="fxwait" href="#/q">Чекає вашого підтвердження: ${fixPend(id).length} ${fixPend(id).length === 1 ? 'правка' : 'правки'} →</a>` : '') + `<button type="button" class="fixbtn ${cls}" data-act="q-fix" data-id="${esc(id)}" title="Бачите помилку чи знаєте більше? Напишіть — перевіримо й виправимо"><span class="fx-ic">✎</span><span>Внести правку</span></button>` : '';
-const FIXK = { n: "Ім'я", pt: 'По батькові', s: 'Прізвище', m: 'Дівоче прізвище', sex: 'Стать', b: 'Народження', bp: 'Місце народження', d: 'Смерть', dp: 'Місце смерті', lp: 'Де жив(-ла) / живе', note: 'Опис' };
+const FIXK = { n: "Ім'я", pt: 'По батькові', s: 'Прізвище', m: 'Дівоче прізвище', sex: 'Стать', b: 'Народження', bp: 'Місце народження', d: 'Смерть', dp: 'Місце смерті', lp: 'Де жив(-ла) / живе', note: 'Опис', dead: 'Помер(ла), дата невідома' };
 const fixPend = pid => (S.data.questions || []).filter(q => q.kind === 'fix' && q.person === pid && (q.patch || q.padd || q.pdup) && q.pst === '');
 const FXREL = { spouse: 'чоловік / дружина', son: 'син', daughter: 'донька', father: 'батько', mother: 'мати', brother: 'брат', sister: 'сестра' };
 const fxRelRow = p => `<div class="fxrel"><select class="in" data-fr="rel">${Object.entries(FXREL).filter(([k]) => !((k === 'father' && P[p.f]) || (k === 'mother' && P[p.mo]) || ((k === 'brother' || k === 'sister') && !P[p.f] && !P[p.mo]))).map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select><input class="in" data-fr="fio" placeholder="Прізвище Ім'я По батькові"><input class="in" data-fr="b" placeholder="рік народж." inputmode="numeric"><button type="button" class="fxx" data-act="q-fxrm" title="Прибрати">×</button></div>`;
@@ -1097,7 +1097,7 @@ function fxForm(p) {
   return `<div class="fxform" data-id="${esc(p.id)}">
     <p class="small muted" style="margin:0 0 10px">${own ? 'Ви власник — усе внесеться одразу.' : 'Виправте, що не так, додайте рідних і напишіть, звідки це відомо. Максим перегляне й одним кліком внесе в дерево.'}</p>
     <details class="fxsec" open><summary>Дані картки</summary><div class="grid2">${f('n', "Ім'я")}${f('pt', 'По батькові')}${f('s', 'Прізвище')}${f('m', 'Дівоче прізвище', 'для жінок')}
-      ${f('b', 'Дата народження', 'напр. 14.02.1938 або 1938')}${f('bp', 'Місце народження')}${f('d', 'Дата смерті', 'якщо людина померла')}${f('dp', 'Місце смерті / поховання')}
+      ${f('b', 'Дата народження', 'напр. 14.02.1938 або 1938')}${f('bp', 'Місце народження')}<div class="f">Дата смерті<input class="in" data-fx="d" value="${esc(p.d || '')}" placeholder="якщо відома"><label class="edead"><input type="checkbox" data-fxc="dead"${p.dead ? ' checked' : ''}> ${p.sex === 'f' ? 'Померла' : p.sex === 'm' ? 'Помер' : 'Помер(ла)'}, дата невідома</label></div>${f('dp', 'Місце смерті / поховання')}
       ${f('lp', 'Де жив(-ла) / живе')}<label class="f">Стать<select class="in" data-fx="sex"><option value=""${!p.sex ? ' selected' : ''}>—</option><option value="m"${p.sex === 'm' ? ' selected' : ''}>чоловік</option><option value="f"${p.sex === 'f' ? ' selected' : ''}>жінка</option></select></label></div>
     <label class="f">Опис<textarea class="in" data-fx="note" rows="4">${esc(p.note || '')}</textarea></label></details>
     <details class="fxsec"${own ? '' : ' open'}><summary>Додати рідних (чоловік / дружина, діти, батьки…)</summary><div id="fxrels">${fxRelRow(p)}</div><button type="button" class="btn line small" data-act="q-fxmore">+ ще одна людина</button></details>
@@ -1108,7 +1108,7 @@ function fxForm(p) {
 }
 function fxDiff(q) {
   const ch = q.patch || {}, ad = q.padd || [], dup = q.pdup || '', rows = [];
-  const can = isOwner() && !q.pst, done = k => q.pst === 'ok' && (q.pkeys || []).includes(k), cut = v => v ? (v.length > 400 ? v.slice(0, 400) + '…' : v) : '—', sx = (k, v) => k === 'sex' ? ({ m: 'чоловік', f: 'жінка' }[v] || '—') : cut(v);
+  const can = isOwner() && !q.pst, done = k => q.pst === 'ok' && (q.pkeys || []).includes(k), cut = v => v ? (v.length > 400 ? v.slice(0, 400) + '…' : v) : '—', sx = (k, v) => k === 'sex' ? ({ m: 'чоловік', f: 'жінка' }[v] || '—') : k === 'dead' ? (v ? 'так' : 'ні') : cut(v);
   const cb = k => can ? `<td><input type="checkbox" data-fxk="${k}" checked></td>` : '';
   Object.keys(ch).forEach(k => rows.push(`<tr class="${done(k) ? 'ok' : q.pst ? 'no' : ''}">${cb(k)}<td>${esc(FIXK[k] || k)}</td><td class="was">${esc(sx(k, ch[k][0]))}</td><td class="now">${esc(sx(k, ch[k][1]))}</td></tr>`));
   ad.forEach((x, i) => rows.push(`<tr class="${done('add' + i) ? 'ok' : q.pst ? 'no' : ''}">${cb('add' + i)}<td>Додати: ${esc(FXREL[x.rel] || x.rel)}</td><td class="was">—</td><td class="now">${esc([x.n, x.pt, x.s].filter(Boolean).join(' '))}${x.b ? ', н. ' + esc(x.b) : ''}</td></tr>`));
@@ -1189,7 +1189,7 @@ async function qHandle(act, t, d) {
   if (act === 'q-fxrm') { const r = t.closest('.fxrel'); if (r) { r.querySelectorAll('input').forEach(i => i.value = ''); if (r.parentElement.children.length > 1) r.remove(); } return true; }
   if (act === 'q-fxsend') {
     const f = t.closest('.fxform'), id = f.dataset.id, p = P[id], m = f.querySelector('#fx-m'); if (!p) return true;
-    const patch = {}; f.querySelectorAll('[data-fx]').forEach(i => { const k = i.dataset.fx, v = i.value.trim(); if (v !== String(p[k] || '')) patch[k] = v; });
+    const patch = {}; f.querySelectorAll('[data-fx]').forEach(i => { const k = i.dataset.fx, v = i.value.trim(); if (v !== String(p[k] || '')) patch[k] = v; }); { const dc = f.querySelector('[data-fxc=dead]'), dv_ = dc?.checked && !(patch.d ?? p.d) ? '1' : ''; if (dc && dv_ !== (p.dead ? '1' : '')) patch.dead = dv_; }
     const add = [...f.querySelectorAll('.fxrel')].map(r => { const o = parseFio(r.querySelector('[data-fr=fio]').value); const b = r.querySelector('[data-fr=b]').value.trim() || o.b; return { rel: r.querySelector('[data-fr=rel]').value, s: o.s, n: o.n, pt: o.pt, m: o.m, b }; }).filter(x => x.n);
     const dv = f.querySelector('#fx-dup').value.trim(), dup = dv ? personByLabel(dv) : '';
     if (dv && !dup) { m.className = 'msg err'; m.textContent = 'Дублікат: оберіть людину зі списку.'; return true; }
